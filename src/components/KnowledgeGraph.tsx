@@ -14,7 +14,7 @@ interface HistoryItem {
 interface Node {
   id: string;
   name: string;
-  type: 'movement' | 'artist' | 'artwork';
+  type: 'movement' | 'artist' | 'artwork' | 'location' | 'type';
   val: number;
   color: string;
   icon: string;
@@ -66,13 +66,19 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
     const links: Link[] = [];
     const movements = new Set<string>();
     const artists = new Map<string, string>(); // Artist -> Movement
+    const locations = new Set<string>();
+    const types = new Set<string>();
 
     items.forEach(item => {
       const m = item.details.movement || 'Unknown Movement';
       const a = item.details.artist || 'Unknown Artist';
+      const l = item.details.location;
+      const t = item.details.type;
       
       movements.add(m);
       artists.set(a, m);
+      if (l) locations.add(l);
+      if (t) types.add(t);
     });
 
     // 1. Add Movement Nodes
@@ -102,9 +108,38 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
       links.push({ source: `mov_${m}`, target: `art_${a}` });
     });
 
-    // 3. Add Artwork Nodes
+    // 3. Add Location Nodes
+    locations.forEach(l => {
+      nodes.push({
+        id: `loc_${l}`,
+        name: l,
+        type: 'location',
+        val: 10,
+        color: '#FF4B4B',
+        icon: '📍',
+        info: `A geographical location where significant artworks are currently housed or originated.`
+      });
+    });
+
+    // 4. Add Type Nodes
+    types.forEach(t => {
+      nodes.push({
+        id: `typ_${t}`,
+        name: t,
+        type: 'type',
+        val: 10,
+        color: '#4B7BFF',
+        icon: '🏺',
+        info: `The medium and format of the masterpiece, classifying it as a ${t}.`
+      });
+    });
+
+    // 5. Add Artwork Nodes
     items.forEach(item => {
       const a = item.details.artist || 'Unknown Artist';
+      const l = item.details.location;
+      const t = item.details.type;
+
       nodes.push({
         id: `work_${item.id}`,
         name: item.details.title,
@@ -116,6 +151,8 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
         info: `${item.details.title} (${item.details.year}). ${item.details.description?.substring(0, 100)}...`
       });
       links.push({ source: `art_${a}`, target: `work_${item.id}` });
+      if (l) links.push({ source: `loc_${l}`, target: `work_${item.id}` });
+      if (t) links.push({ source: `typ_${t}`, target: `work_${item.id}` });
     });
 
     return { nodes, links };
@@ -156,7 +193,8 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
     const fontSize = 12 / globalScale;
     const size = node.val;
     
-    // Draw background circle
+    /* 
+    // Removed background circle as requested
     ctx.beginPath();
     ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
     ctx.fillStyle = node.color;
@@ -166,20 +204,24 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
     ctx.strokeStyle = '#1A1A1A';
     ctx.lineWidth = 1 / globalScale;
     ctx.stroke();
+    */
 
     // Draw Icon
-    ctx.font = `${size * 1.2}px serif`;
+    ctx.font = `${size * 1.5}px serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(node.icon, node.x, node.y);
 
     // Draw Label
     if (globalScale > 1.5) {
-      ctx.font = `${fontSize}px Inter, sans-serif`;
+      ctx.font = `bold ${fontSize}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillStyle = '#1A1A1A';
+      ctx.fillStyle = '#101010';
+      ctx.shadowBlur = 4 / globalScale;
+      ctx.shadowColor = 'rgba(255,255,255,0.8)';
       ctx.fillText(label, node.x, node.y + size + 2);
+      ctx.shadowBlur = 0;
     }
   }, []);
 
@@ -190,6 +232,12 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
     }
     if (selectedNode.type === 'movement') {
       return items.filter(item => item.details.movement === selectedNode.name);
+    }
+    if (selectedNode.type === 'location') {
+      return items.filter(item => item.details.location === selectedNode.name);
+    }
+    if (selectedNode.type === 'type') {
+      return items.filter(item => item.details.type === selectedNode.name);
     }
     return [];
   }, [selectedNode, items]);
@@ -317,18 +365,26 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
         )}
       </AnimatePresence>
 
-      <div className="absolute bottom-6 left-6 flex flex-col gap-3 p-5 bg-white/70 backdrop-blur-md rounded-2xl border border-artistic-ink/5 shadow-sm pointer-events-none">
+      <div className="absolute bottom-6 left-6 flex flex-col gap-2 p-5 bg-white/70 backdrop-blur-md rounded-2xl border border-artistic-ink/5 shadow-sm pointer-events-none">
           <div className="flex items-center gap-3">
               <span className="text-lg">🎨</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Styles / Movements</span>
           </div>
           <div className="flex items-center gap-3">
               <span className="text-lg">👨‍🎨</span>
-              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Painters</span>
+              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Artists</span>
           </div>
           <div className="flex items-center gap-3">
               <span className="text-lg">🖼️</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Paintings</span>
+          </div>
+          <div className="flex items-center gap-3">
+              <span className="text-lg">📍</span>
+              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Locations</span>
+          </div>
+          <div className="flex items-center gap-3">
+              <span className="text-lg">🏺</span>
+              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Masterpiece Types</span>
           </div>
       </div>
     </div>

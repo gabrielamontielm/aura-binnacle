@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon } from 'lucide-react';
+import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as heic2anyModule from 'heic2any';
-import { identifyArtwork, ArtDetails, EntityDetails } from './services/artService';
+import { identifyArtwork, identifyArtworkFromUrl, ArtDetails, EntityDetails } from './services/artService';
 import { KnowledgeGraph } from './components/KnowledgeGraph';
 import { EntityViewer } from './components/EntityViewer';
 import { auth, googleProvider, db, handleFirestoreError, OperationType } from './services/firebase';
+import { ValidatedImage } from './components/ValidatedImage';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 
 // Handle potential default import differences
 const heic2any = (heic2anyModule as any).default || heic2anyModule;
@@ -28,8 +29,12 @@ export default function App() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer'>('home');
+  const [isGalleryPublic, setIsGalleryPublic] = useState(false);
+  const [isBucketListPublic, setIsBucketListPublic] = useState(false);
+  const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist'>('home');
   const [galleryMode, setGalleryMode] = useState<'grid' | 'graph'>('grid');
+  const [bucketList, setBucketList] = useState<HistoryItem[]>([]);
+  const [isViewOnly, setIsViewOnly] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auth Listener
@@ -39,7 +44,22 @@ export default function App() {
       if (currentUser) {
         // Log basic profile
         const userDoc = doc(db, 'users', currentUser.uid);
+        const userSnapshot = await getDoc(userDoc);
+        let userData = userSnapshot.exists() ? userSnapshot.data() : {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName,
+          photoURL: currentUser.photoURL,
+          lastLogin: Date.now(),
+          isGalleryPublic: false,
+          isBucketListPublic: false
+        };
+        
+        setIsGalleryPublic(userData.isGalleryPublic || false);
+        setIsBucketListPublic(userData.isBucketListPublic || false);
+        
         await setDoc(userDoc, {
+          ...userData,
           uid: currentUser.uid,
           email: currentUser.email,
           displayName: currentUser.displayName,
@@ -48,6 +68,7 @@ export default function App() {
         }, { merge: true });
         
         fetchUserHistory(currentUser.uid);
+        fetchUserBucketList(currentUser.uid);
       } else {
         // Fallback to local history if signed out
         const saved = localStorage.getItem('art_curator_history');
@@ -74,6 +95,22 @@ export default function App() {
       });
       // Sort by timestamp descending
       setHistory(items.sort((a, b) => b.timestamp - a.timestamp));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, path);
+    }
+  };
+
+  const fetchUserBucketList = async (uid: string) => {
+    const path = `users/${uid}/bucketlist`;
+    try {
+      const q = query(collection(db, path));
+      const querySnapshot = await getDocs(q);
+      const items: HistoryItem[] = [];
+      querySnapshot.forEach((doc) => {
+        items.push(doc.data() as HistoryItem);
+      });
+      // Sort by timestamp descending
+      setBucketList(items.sort((a, b) => b.timestamp - a.timestamp));
     } catch (err) {
       handleFirestoreError(err, OperationType.LIST, path);
     }
@@ -266,6 +303,26 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedProfileUid = params.get('sharedProfile');
+    // Backward compatibility
+    const oldSharedGallery = params.get('sharedGallery');
+    const oldSharedBucketList = params.get('sharedBucketList');
+    
+    if (sharedProfileUid) {
+        fetchPublicGallery(sharedProfileUid);
+        fetchPublicBucketList(sharedProfileUid);
+        setIsViewOnly(true);
+    } else if (oldSharedGallery) {
+        fetchPublicGallery(oldSharedGallery);
+        setIsViewOnly(true);
+    } else if (oldSharedBucketList) {
+        fetchPublicBucketList(oldSharedBucketList);
+        setIsViewOnly(true);
+    }
+  }, []);
+
   const deleteHistoryItem = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setHistory(prev => prev.filter(item => item.id !== id));
@@ -286,9 +343,142 @@ export default function App() {
     }
   };
 
-  const loadFromHistory = (item: HistoryItem) => {
+  const deleteBucketListItem = async (itemId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setBucketList(prev => prev.filter(item => item.id !== itemId));
+    
+    if (user) {
+      const path = `users/${user.uid}/bucketlist`;
+      try {
+        await deleteDoc(doc(db, path, itemId));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, path);
+      }
+    }
+  };
+
+  const fetchPublicBucketList = async (uid: string) => {
+      setIsLoading(true);
+      const path = `public_bucketlist/${uid}/items`;
+      try {
+        const q = query(collection(db, path));
+        const querySnapshot = await getDocs(q);
+        const items: HistoryItem[] = [];
+        querySnapshot.forEach((doc) => {
+          items.push(doc.data() as HistoryItem);
+        });
+        setBucketList(items.sort((a, b) => b.timestamp - a.timestamp));
+        setView('bucketlist');
+      } catch (err) {
+        setError("Failed to load shared bucket list.");
+      } finally {
+          setIsLoading(false);
+      }
+  };
+
+  const toggleBucketListPublic = async () => {
+    if (!user) return;
+    const nextPublic = !isBucketListPublic;
+    setIsBucketListPublic(nextPublic);
+    
+    // Update user doc
+    try {
+        await setDoc(doc(db, 'users', user.uid), { isBucketListPublic: nextPublic }, { merge: true });
+        
+        // Sync items
+        if (nextPublic) {
+          // Copy all items to public_bucketlist/{uid}/items
+          for (const item of bucketList) {
+              const docId = item.id || (Date.now().toString() + Math.random().toString(36).substring(2));
+              const docRef = doc(db, `public_bucketlist/${user.uid}/items`, docId);
+              await setDoc(docRef, { ...item, id: docId, userId: user.uid });
+          }
+        } else {
+          // Delete all items in public_bucketlist/{uid}/items
+          const q = query(collection(db, `public_bucketlist/${user.uid}/items`));
+          const snapshot = await getDocs(q);
+          for (const docSnapshot of snapshot.docs) {
+              await deleteDoc(docSnapshot.ref);
+          }
+        }
+    } catch (err) {
+        console.error("Sync failed", err);
+        handleFirestoreError(err, OperationType.WRITE, `public_bucketlist/${user.uid}/items`);
+        setIsBucketListPublic(!nextPublic);
+        setError("Failed to update bucket list sharing settings.");
+    }
+  };
+
+  const toggleGalleryPublic = async () => {
+    if (!user) return;
+    const nextPublic = !isGalleryPublic;
+    setIsGalleryPublic(nextPublic);
+    
+    // Update user doc
+    try {
+        await setDoc(doc(db, 'users', user.uid), { isGalleryPublic: nextPublic }, { merge: true });
+        
+        // Sync items
+        if (nextPublic) {
+          // Copy all items to public_items/{uid}/items
+          for (const item of history) {
+              const docId = item.id || (Date.now().toString() + Math.random().toString(36).substring(2));
+              const docRef = doc(db, `public_items/${user.uid}/items`, docId);
+              console.log("Attempting to save item to public_items with ID:", docId, "item id:", item.id);
+              await setDoc(docRef, { ...item, id: docId, userId: user.uid });
+          }
+        } else {
+          // Delete all items in public_items/{uid}/items
+          const q = query(collection(db, `public_items/${user.uid}/items`));
+          const snapshot = await getDocs(q);
+          for (const docSnapshot of snapshot.docs) {
+              await deleteDoc(docSnapshot.ref);
+          }
+        }
+    } catch (err) {
+        console.error("Sync failed", err);
+        handleFirestoreError(err, OperationType.WRITE, `public_items/${user.uid}/items`);
+        setIsGalleryPublic(!nextPublic);
+        setError("Failed to update sharing settings.");
+    }
+  };
+
+  const fetchPublicGallery = async (uid: string) => {
+      setIsLoading(true);
+      const path = `public_items/${uid}/items`;
+      try {
+        const q = query(collection(db, path));
+        const querySnapshot = await getDocs(q);
+        const items: HistoryItem[] = [];
+        querySnapshot.forEach((doc) => {
+          items.push(doc.data() as HistoryItem);
+        });
+        setHistory(items.sort((a, b) => b.timestamp - a.timestamp));
+        setView('galleries');
+      } catch (err) {
+        setError("Failed to load shared gallery.");
+      } finally {
+          setIsLoading(false);
+      }
+  };
+
+  const loadFromHistory = async (item: HistoryItem) => {
     setImage(item.image);
-    setDetails(item.details);
+    
+    // Check if details look like placeholder
+    if (item.details.description.startsWith('Bucket list work by') || item.details.medium === 'Unknown') {
+       try {
+         const newDetails = await identifyArtworkFromUrl(item.image);
+         setDetails(newDetails);
+         // Optionally update bucket list/history in state and db
+       } catch (err) {
+         console.error("Failed to fetch better details", err);
+         setDetails(item.details);
+       }
+    } else {
+        setDetails(item.details);
+    }
+    
     setView('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -321,8 +511,9 @@ export default function App() {
         
         <nav className="hidden md:flex space-x-12 uppercase text-[9px] tracking-[0.2em] font-bold">
           <button 
+            disabled={isViewOnly}
             onClick={() => { setView('home'); reset(); }} 
-            className={`${view === 'home' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
+            className={`${view === 'home' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors ${isViewOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             Scanner
           </button>
@@ -331,6 +522,12 @@ export default function App() {
             className={`${view === 'galleries' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
           >
             Knowledge Base
+          </button>
+          <button 
+            onClick={() => setView('bucketlist')} 
+            className={`${view === 'bucketlist' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
+          >
+            Bucket List
           </button>
         </nav>
 
@@ -368,8 +565,9 @@ export default function App() {
             </button>
           )}
           <button 
+            disabled={isViewOnly}
             onClick={() => fileInputRef.current?.click()}
-            className="px-5 py-2 border border-artistic-ink rounded-full text-[10px] uppercase font-bold tracking-tight hover:bg-artistic-ink hover:text-artistic-bg transition-all"
+            className={`px-5 py-2 border border-artistic-ink rounded-full text-[10px] uppercase font-bold tracking-tight hover:bg-artistic-ink hover:text-artistic-bg transition-all ${isViewOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             Capture Art
           </button>
@@ -385,9 +583,129 @@ export default function App() {
                 ? history.filter(h => h.details.artist === selectedEntity.name)
                 : history.filter(h => h.details.movement === selectedEntity.name)
             }
+            bucketListWorks={bucketList}
             onArtworkClick={findAndLoadFromHistoryId}
+            onAddToBucketList={async (work) => {
+              if (!user) {
+                setError("Please sign in to save bucket list items.");
+                return;
+              }
+              // Avoid duplicates
+              if (bucketList.some(item => item.details.title === work.title && item.details.year === work.year)) {
+                return;
+              }
+              const favoriteDetails: ArtDetails = {
+                title: work.title,
+                artist: selectedEntity.type === 'artist' ? selectedEntity.name : 'Unknown',
+                year: work.year,
+                movement: selectedEntity.type === 'movement' ? selectedEntity.name : 'Unknown',
+                medium: 'Unknown',
+                type: 'Masterpiece',
+                description: 'Bucket list work by ' + (selectedEntity.name || 'Unknown'),
+                historicalContext: 'Saved from famous works.',
+                museum: work.museum,
+                location: work.location
+              };
+              const newItem: HistoryItem = {
+                id: Date.now().toString() + Math.random().toString(36).substring(2),
+                image: work.imageUrl || '',
+                details: favoriteDetails,
+                timestamp: Date.now()
+              };
+              try {
+                await setDoc(doc(db, `users/${user.uid}/bucketlist`, newItem.id), {
+                    ...newItem,
+                    userId: user.uid
+                });
+                setBucketList(prev => [newItem, ...prev].slice(0, 50));
+              } catch (err) {
+                handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/bucketlist`);
+              }
+            }}
             onBack={() => setView('galleries')} 
           />
+            ) : view === 'bucketlist' ? (
+          <section className="w-full h-full overflow-y-auto bg-white p-10 md:p-20">
+            <div className="max-w-6xl mx-auto">
+              <header className="mb-16">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-4">Your Curated Selections</span>
+                    <h2 className="text-5xl font-serif tracking-tighter italic">Bucket List</h2>
+                  </div>
+                  {user && (
+                    <div className="flex flex-col items-end gap-2">
+                       <button 
+                        onClick={toggleBucketListPublic}
+                        className={`text-[9px] uppercase font-bold tracking-widest ${isBucketListPublic ? 'text-artistic-accent' : 'text-artistic-ink/40'}`}
+                      >
+                        {isBucketListPublic ? 'Bucket List is Public' : 'Make Bucket List Public'}
+                      </button>
+                      {isBucketListPublic && (
+                        <div className="flex items-center gap-2 bg-artistic-shadow/50 p-2 rounded-full mt-1">
+                          <input 
+                            type="text" 
+                            readOnly 
+                            value={`${window.location.origin}/?sharedProfile=${user.uid}`}
+                            className="text-[8px] max-w-[120px] font-bold bg-transparent italic outline-none truncate"
+                          />
+                          <button 
+                            onClick={() => {
+                                navigator.clipboard.writeText(`${window.location.origin}/?sharedProfile=${user.uid}`);
+                            }}
+                            className="text-artistic-accent hover:text-artistic-ink transition-colors"
+                            title="Copy link"
+                          >
+                            <Share2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                 </div>
+              </header>
+
+              {bucketList.length === 0 ? (
+                <div className="h-[40vh] flex flex-col items-center justify-center text-center">
+                  <p className="text-artistic-ink/40 text-sm italic">You haven't added anything to your bucket list.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+                  <AnimatePresence>
+                    {bucketList.map((item) => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        whileHover={{ y: -5 }}
+                        onClick={() => loadFromHistory(item)}
+                        className="group cursor-pointer"
+                      >
+                        <div className="aspect-[4/5] bg-artistic-shadow p-4 mb-6 art-shadow transition-all group-hover:shadow-[40px_40px_0px_#E5E0D5]">
+                          <div className="w-full h-full bg-gray-100 gallery-frame overflow-hidden relative">
+                            <ValidatedImage src={item.image} alt={item.details.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
+                            <button 
+                              onClick={(e) => deleteBucketListItem(item.id, e)}
+                              className="absolute top-4 right-4 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                        <h3 className="font-serif text-xl italic mb-1 group-hover:text-artistic-accent transition-colors">{item.details.title}</h3>
+                        <div className="flex items-center gap-3 text-[10px] uppercase font-bold tracking-widest opacity-40">
+                          <span>{item.details.artist}</span>
+                          <span className="w-1 h-px bg-artistic-ink" />
+                          <span>{item.details.year}</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
+          </section>
         ) : view === 'galleries' ? (
           <section className="w-full h-full overflow-y-auto bg-white p-10 md:p-20">
             <div className="max-w-6xl mx-auto">
@@ -397,6 +715,36 @@ export default function App() {
                   <h2 className="text-5xl font-serif tracking-tighter italic">Your Knowledge Base</h2>
                 </div>
                 <div className="flex gap-8 items-center">
+                  {user && (
+                    <div className="flex flex-col items-end gap-2">
+                      <button 
+                        onClick={toggleGalleryPublic}
+                        className={`text-[9px] uppercase font-bold tracking-widest ${isGalleryPublic ? 'text-artistic-accent' : 'text-artistic-ink/40'}`}
+                      >
+                        {isGalleryPublic ? 'Gallery is Public' : 'Make Gallery Public'}
+                      </button>
+                      {isGalleryPublic && (
+                        <div className="flex items-center gap-2 bg-artistic-shadow/50 p-2 rounded-full mt-1">
+                          <input 
+                            type="text" 
+                            readOnly 
+                            value={`${window.location.origin}/?sharedProfile=${user.uid}`}
+                            className="text-[8px] max-w-[120px] font-bold bg-transparent italic outline-none truncate"
+                          />
+                          <button 
+                            onClick={() => {
+                                navigator.clipboard.writeText(`${window.location.origin}/?sharedProfile=${user.uid}`);
+                                // Would be nice to add feedback toast here, but for now just copy.
+                            }}
+                            className="text-artistic-accent hover:text-artistic-ink transition-colors"
+                            title="Copy link"
+                          >
+                            <Share2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="flex p-1 bg-artistic-shadow rounded-full border border-artistic-ink/5">
                     <button 
                       onClick={() => setGalleryMode('grid')}
@@ -456,7 +804,7 @@ export default function App() {
                       >
                         <div className="aspect-[4/5] bg-artistic-shadow p-4 mb-6 art-shadow transition-all group-hover:shadow-[40px_40px_0px_#E5E0D5]">
                           <div className="w-full h-full bg-gray-100 gallery-frame overflow-hidden relative">
-                            <img src={item.image} alt={item.details.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
+                            <ValidatedImage src={item.image} alt={item.details.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
                             <button 
                               onClick={(e) => deleteHistoryItem(item.id, e)}
                               className="absolute top-4 right-4 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50"
@@ -496,8 +844,9 @@ export default function App() {
 
               <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
                 <button
+                  disabled={isViewOnly}
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-16 h-16 bg-artistic-ink text-artistic-bg rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl"
+                  className={`w-16 h-16 bg-artistic-ink text-artistic-bg rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl ${isViewOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <Upload className="w-6 h-6" />
                 </button>
@@ -648,6 +997,22 @@ export default function App() {
                             <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2">Medium</span>
                             <span className="text-xs font-semibold">{details.medium}</span>
                           </div>
+                          <div>
+                            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2">Type</span>
+                            <span className="text-xs font-semibold">{details.type}</span>
+                          </div>
+                          {details.museum && (
+                            <div>
+                              <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2">Collection</span>
+                              <span className="text-xs font-semibold">{details.museum}</span>
+                            </div>
+                          )}
+                          {details.location && (
+                            <div className="col-span-2">
+                              <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2">Location</span>
+                              <span className="text-xs font-semibold">{details.location}</span>
+                            </div>
+                          )}
                         </div>
 
                         <div>

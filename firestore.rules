@@ -17,7 +17,7 @@ service cloud.firestore {
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\.\\-]+$');
     }
 
     function incoming() {
@@ -30,35 +30,37 @@ service cloud.firestore {
 
     // Validation Blueprints
     function isValidUserProfile(data) {
-      return data.keys().hasAll(['uid', 'email', 'displayName', 'photoURL', 'lastLogin'])
-        && data.keys().size() == 5
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'photoURL', 'lastLogin', 'isGalleryPublic', 'isBucketListPublic'])
         && data.uid == request.auth.uid
         && data.email is string && data.email.size() <= 256
         && (data.displayName is string || data.displayName == null)
         && (data.photoURL is string || data.photoURL == null)
-        && data.lastLogin is number;
+        && data.lastLogin is number
+        && data.isGalleryPublic is bool
+        && data.isBucketListPublic is bool;
     }
 
     function isValidArtDetails(details) {
-      return details.keys().hasAll(['title', 'artist', 'year', 'movement', 'medium', 'description', 'historicalContext'])
-        && details.keys().size() == 7
-        && details.title is string && details.title.size() <= 500
+      return details.title is string && details.title.size() <= 500
         && details.artist is string && details.artist.size() <= 500
-        && details.year is string && details.year.size() <= 100
-        && details.movement is string && details.movement.size() <= 200
-        && details.medium is string && details.medium.size() <= 200
-        && details.description is string && details.description.size() <= 2000
-        && details.historicalContext is string && details.historicalContext.size() <= 5000;
+        && (!('year' in details) || details.year == null || (details.year is string && details.year.size() <= 100))
+        && (!('movement' in details) || details.movement == null || (details.movement is string && details.movement.size() <= 200))
+        && (!('medium' in details) || details.medium == null || (details.medium is string && details.medium.size() <= 200))
+        && (!('type' in details) || details.type == null || (details.type is string && details.type.size() <= 200))
+        && (!('museum' in details) || details.museum == null || (details.museum is string && details.museum.size() <= 500))
+        && (!('location' in details) || details.location == null || (details.location is string && details.location.size() <= 500))
+        && (!('description' in details) || details.description == null || (details.description is string && details.description.size() <= 2000))
+        && (!('historicalContext' in details) || details.historicalContext == null || (details.historicalContext is string && details.historicalContext.size() <= 5000));
     }
 
-    function isValidArtItem(data) {
-      return data.keys().hasAll(['id', 'image', 'details', 'timestamp', 'userId'])
-        && data.keys().size() == 5
-        && data.id is string && data.id.size() <= 128
-        && data.image is string && data.image.size() <= 1000000 // Up to 1MB base64 (thumbnails)
+    function isValidArtItem(data, itemId) {
+      return data.id is string && data.id.size() <= 128
+        && data.image is string && data.image.size() <= 2000000 // Increased limit, just in case
+        && data.details is map
         && isValidArtDetails(data.details)
         && data.timestamp is number
-        && data.userId == request.auth.uid;
+        && data.userId is string
+        && data.id == itemId;
     }
 
     // Collection: Users
@@ -66,16 +68,49 @@ service cloud.firestore {
       allow get: if isOwner(userId) && isValidId(userId);
       allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
       allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL'])
+        incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL', 'isGalleryPublic', 'isBucketListPublic'])
       );
 
       // Collection: Saved Items
       match /items/{itemId} {
         allow list: if isOwner(userId);
         allow get: if isOwner(userId) && isValidId(itemId);
-        allow create: if isOwner(userId) && isValidId(itemId) && isValidArtItem(incoming());
+        allow create: if isOwner(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
         allow delete: if isOwner(userId) && isValidId(itemId);
       }
+
+      // Collection: Bucket List
+      match /bucketlist/{favoriteId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(favoriteId);
+        allow create: if isOwner(userId) && isValidId(favoriteId) && isValidArtItem(incoming(), favoriteId);
+        allow update: if isOwner(userId) && isValidId(favoriteId) && isValidArtItem(incoming(), favoriteId);
+        allow delete: if isOwner(userId) && isValidId(favoriteId);
+      }
+    }
+
+    match /public_items/{userId}/items/{itemId} {
+      allow list: if true;
+      allow get: if true;
+      allow write: if isOwner(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
+      allow delete: if isOwner(userId) && isValidId(itemId);
+    }
+
+    match /public_bucketlist/{userId}/items/{itemId} {
+      allow list: if true;
+      allow get: if true;
+      allow write: if isOwner(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
+      allow delete: if isOwner(userId) && isValidId(itemId);
+    }
+
+    // Collections: Metadata Cache
+    match /metadata_artists/{artistId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /metadata_movements/{movementId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
   }
 }

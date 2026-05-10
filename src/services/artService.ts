@@ -1,7 +1,13 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
+import { db } from './firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+
+function sanitizeId(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+}
 
 export interface ArtDetails {
   title: string;
@@ -9,6 +15,9 @@ export interface ArtDetails {
   year: string;
   movement: string;
   medium: string;
+  museum?: string;
+  location?: string;
+  type: string;
   description: string;
   historicalContext: string;
 }
@@ -21,7 +30,7 @@ export async function identifyArtwork(base64Image: string, mimeType: string = "i
         {
           parts: [
             {
-              text: "Identify this artwork and provide details in a structured format. If it's a famous piece, provide accurate historical context. If it is not a recognizable artwork, analyze its style and provide a professional curatorial description as if it were in a gallery.",
+              text: "Identify this artwork and provide details in a structured format. If it's a famous piece, provide accurate historical context, including the museum where it resides and its location. Determine the type of masterpiece (e.g., Painting, Sculpture, Architecture, etc.). If it is not a recognizable artwork, analyze its style and provide a professional curatorial description as if it were in a gallery.",
             },
             {
               inlineData: {
@@ -42,10 +51,13 @@ export async function identifyArtwork(base64Image: string, mimeType: string = "i
             year: { type: Type.STRING },
             movement: { type: Type.STRING },
             medium: { type: Type.STRING },
+            museum: { type: Type.STRING, description: "The museum where the piece resides, if known" },
+            location: { type: Type.STRING, description: "The city and country where the piece resides, if known" },
+            type: { type: Type.STRING, description: "The category of artwork, e.g., Painting, Sculpture" },
             description: { type: Type.STRING },
             historicalContext: { type: Type.STRING },
           },
-          required: ["title", "artist", "year", "movement", "medium", "description", "historicalContext"],
+          required: ["title", "artist", "year", "movement", "medium", "type", "description", "historicalContext"],
         },
       },
     });
@@ -64,6 +76,51 @@ export async function identifyArtwork(base64Image: string, mimeType: string = "i
   }
 }
 
+export async function identifyArtworkFromUrl(imageUrl: string): Promise<ArtDetails> {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [
+        {
+          parts: [
+            {
+              text: `Identify the artwork shown at this URL: ${imageUrl}. Provide details in a structured format: title, artist, year, movement, medium, museum, location, type (e.g. Painting), description, and historicalContext.`,
+            },
+          ],
+        },
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            artist: { type: Type.STRING },
+            year: { type: Type.STRING },
+            movement: { type: Type.STRING },
+            medium: { type: Type.STRING },
+            museum: { type: Type.STRING, description: "The museum where the piece resides, if known" },
+            location: { type: Type.STRING, description: "The city and country where the piece resides, if known" },
+            type: { type: Type.STRING, description: "The category of artwork, e.g., Painting, Sculpture" },
+            description: { type: Type.STRING },
+            historicalContext: { type: Type.STRING },
+          },
+          required: ["title", "artist", "year", "movement", "medium", "type", "description", "historicalContext"],
+        },
+      },
+    });
+
+    if (!response.text) {
+      throw new Error("No identification text received from AI");
+    }
+
+    return JSON.parse(response.text);
+  } catch (error: any) {
+    console.error("AI Identify URL Error:", error);
+    throw error;
+  }
+}
+
 export interface EntityDetails {
   name: string;
   type: 'artist' | 'movement';
@@ -74,10 +131,23 @@ export interface EntityDetails {
   keyCharacteristics: string[];
   historicalImpact: string;
   curatorialSummary: string;
-  famousWorks: { title: string; year: string }[];
+  famousWorks: { title: string; year: string; museum?: string; location?: string; imageUrl?: string }[];
 }
 
 export async function getEntityDetails(name: string, type: 'artist' | 'movement'): Promise<EntityDetails> {
+  const collectionName = type === 'artist' ? 'metadata_artists' : 'metadata_movements';
+  const id = sanitizeId(name);
+  const docRef = doc(db, collectionName, id);
+
+  try {
+    const cachedDoc = await getDoc(docRef);
+    if (cachedDoc.exists()) {
+      return cachedDoc.data() as EntityDetails;
+    }
+  } catch (error) {
+    console.error("Cache Read Error:", error);
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -96,7 +166,7 @@ export async function getEntityDetails(name: string, type: 'artist' | 'movement'
               - keyCharacteristics: A list of 3-4 defining traits or styles
               - historicalImpact: Their long-term legacy (2-3 sentences)
               - curatorialSummary: An engaging short summary (around 200 characters) for a quick overview
-              - famousWorks: A list of 3-5 most famous artworks by this artist or associated with this movement. For each work include title and year.`,
+              - famousWorks: A list of 3-5 most famous artworks by this artist or associated with this movement. For each work include title, year, museum, location if known, and a URL string for an image if available.`,
             },
           ],
         },
@@ -121,7 +191,10 @@ export async function getEntityDetails(name: string, type: 'artist' | 'movement'
                 type: Type.OBJECT,
                 properties: {
                   title: { type: Type.STRING },
-                  year: { type: Type.STRING }
+                  year: { type: Type.STRING },
+                  museum: { type: Type.STRING },
+                  location: { type: Type.STRING },
+                  imageUrl: { type: Type.STRING }
                 },
                 required: ["title", "year"]
               }
@@ -136,7 +209,12 @@ export async function getEntityDetails(name: string, type: 'artist' | 'movement'
       throw new Error("No entity details received from AI");
     }
 
-    return JSON.parse(response.text);
+    const data = JSON.parse(response.text);
+
+    // Save to cache
+    await setDoc(docRef, data);
+
+    return data;
   } catch (error: any) {
     console.error("AI Entity Error:", error);
     if (error?.message?.includes("RESOURCE_EXHAUSTED") || error?.message?.includes("429")) {

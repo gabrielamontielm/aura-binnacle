@@ -15,10 +15,13 @@
             "year": { "type": "string" },
             "movement": { "type": "string" },
             "medium": { "type": "string" },
+            "museum": { "type": "string" },
+            "location": { "type": "string" },
+            "type": { "type": "string" },
             "description": { "type": "string" },
             "historicalContext": { "type": "string" }
           },
-          "required": ["title", "artist", "year", "movement", "medium", "description", "historicalContext"]
+          "required": ["title", "artist", "year", "movement", "medium", "type", "description", "historicalContext"]
         },
         "timestamp": { "type": "number" },
         "userId": { "type": "string" }
@@ -34,9 +37,40 @@
         "email": { "type": "string" },
         "displayName": { "type": "string" },
         "photoURL": { "type": "string" },
-        "lastLogin": { "type": "number" }
+        "lastLogin": { "type": "number" },
+        "isGalleryPublic": { "type": "boolean" }
       },
-      "required": ["uid", "email"]
+      "required": ["uid", "email", "isGalleryPublic"]
+    },
+    "EntityMetadata": {
+      "title": "Artwork Entity Metadata",
+      "description": "Cached data for artists or movements",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "yearsOrPeriod": { "type": "string" },
+        "originOrRegion": { "type": "string" },
+        "significance": { "type": "string" },
+        "detailedDescription": { "type": "string" },
+        "keyCharacteristics": { "type": "array", "items": { "type": "string" } },
+        "historicalImpact": { "type": "string" },
+        "curatorialSummary": { "type": "string" },
+        "famousWorks": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "year": { "type": "string" },
+              "museum": { "type": "string" },
+              "location": { "type": "string" },
+              "imageUrl": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["name", "type", "yearsOrPeriod", "originOrRegion", "significance", "detailedDescription", "keyCharacteristics", "historicalImpact", "curatorialSummary", "famousWorks"]
     }
   },
   "firestore": {
@@ -47,6 +81,22 @@
     "users/{userId}/items/{itemId}": {
       "schema": "ArtItem",
       "description": "The user's personal collection of artworks"
+    },
+    "users/{userId}/bucketlist/{favoriteId}": {
+      "schema": "ArtItem",
+      "description": "The user's bucket list artworks"
+    },
+    "public_items/{userId}/items/{itemId}": {
+      "schema": "ArtItem",
+      "description": "Shared artworks"
+    },
+    "metadata_artists/{artistId}": {
+      "schema": "EntityMetadata",
+      "description": "Cached data about artists"
+    },
+    "metadata_movements/{movementId}": {
+      "schema": "EntityMetadata",
+      "description": "Cached data about movements"
     }
   }
 }

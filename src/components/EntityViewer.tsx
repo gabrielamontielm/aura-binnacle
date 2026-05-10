@@ -1,16 +1,19 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { BookOpen, MapPin, Calendar, ArrowRight, Star } from 'lucide-react';
+import { BookOpen, MapPin, Calendar, ArrowRight, Star, Plus, Check } from 'lucide-react';
+import { ValidatedImage } from './ValidatedImage';
 import { EntityDetails, ArtDetails } from '../services/artService';
 
 interface EntityViewerProps {
   details: EntityDetails;
   relatedArtworks: { id: string, image: string, details: ArtDetails }[];
   onArtworkClick: (id: string) => void;
+  onAddToBucketList: (work: any) => void;
+  bucketListWorks: any[];
   onBack: () => void;
 }
 
-export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, onArtworkClick, onBack }) => {
+export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, onArtworkClick, onAddToBucketList, bucketListWorks, onBack }) => {
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -118,12 +121,29 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                 .map((work, i) => (
                   <div key={i} className="flex items-center justify-between p-4 bg-white/30 border border-dashed border-artistic-ink/10 rounded-xl group hover:border-artistic-accent/30 transition-colors">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-bold tracking-tight">{work.title}</span>
-                      <span className="text-[8px] uppercase tracking-widest opacity-40 mt-1">{work.year}</span>
+                      <span className="text-[10px] font-bold tracking-tight">{work.title} ({work.year})</span>
+                      { (work.museum || work.location) && (
+                        <span className="text-[8px] uppercase tracking-widest opacity-40 mt-1">
+                          {work.museum} {work.museum && work.location ? '•' : ''} {work.location}
+                        </span>
+                      )}
                     </div>
-                    <div className="w-8 h-8 rounded-full border border-artistic-ink/10 flex items-center justify-center opacity-20 group-hover:opacity-100 transition-opacity">
-                      <Star className="w-3 h-3" />
-                    </div>
+                    {work.imageUrl && (
+                      <div className="w-12 h-12 overflow-hidden rounded-lg mr-2">
+                          <ValidatedImage src={work.imageUrl} alt={work.title} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => onAddToBucketList(work)}
+                      disabled={bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year)}
+                      className="w-8 h-8 rounded-full border border-artistic-ink/10 flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity hover:bg-artistic-accent/10 disabled:opacity-30"
+                    >
+                      {bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) ? (
+                        <Check className="w-3 h-3" />
+                      ) : (
+                        <Plus className="w-3 h-3" />
+                      )}
+                    </button>
                   </div>
                 ))}
               {details.famousWorks.filter(work => !relatedArtworks.some(art => 
@@ -148,7 +168,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                     className="group flex flex-col gap-3 p-3 bg-white/40 hover:bg-white/80 rounded-2xl cursor-pointer transition-all border border-artistic-ink/5"
                   >
                     <div className="aspect-[4/3] rounded-xl overflow-hidden bg-artistic-shadow">
-                      <img 
+                      <ValidatedImage 
                         src={art.image} 
                         alt={art.details.title} 
                         className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
