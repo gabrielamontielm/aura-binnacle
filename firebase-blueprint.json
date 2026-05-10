@@ -34,7 +34,7 @@
         "email": { "type": "string" },
         "displayName": { "type": "string" },
         "photoURL": { "type": "string" },
-        "createdAt": { "type": "number" }
+        "lastLogin": { "type": "number" }
       },
       "required": ["uid", "email"]
     }

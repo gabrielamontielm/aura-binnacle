@@ -556,18 +556,39 @@ export default function App() {
                     </div>
                   )}
 
-                  {error && (
-                    <div className="absolute inset-0 bg-red-50/90 flex flex-col items-center justify-center p-8 text-center gap-4">
-                      <Info className="w-8 h-8 text-red-500" />
-                      <p className="text-red-900 font-medium text-xs">{error}</p>
-                      <button 
-                        onClick={reset}
-                        className="px-6 py-2 bg-red-900 text-white rounded-full text-[10px] uppercase font-bold"
-                      >
-                        Try Again
-                      </button>
-                    </div>
-                  )}
+                      {error && (
+                        <div className="absolute inset-0 bg-red-50/90 flex flex-col items-center justify-center p-8 text-center gap-4">
+                          <Info className="w-8 h-8 text-red-500" />
+                          <div className="space-y-2">
+                            <p className="text-red-900 font-bold text-xs">
+                              {error.startsWith("API_LIMIT_REACHED") ? "Neural Credits Depleted" : "Analysis Error"}
+                            </p>
+                            <p className="text-red-800 text-[10px] leading-relaxed">
+                              {error.startsWith("API_LIMIT_REACHED") 
+                                ? "Your Google AI Studio prepayment credits have been exhausted. Please recharge your account to continue scanning." 
+                                : error}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-2 w-full max-w-[180px]">
+                            {error.startsWith("API_LIMIT_REACHED") && (
+                              <a 
+                                href="https://ai.studio/projects" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="px-6 py-2 bg-artistic-ink text-artistic-bg rounded-full text-[10px] uppercase font-bold text-center hover:bg-artistic-accent transition-colors"
+                              >
+                                Manage Billing
+                              </a>
+                            )}
+                            <button 
+                              onClick={reset}
+                              className="px-6 py-2 border border-red-900 text-red-900 rounded-full text-[10px] uppercase font-bold hover:bg-red-900 hover:text-white transition-colors"
+                            >
+                              {error.startsWith("API_LIMIT_REACHED") ? "Close" : "Try Again"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                 </div>
 
                 {/* Aesthetic Accents */}
