@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as heic2anyModule from 'heic2any';
-import { identifyArtwork, ArtDetails } from './services/artService';
+import { identifyArtwork, ArtDetails, EntityDetails } from './services/artService';
 import { KnowledgeGraph } from './components/KnowledgeGraph';
+import { EntityViewer } from './components/EntityViewer';
 import { auth, googleProvider, db, handleFirestoreError, OperationType } from './services/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
@@ -22,11 +23,12 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [details, setDetails] = useState<ArtDetails | null>(null);
+  const [selectedEntity, setSelectedEntity] = useState<EntityDetails | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [view, setView] = useState<'home' | 'galleries'>('home');
+  const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer'>('home');
   const [galleryMode, setGalleryMode] = useState<'grid' | 'graph'>('grid');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -375,7 +377,18 @@ export default function App() {
       </header>
 
       <main className="flex-1 flex overflow-hidden">
-        {view === 'galleries' ? (
+        {view === 'entity-viewer' && selectedEntity ? (
+          <EntityViewer 
+            details={selectedEntity} 
+            relatedArtworks={
+              selectedEntity.type === 'artist' 
+                ? history.filter(h => h.details.artist === selectedEntity.name)
+                : history.filter(h => h.details.movement === selectedEntity.name)
+            }
+            onArtworkClick={findAndLoadFromHistoryId}
+            onBack={() => setView('galleries')} 
+          />
+        ) : view === 'galleries' ? (
           <section className="w-full h-full overflow-y-auto bg-white p-10 md:p-20">
             <div className="max-w-6xl mx-auto">
               <header className="mb-16 flex justify-between items-end">
@@ -414,7 +427,14 @@ export default function App() {
               ) : galleryMode === 'graph' ? (
                 <div className="w-full bg-artistic-shadow/30 rounded-3xl border border-artistic-ink/5 p-4 md:p-8 flex flex-col items-center">
                   <div className="w-full h-[700px] bg-white rounded-3xl shadow-sm border border-artistic-ink/5 relative overflow-hidden">
-                    <KnowledgeGraph items={history} onArtworkClick={findAndLoadFromHistoryId} />
+                    <KnowledgeGraph 
+                      items={history} 
+                      onArtworkClick={findAndLoadFromHistoryId} 
+                      onEntityClick={(details) => {
+                        setSelectedEntity(details);
+                        setView('entity-viewer');
+                      }}
+                    />
                   </div>
                   <p className="mt-8 text-[9px] uppercase tracking-[0.2em] font-bold opacity-30 flex items-center gap-3">
                     <HistoryIcon className="w-3 h-3" />

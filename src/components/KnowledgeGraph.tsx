@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import ForceGraph2D, { ForceGraphMethods } from 'react-force-graph-2d';
-import { ArtDetails, getEntityDetails } from '../services/artService';
-import { Info, X, ExternalLink, Network, Loader2 } from 'lucide-react';
+import { ArtDetails, getEntityDetails, EntityDetails } from '../services/artService';
+import { Info, X, ExternalLink, Network, Loader2, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface HistoryItem {
@@ -32,15 +32,16 @@ interface Link {
 interface KnowledgeGraphProps {
   items: HistoryItem[];
   onArtworkClick: (itemId: string) => void;
+  onEntityClick: (details: EntityDetails) => void;
 }
 
-export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtworkClick }) => {
+export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtworkClick, onEntityClick }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<ForceGraphMethods>();
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [entityDetails, setEntityDetails] = useState<Record<string, string>>({});
+  const [entityDetails, setEntityDetails] = useState<Record<string, EntityDetails>>({});
 
   // Explicit dimension tracking
   useEffect(() => {
@@ -258,19 +259,17 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
                   animate={{ opacity: 1 }}
                 >
                   <p className="text-sm leading-relaxed text-artistic-ink/70 mb-6 italic">
-                    {entityDetails[selectedNode.id] || selectedNode.info}
+                    {entityDetails[selectedNode.id]?.curatorialSummary || selectedNode.info}
                   </p>
                   
-                  {(selectedNode.type === 'artist' || selectedNode.type === 'movement') && (
-                    <a 
-                      href={`https://www.google.com/search?q=${encodeURIComponent(selectedNode.name + ' art ' + selectedNode.type)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-[9px] uppercase font-bold tracking-widest text-artistic-accent hover:opacity-60 transition-opacity mb-8"
+                  {(selectedNode.type === 'artist' || selectedNode.type === 'movement') && entityDetails[selectedNode.id] && (
+                    <button 
+                      onClick={() => onEntityClick(entityDetails[selectedNode.id])}
+                      className="w-full py-4 bg-artistic-ink text-white text-[10px] uppercase font-bold tracking-[0.2em] rounded-xl flex items-center justify-center gap-3 hover:bg-artistic-accent transition-colors shadow-lg shadow-artistic-ink/20 mb-8"
                     >
-                      <Info className="w-3 h-3" />
-                      <span>Learn More Details</span>
-                    </a>
+                      <span>Full Curatorial Report</span>
+                      <BookOpen className="w-3 h-3" />
+                    </button>
                   )}
                 </motion.div>
               )}
