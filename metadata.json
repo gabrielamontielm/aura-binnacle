@@ -1,0 +1,6 @@
+{
+  "name": "AURA - The Art Binnacle",
+  "description": "Identify artwork instantly and explore its history, artist, and significance to create your own binnacle of Art masterpieces.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["image_recognition", "art_history"]
+}

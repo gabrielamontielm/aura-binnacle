@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity validation
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.email is string && data.email.size() <= 256;
+    }
+
+    function isValidArtItem(data) {
+      return data.keys().hasAll(['id', 'image', 'details', 'timestamp', 'userId']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.image is string && data.image.size() <= 5000000 &&
+             data.timestamp is number &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.details is map &&
+             data.details.title is string && data.details.title.size() <= 500 &&
+             data.details.artist is string && data.details.artist.size() <= 500 &&
+             data.details.movement is string && data.details.movement.size() <= 500;
+    }
+
+    // Match blocks
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidUserProfile(incoming()) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'lastLogin']);
+    }
+
+    match /users/{userId}/items/{itemId} {
+      allow list, get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidArtItem(incoming()) && isValidId(itemId);
+      allow update: if isOwner(userId) && isValidArtItem(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['details', 'image']);
+      allow delete: if isOwner(userId);
+    }
+  }
+}

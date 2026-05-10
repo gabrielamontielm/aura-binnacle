@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "ArtItem": {
+      "title": "Art Item",
+      "description": "An artwork saved to the user's knowledge base",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "image": { "type": "string" },
+        "details": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "artist": { "type": "string" },
+            "year": { "type": "string" },
+            "movement": { "type": "string" },
+            "medium": { "type": "string" },
+            "description": { "type": "string" },
+            "historicalContext": { "type": "string" }
+          },
+          "required": ["title", "artist", "year", "movement", "medium", "description", "historicalContext"]
+        },
+        "timestamp": { "type": "number" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "image", "details", "timestamp", "userId"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Basic user information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "users/{userId}/items/{itemId}": {
+      "schema": "ArtItem",
+      "description": "The user's personal collection of artworks"
+    }
+  }
+}

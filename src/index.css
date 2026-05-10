@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-serif: Georgia, "Playfair Display", serif;
+  
+  --color-artistic-bg: #F5F2ED;
+  --color-artistic-ink: #1A1A1A;
+  --color-artistic-accent: #A68F69;
+  --color-artistic-shadow: #E5E0D5;
+}
+
+@layer base {
+  body {
+    @apply bg-artistic-bg text-artistic-ink font-sans antialiased;
+  }
+}
+
+.art-shadow {
+  box-shadow: 30px 30px 0px var(--color-artistic-shadow);
+}
+
+.gallery-frame {
+  @apply border-[12px] border-white shadow-inner;
+}
+
+.vertical-line {
+  @apply absolute -left-8 top-1/2 -translate-y-1/2 h-[80%] w-px bg-artistic-ink/10;
+}

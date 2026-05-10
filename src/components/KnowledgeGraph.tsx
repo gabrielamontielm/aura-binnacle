@@ -1,0 +1,338 @@
+import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
+import ForceGraph2D, { ForceGraphMethods } from 'react-force-graph-2d';
+import { ArtDetails, getEntityDetails } from '../services/artService';
+import { Info, X, ExternalLink, Network, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+
+interface HistoryItem {
+  id: string;
+  image: string;
+  details: ArtDetails;
+  timestamp: number;
+}
+
+interface Node {
+  id: string;
+  name: string;
+  type: 'movement' | 'artist' | 'artwork';
+  val: number;
+  color: string;
+  icon: string;
+  itemId?: string;
+  info?: string;
+  x?: number;
+  y?: number;
+}
+
+interface Link {
+  source: string;
+  target: string;
+}
+
+interface KnowledgeGraphProps {
+  items: HistoryItem[];
+  onArtworkClick: (itemId: string) => void;
+}
+
+export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtworkClick }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const fgRef = useRef<ForceGraphMethods>();
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [entityDetails, setEntityDetails] = useState<Record<string, string>>({});
+
+  // Explicit dimension tracking
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setDimensions({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height
+        });
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // Generate Graph Data
+  const graphData = useMemo(() => {
+    const nodes: Node[] = [];
+    const links: Link[] = [];
+    const movements = new Set<string>();
+    const artists = new Map<string, string>(); // Artist -> Movement
+
+    items.forEach(item => {
+      const m = item.details.movement || 'Unknown Movement';
+      const a = item.details.artist || 'Unknown Artist';
+      
+      movements.add(m);
+      artists.set(a, m);
+    });
+
+    // 1. Add Movement Nodes
+    movements.forEach(m => {
+      nodes.push({
+        id: `mov_${m}`,
+        name: m,
+        type: 'movement',
+        val: 12,
+        color: '#C4A484',
+        icon: '🎨',
+        info: `An artistic movement characterized by specific styles and philosophies during its era.`
+      });
+    });
+
+    // 2. Add Artist Nodes
+    artists.forEach((m, a) => {
+      nodes.push({
+        id: `art_${a}`,
+        name: a,
+        type: 'artist',
+        val: 10,
+        color: '#1A1A1A',
+        icon: '👨‍🎨',
+        info: `A notable creator whose work contributes to the ${m} movement.`
+      });
+      links.push({ source: `mov_${m}`, target: `art_${a}` });
+    });
+
+    // 3. Add Artwork Nodes
+    items.forEach(item => {
+      const a = item.details.artist || 'Unknown Artist';
+      nodes.push({
+        id: `work_${item.id}`,
+        name: item.details.title,
+        type: 'artwork',
+        val: 8,
+        color: '#E5E0D5',
+        icon: '🖼️',
+        itemId: item.id,
+        info: `${item.details.title} (${item.details.year}). ${item.details.description?.substring(0, 100)}...`
+      });
+      links.push({ source: `art_${a}`, target: `work_${item.id}` });
+    });
+
+    return { nodes, links };
+  }, [items]);
+
+  // Handle Node Click
+  const handleNodeClick = useCallback(async (node: any) => {
+    const n = node as Node;
+    
+    setSelectedNode(n);
+
+    // Zoom and center
+    if (fgRef.current) {
+      fgRef.current.centerAt(node.x, node.y, 1000);
+      fgRef.current.zoom(3, 1000);
+    }
+
+    // Fetch more details for artists and movements if not already cached
+    if ((n.type === 'artist' || n.type === 'movement') && !entityDetails[n.id]) {
+      setIsLoadingMore(true);
+      try {
+        const details = await getEntityDetails(n.name, n.type);
+        setEntityDetails(prev => ({
+          ...prev,
+          [n.id]: details
+        }));
+      } catch (err) {
+        console.error("Failed to fetch entity details", err);
+      } finally {
+        setIsLoadingMore(false);
+      }
+    }
+  }, [entityDetails]);
+
+  // Custom Node Rendering
+  const renderNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const label = node.name;
+    const fontSize = 12 / globalScale;
+    const size = node.val;
+    
+    // Draw background circle
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
+    ctx.fillStyle = node.color;
+    ctx.fill();
+    
+    // Draw border
+    ctx.strokeStyle = '#1A1A1A';
+    ctx.lineWidth = 1 / globalScale;
+    ctx.stroke();
+
+    // Draw Icon
+    ctx.font = `${size * 1.2}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(node.icon, node.x, node.y);
+
+    // Draw Label
+    if (globalScale > 1.5) {
+      ctx.font = `${fontSize}px Inter, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = '#1A1A1A';
+      ctx.fillText(label, node.x, node.y + size + 2);
+    }
+  }, []);
+
+  const relatedArtworks = useMemo(() => {
+    if (!selectedNode) return [];
+    if (selectedNode.type === 'artist') {
+      return items.filter(item => item.details.artist === selectedNode.name);
+    }
+    if (selectedNode.type === 'movement') {
+      return items.filter(item => item.details.movement === selectedNode.name);
+    }
+    return [];
+  }, [selectedNode, items]);
+
+  return (
+    <div ref={containerRef} className="w-full h-full relative overflow-hidden">
+      {items.length > 0 ? (
+        <ForceGraph2D
+          ref={fgRef}
+          width={dimensions.width}
+          height={dimensions.height}
+          graphData={graphData}
+          nodeCanvasObject={renderNode}
+          nodePointerAreaPaint={(node: any, color, ctx) => {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI, false);
+            ctx.fill();
+          }}
+          linkColor={() => 'rgba(26, 26, 26, 0.1)'}
+          onNodeClick={handleNodeClick}
+          cooldownTicks={100}
+        />
+      ) : (
+        <div className="w-full h-full flex flex-col items-center justify-center opacity-30">
+          <Network className="w-8 h-8 mb-4" />
+          <p className="text-[10px] uppercase tracking-widest font-bold">No Neural Connections Detected</p>
+          <p className="text-[10px] uppercase tracking-widest font-bold mt-2">Scan artworks to populate the graph</p>
+        </div>
+      )}
+
+      {/* Info Panel Overlay */}
+      <AnimatePresence>
+        {selectedNode && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="absolute top-6 right-6 w-80 bg-white/95 shadow-2xl border border-artistic-ink/10 rounded-2xl p-6 z-10 backdrop-blur-md max-h-[85vh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-start mb-6 sticky top-0 bg-white/95 pt-2 pb-2 -mt-2 -mx-2 px-2 z-20 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{selectedNode.icon}</span>
+                <span className="uppercase text-[9px] tracking-[0.3em] font-bold text-artistic-accent">
+                  {selectedNode.type}
+                </span>
+              </div>
+              <button 
+                onClick={() => setSelectedNode(null)}
+                className="p-1 hover:bg-artistic-shadow rounded-full transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <h3 className="text-2xl font-serif italic mb-4 tracking-tight leading-tight">{selectedNode.name}</h3>
+            
+            <div className="min-h-[100px] flex flex-col justify-center">
+              {isLoadingMore ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-artistic-accent mb-2" />
+                  <span className="text-[8px] uppercase tracking-widest font-bold opacity-40">Consulting Archive...</span>
+                </div>
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <p className="text-sm leading-relaxed text-artistic-ink/70 mb-6 italic">
+                    {entityDetails[selectedNode.id] || selectedNode.info}
+                  </p>
+                  
+                  {(selectedNode.type === 'artist' || selectedNode.type === 'movement') && (
+                    <a 
+                      href={`https://www.google.com/search?q=${encodeURIComponent(selectedNode.name + ' art ' + selectedNode.type)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-[9px] uppercase font-bold tracking-widest text-artistic-accent hover:opacity-60 transition-opacity mb-8"
+                    >
+                      <Info className="w-3 h-3" />
+                      <span>Learn More Details</span>
+                    </a>
+                  )}
+                </motion.div>
+              )}
+            </div>
+
+            {relatedArtworks.length > 0 && (
+              <div className="mb-8">
+                <h4 className="text-[9px] uppercase tracking-widest font-bold text-artistic-ink/40 mb-4 px-1">
+                  In Your Collection ({relatedArtworks.length})
+                </h4>
+                <div className="space-y-4">
+                  {relatedArtworks.map(art => (
+                    <div 
+                      key={art.id}
+                      onClick={() => onArtworkClick(art.id)}
+                      className="group flex items-center gap-4 p-2 hover:bg-artistic-shadow rounded-xl cursor-pointer transition-all border border-transparent hover:border-artistic-ink/5"
+                    >
+                      <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-artistic-shadow">
+                        <img 
+                          src={art.image} 
+                          alt={art.details.title} 
+                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold truncate leading-tight">{art.details.title}</p>
+                        <p className="text-[9px] opacity-40 uppercase tracking-widest mt-0.5">{art.details.year}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedNode.type === 'artwork' && (
+              <button 
+                onClick={() => onArtworkClick(selectedNode.itemId!)}
+                className="w-full py-4 bg-artistic-ink text-white text-[10px] uppercase font-bold tracking-[0.2em] rounded-xl flex items-center justify-center gap-3 hover:bg-artistic-accent transition-colors shadow-lg shadow-artistic-ink/20"
+              >
+                <span>View Details</span>
+                <ExternalLink className="w-3 h-3" />
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="absolute bottom-6 left-6 flex flex-col gap-3 p-5 bg-white/70 backdrop-blur-md rounded-2xl border border-artistic-ink/5 shadow-sm pointer-events-none">
+          <div className="flex items-center gap-3">
+              <span className="text-lg">🎨</span>
+              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Styles / Movements</span>
+          </div>
+          <div className="flex items-center gap-3">
+              <span className="text-lg">👨‍🎨</span>
+              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Painters</span>
+          </div>
+          <div className="flex items-center gap-3">
+              <span className="text-lg">🖼️</span>
+              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Paintings</span>
+          </div>
+      </div>
+    </div>
+  );
+};
+
