@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import ForceGraph2D, { ForceGraphMethods } from 'react-force-graph-2d';
 import { ArtDetails, getEntityDetails, EntityDetails } from '../services/artService';
-import { Info, X, ExternalLink, Network, Loader2, BookOpen } from 'lucide-react';
+import { Info, X, ExternalLink, Network, Loader2, BookOpen, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface HistoryItem {
@@ -198,6 +198,26 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
     return { nodes, links };
   }, [items]);
 
+  // Fetch Entity Logic
+  const fetchEntity = useCallback(async (node: Node, forceRefresh = false) => {
+    if (!(node.type === 'artist' || node.type === 'movement' || node.type === 'museum' || node.type === 'type')) return;
+
+    if (!forceRefresh && entityDetails[node.id]) return;
+
+    setIsLoadingMore(true);
+    try {
+      const details = await getEntityDetails(node.name, node.type as 'artist' | 'movement' | 'museum' | 'type', forceRefresh);
+      setEntityDetails(prev => ({
+        ...prev,
+        [node.id]: details
+      }));
+    } catch (err) {
+      console.error("Failed to fetch entity details", err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [entityDetails]);
+
   // Handle Node Click
   const handleNodeClick = useCallback(async (node: any) => {
     const n = node as Node;
@@ -210,22 +230,8 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
       fgRef.current.zoom(3, 1000);
     }
 
-    // Fetch more details for artists and movements if not already cached
-    if ((n.type === 'artist' || n.type === 'movement') && !entityDetails[n.id]) {
-      setIsLoadingMore(true);
-      try {
-        const details = await getEntityDetails(n.name, n.type);
-        setEntityDetails(prev => ({
-          ...prev,
-          [n.id]: details
-        }));
-      } catch (err) {
-        console.error("Failed to fetch entity details", err);
-      } finally {
-        setIsLoadingMore(false);
-      }
-    }
-  }, [entityDetails]);
+    await fetchEntity(n);
+  }, [fetchEntity]);
 
   // Custom Node Rendering
   const renderNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
@@ -328,12 +334,21 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
                   {selectedNode.type}
                 </span>
               </div>
-              <button 
-                onClick={() => setSelectedNode(null)}
-                className="p-1 hover:bg-artistic-shadow rounded-full transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => fetchEntity(selectedNode, true)}
+                  className="p-1 hover:bg-artistic-shadow rounded-full transition-colors"
+                  title="Refresh Data"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => setSelectedNode(null)}
+                  className="p-1 hover:bg-artistic-shadow rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <h3 className="text-2xl font-serif italic mb-4 tracking-tight leading-tight">{selectedNode.name}</h3>
@@ -353,7 +368,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
                     {entityDetails[selectedNode.id]?.curatorialSummary || selectedNode.info}
                   </p>
                   
-                  {(selectedNode.type === 'artist' || selectedNode.type === 'movement') && entityDetails[selectedNode.id] && (
+                  {(selectedNode.type === 'artist' || selectedNode.type === 'movement' || selectedNode.type === 'museum' || selectedNode.type === 'type') && entityDetails[selectedNode.id] && (
                     <button 
                       onClick={() => onEntityClick(entityDetails[selectedNode.id])}
                       className="w-full py-4 bg-artistic-ink text-white text-[10px] uppercase font-bold tracking-[0.2em] rounded-xl flex items-center justify-center gap-3 hover:bg-artistic-accent transition-colors shadow-lg shadow-artistic-ink/20 mb-8"

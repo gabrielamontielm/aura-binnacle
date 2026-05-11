@@ -5,12 +5,12 @@ test.describe('Knowledge Graph E2E', () => {
     await page.goto('/');
   });
 
-  test('should navigate to knowledge base and toggle graph view', async ({ page }) => {
-    // Navigate to Knowledge Base
-    await page.click('button:has-text("Knowledge Base")');
+  test('should navigate to Gallery and toggle graph view', async ({ page }) => {
+    // Navigate to Gallery
+    await page.click('button:has-text("Gallery")');
     
-    // Check if we are on the Knowledge Base view
-    await expect(page.locator('h2')).toContainText('Your Knowledge Base');
+    // Check if we are on the Gallery view (part of the title check)
+    await expect(page.locator('h2')).toContainText('Gallery');
     
     // Toggle to Graph mode
     // We target the button with the Network icon (which we can find by its class or title if we had one)
@@ -26,7 +26,7 @@ test.describe('Knowledge Graph E2E', () => {
   test('should display nodes when history is present', async ({ page }) => {
      // This test would ideally mock the localStorage or perform an upload
      // For now, it validates the structure of the graph view
-     await page.click('button:has-text("Knowledge Base")');
+     await page.click('button:has-text("Gallery")');
      const graphButton = page.locator('button').filter({ has: page.locator('svg.lucide-network') });
      await graphButton.click();
      

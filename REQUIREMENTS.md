@@ -19,10 +19,11 @@ AURA is a mobile-first web application designed for art enthusiasts to scan, ide
 ### 2. Personal Gallery & Bucket List
 - **Private Collection:** Users can save identified artworks to their personal gallery.
 - **Planning:** A "Bucket List" feature allows users to save artworks they wish to see in person.
+- **Guest Support:** Basic functionality available for non-signed-in users using local storage.
 - **Organization:** Artworks are stored with full metadata and AI-generated insights.
 
 ### 3. Knowledge Graph
-- **Relational Visualization:** A 3D/2D force-directed graph showing connections.
+- **Relational Visualization:** A 2D force-directed graph showing connections.
 - **Entities:**
     - **Movements:** Art styles (e.g., Impressionism).
     - **Artists:** The creators of the works.

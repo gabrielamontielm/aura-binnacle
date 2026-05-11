@@ -143,7 +143,7 @@ export async function identifyArtworkFromUrl(imageUrl: string): Promise<ArtDetai
  */
 export interface EntityDetails {
   name: string;
-  type: 'artist' | 'movement';
+  type: 'artist' | 'movement' | 'museum' | 'type';
   yearsOrPeriod: string;
   originOrRegion: string;
   significance: string;
@@ -155,23 +155,32 @@ export interface EntityDetails {
 }
 
 /**
- * Fetches comprehensive details for an artist or movement, with caching.
- * @param name The name of the artist or movement.
- * @param type The type of entity ('artist' or 'movement').
+ * Fetches comprehensive details for an artist, movement, museum, or type, with caching.
+ * @param name The name of the artist, movement, museum, or type.
+ * @param type The type of entity ('artist' | 'movement' | 'museum' | 'type').
+ * @param forceRefresh If true, bypasses cache.
  * @returns A promise resolving to entity details.
  */
-export async function getEntityDetails(name: string, type: 'artist' | 'movement'): Promise<EntityDetails> {
-  const collectionName = type === 'artist' ? 'metadata_artists' : 'metadata_movements';
+export async function getEntityDetails(name: string, type: 'artist' | 'movement' | 'museum' | 'type', forceRefresh: boolean = false): Promise<EntityDetails> {
+  const collectionName = type === 'artist' 
+    ? 'metadata_artists' 
+    : type === 'movement' 
+        ? 'metadata_movements'
+        : type === 'museum'
+            ? 'metadata_museums'
+            : 'metadata_types';
   const id = sanitizeId(name);
   const docRef = doc(db, collectionName, id);
 
-  try {
-    const cachedDoc = await getDoc(docRef);
-    if (cachedDoc.exists()) {
-      return cachedDoc.data() as EntityDetails;
+  if (!forceRefresh) {
+    try {
+      const cachedDoc = await getDoc(docRef);
+      if (cachedDoc.exists()) {
+        return cachedDoc.data() as EntityDetails;
+      }
+    } catch (error) {
+      console.error("Cache Read Error:", error);
     }
-  } catch (error) {
-    console.error("Cache Read Error:", error);
   }
 
   try {
@@ -185,14 +194,14 @@ export async function getEntityDetails(name: string, type: 'artist' | 'movement'
               Format the response as JSON with the following fields:
               - name: The full name of the ${type}
               - type: "${type}"
-              - yearsOrPeriod: Life spans for artists or active period for movements
-              - originOrRegion: Birthplace/National origin or geographical center of movement
+              - yearsOrPeriod: Life spans for artists, active period for movements or founding date for museums
+              - originOrRegion: Birthplace/National origin or geographical center of movement or location of museum
               - significance: Why they are important in art history (1-2 sentences)
-              - detailedDescription: A deep dive into their style, philosophy, and evolution (3-4 paragraphs)
-              - keyCharacteristics: A list of 3-4 defining traits or styles
+              - detailedDescription: A deep dive into their style, philosophy, evolution, or history (3-4 paragraphs)
+              - keyCharacteristics: A list of 3-4 defining traits or styles or collections
               - historicalImpact: Their long-term legacy (2-3 sentences)
               - curatorialSummary: An engaging short summary (around 200 characters) for a quick overview
-              - famousWorks: A list of 3-5 most famous artworks by this artist or associated with this movement. For each work include title, year, museum, location if known, and a URL string for an image if available.`,
+              - famousWorks: A list of 3-5 most famous artworks associated. For each work include title, year, museum, location if known, and a URL string for an image. Validate that the URL is valid and returns a image, the file is found and is a valid image in JPG or PNG format.`,
             },
           ],
         },
@@ -238,7 +247,11 @@ export async function getEntityDetails(name: string, type: 'artist' | 'movement'
     const data = JSON.parse(response.text);
 
     // Save to cache
-    await setDoc(docRef, data);
+    try {
+      await setDoc(docRef, data);
+    } catch (e) {
+      console.warn("Failed to cache entity details, proceeding without caching.", e);
+    }
 
     return data;
   } catch (error: any) {

@@ -89,6 +89,11 @@ service cloud.firestore {
       }
     }
 
+    match /public_profiles/{userId} {
+      allow get: if true;
+      allow write: if isOwner(userId) && isValidId(userId);
+    }
+
     match /public_items/{userId}/items/{itemId} {
       allow list: if true;
       allow get: if true;
@@ -105,11 +110,19 @@ service cloud.firestore {
 
     // Collections: Metadata Cache
     match /metadata_artists/{artistId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isSignedIn();
     }
     match /metadata_movements/{movementId} {
-      allow read: if isSignedIn();
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+    match /metadata_museums/{museumId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+    match /metadata_types/{typeId} {
+      allow read: if true;
       allow write: if isSignedIn();
     }
   }

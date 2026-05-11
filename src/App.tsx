@@ -35,10 +35,34 @@ function App() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isGalleryPublic, setIsGalleryPublic] = useState(false);
   const [isBucketListPublic, setIsBucketListPublic] = useState(false);
+  const [sharedGalleryOwnerName, setSharedGalleryOwnerName] = useState<string | null>(null);
   const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist'>('home');
   const [galleryMode, setGalleryMode] = useState<'grid' | 'graph'>('grid');
   const [bucketList, setBucketList] = useState<HistoryItem[]>([]);
-  const [isViewOnly, setIsViewOnly] = useState(false);
+  const [sharedUid, setSharedUid] = useState<string | null>(new URLSearchParams(window.location.search).get('sharedProfile'));
+  const [isViewOnly, setIsViewOnly] = useState(new URLSearchParams(window.location.search).has('sharedProfile') || new URLSearchParams(window.location.search).has('sharedGallery') || new URLSearchParams(window.location.search).has('sharedBucketList'));
+  
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedProfileUid = params.get('sharedProfile');
+    const oldSharedGallery = params.get('sharedGallery');
+    const oldSharedBucketList = params.get('sharedBucketList');
+    
+    if (user) {
+      if (sharedProfileUid) {
+        setIsViewOnly(user.uid !== sharedProfileUid);
+      } else if (oldSharedGallery) {
+        setIsViewOnly(user.uid !== oldSharedGallery);
+      } else if (oldSharedBucketList) {
+        setIsViewOnly(user.uid !== oldSharedBucketList);
+      } else {
+        setIsViewOnly(false);
+      }
+    } else {
+      // If guest, only view only if params are present
+      setIsViewOnly(!!(sharedProfileUid || oldSharedGallery || oldSharedBucketList));
+    }
+  }, [user]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auth Listener
@@ -62,6 +86,11 @@ function App() {
         setIsGalleryPublic(userData.isGalleryPublic || false);
         setIsBucketListPublic(userData.isBucketListPublic || false);
         
+        await setDoc(doc(db, 'public_profiles', currentUser.uid), {
+          displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          email: currentUser.email
+        }, { merge: true });
+        
         await setDoc(userDoc, {
           ...userData,
           uid: currentUser.uid,
@@ -70,23 +99,38 @@ function App() {
           photoURL: currentUser.photoURL,
           lastLogin: Date.now()
         }, { merge: true });
-        
-        fetchUserHistory(currentUser.uid);
-        fetchUserBucketList(currentUser.uid);
       } else {
-        // Fallback to local history if signed out
-        const saved = localStorage.getItem('art_curator_history');
-        if (saved) {
-          try {
-            setHistory(JSON.parse(saved));
-          } catch (e) {
-            setHistory([]);
+        // Fallback to local storage if signed out AND not viewing shared profile
+        if (!isViewOnly) {
+          const saved = localStorage.getItem('art_curator_history');
+          if (saved) {
+            try {
+              setHistory(JSON.parse(saved));
+            } catch (e) {
+              setHistory([]);
+            }
+          }
+          const savedBucket = localStorage.getItem('art_curator_bucketlist');
+          if (savedBucket) {
+            try {
+              setBucketList(JSON.parse(savedBucket));
+            } catch (e) {
+              setBucketList([]);
+            }
           }
         }
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [isViewOnly]);
+
+  // Data Fetching Effect for User Data
+  useEffect(() => {
+    if (user && !isViewOnly) {
+      fetchUserHistory(user.uid);
+      fetchUserBucketList(user.uid);
+    }
+  }, [user, isViewOnly]);
 
   const fetchUserHistory = async (uid: string) => {
     const path = `users/${uid}/items`;
@@ -95,7 +139,7 @@ function App() {
       const querySnapshot = await getDocs(q);
       const items: HistoryItem[] = [];
       querySnapshot.forEach((doc) => {
-        items.push(doc.data() as HistoryItem);
+        items.push({ id: doc.id, ...doc.data() } as HistoryItem);
       });
       // Sort by timestamp descending
       setHistory(items.sort((a, b) => b.timestamp - a.timestamp));
@@ -111,7 +155,7 @@ function App() {
       const querySnapshot = await getDocs(q);
       const items: HistoryItem[] = [];
       querySnapshot.forEach((doc) => {
-        items.push(doc.data() as HistoryItem);
+        items.push({ id: doc.id, ...doc.data() } as HistoryItem);
       });
       // Sort by timestamp descending
       setBucketList(items.sort((a, b) => b.timestamp - a.timestamp));
@@ -133,6 +177,7 @@ function App() {
     try {
       await signOut(auth);
       setHistory([]);
+      setBucketList([]);
       setView('home');
     } catch (err) {
       console.error("Logout failed", err);
@@ -278,6 +323,8 @@ function App() {
       };
       
       setHistory(prev => {
+        const isDuplicate = prev.some(item => item.details.title === newItem.details.title && item.details.year === newItem.details.year);
+        if (isDuplicate) return prev;
         const updated = [newItem, ...prev].slice(0, 50);
         return updated;
       });
@@ -290,6 +337,15 @@ function App() {
             ...newItem,
             userId: user.uid
           });
+          
+          // Also update public gallery if sharing is ON
+          if (isGalleryPublic) {
+            const publicPath = `public_items/${user.uid}/items`;
+            await setDoc(doc(db, publicPath, newItem.id), {
+              ...newItem,
+              userId: user.uid
+            });
+          }
         } catch (err) {
           handleFirestoreError(err, OperationType.WRITE, path);
         }
@@ -314,18 +370,58 @@ function App() {
     const oldSharedGallery = params.get('sharedGallery');
     const oldSharedBucketList = params.get('sharedBucketList');
     
-    if (sharedProfileUid) {
-        fetchPublicGallery(sharedProfileUid);
-        fetchPublicBucketList(sharedProfileUid);
-        setIsViewOnly(true);
-    } else if (oldSharedGallery) {
-        fetchPublicGallery(oldSharedGallery);
-        setIsViewOnly(true);
-    } else if (oldSharedBucketList) {
-        fetchPublicBucketList(oldSharedBucketList);
-        setIsViewOnly(true);
-    }
-  }, []);
+    const loadShared = async () => {
+        // Only load shared if we are actually in view only mode for THIS profile
+        // This handles cases where owner opens their own shared link
+        const currentIsViewOnly = user ? (
+            sharedProfileUid ? user.uid !== sharedProfileUid :
+            oldSharedGallery ? user.uid !== oldSharedGallery :
+            oldSharedBucketList ? user.uid !== oldSharedBucketList :
+            false
+        ) : !!(sharedProfileUid || oldSharedGallery || oldSharedBucketList);
+
+        if (!currentIsViewOnly) return;
+
+        if (sharedProfileUid) {
+            setIsLoading(true);
+            
+            // Try to fetch profile from public_profiles
+            try {
+                const userDoc = await getDoc(doc(db, 'public_profiles', sharedProfileUid));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    const name = userData.displayName || userData.email?.split('@')[0] || 'User';
+                    setSharedGalleryOwnerName(name);
+                } else {
+                    setSharedGalleryOwnerName('User');
+                }
+            } catch (err) {
+                console.error("Error fetching user profile:", err);
+                setSharedGalleryOwnerName('User');
+            }
+            
+            try {
+              await Promise.all([
+                  fetchPublicGallery(sharedProfileUid, false), 
+                  fetchPublicBucketList(sharedProfileUid, false)
+              ]);
+            } catch (err) {
+              console.error("Error fetching shared data:", err);
+            } finally {
+              setIsLoading(false);
+            }
+            setView('galleries');
+        } else if (oldSharedGallery) {
+            fetchPublicGallery(oldSharedGallery);
+            setView('galleries');
+        } else if (oldSharedBucketList) {
+            fetchPublicBucketList(oldSharedBucketList);
+            setView('bucketlist');
+        }
+    };
+
+    loadShared();
+  }, [user]);
 
   const deleteHistoryItem = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -335,6 +431,9 @@ function App() {
       const path = `users/${user.uid}/items`;
       try {
         await deleteDoc(doc(db, path, id));
+        if (isGalleryPublic) {
+          await deleteDoc(doc(db, `public_items/${user.uid}/items`, id));
+        }
       } catch (err) {
         handleFirestoreError(err, OperationType.DELETE, path);
       }
@@ -347,6 +446,20 @@ function App() {
     }
   };
 
+  // Reactive re-fetch for shared views
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedProfileUid = params.get('sharedProfile');
+    
+    if (isViewOnly && sharedProfileUid) {
+      if (view === 'bucketlist') {
+        fetchPublicBucketList(sharedProfileUid, false);
+      } else if (view === 'galleries') {
+        fetchPublicGallery(sharedProfileUid, false);
+      }
+    }
+  }, [view, isViewOnly]);
+  
   const deleteBucketListItem = async (itemId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setBucketList(prev => prev.filter(item => item.id !== itemId));
@@ -355,39 +468,51 @@ function App() {
       const path = `users/${user.uid}/bucketlist`;
       try {
         await deleteDoc(doc(db, path, itemId));
+        if (isBucketListPublic) {
+          await deleteDoc(doc(db, `public_bucketlist/${user.uid}/items`, itemId));
+        }
       } catch (err) {
         handleFirestoreError(err, OperationType.DELETE, path);
       }
     }
   };
 
-  const fetchPublicBucketList = async (uid: string) => {
-      setIsLoading(true);
+  const fetchPublicBucketList = async (uid: string, autoLoading = true) => {
+      if (autoLoading) setIsLoading(true);
       const path = `public_bucketlist/${uid}/items`;
       try {
+        console.log("DEBUG: Fetching bucket list from:", path);
         const q = query(collection(db, path));
         const querySnapshot = await getDocs(q);
+        console.log("DEBUG: Snapshot size:", querySnapshot.size);
         const items: HistoryItem[] = [];
         querySnapshot.forEach((doc) => {
-          items.push(doc.data() as HistoryItem);
+          items.push({ id: doc.id, ...doc.data() } as HistoryItem);
         });
         setBucketList(items.sort((a, b) => b.timestamp - a.timestamp));
-        setView('bucketlist');
       } catch (err) {
+        console.error("DEBUG: Failed to load shared bucket list:", err);
         setError("Failed to load shared bucket list.");
       } finally {
-          setIsLoading(false);
+        if (autoLoading) setIsLoading(false);
       }
   };
 
   const toggleBucketListPublic = async () => {
     if (!user) return;
+    setIsLoading(true);
     const nextPublic = !isBucketListPublic;
     setIsBucketListPublic(nextPublic);
     
     // Update user doc
     try {
-        await setDoc(doc(db, 'users', user.uid), { isBucketListPublic: nextPublic }, { merge: true });
+        await Promise.all([
+          setDoc(doc(db, 'users', user.uid), { isBucketListPublic: nextPublic }, { merge: true }),
+          setDoc(doc(db, 'public_profiles', user.uid), {
+            displayName: user.displayName || user.email?.split('@')[0] || 'User',
+            email: user.email
+          }, { merge: true })
+        ]);
         
         // Sync items
         if (nextPublic) {
@@ -410,17 +535,26 @@ function App() {
         handleFirestoreError(err, OperationType.WRITE, `public_bucketlist/${user.uid}/items`);
         setIsBucketListPublic(!nextPublic);
         setError("Failed to update bucket list sharing settings.");
+    } finally {
+        setIsLoading(false);
     }
   };
 
   const toggleGalleryPublic = async () => {
     if (!user) return;
+    setIsLoading(true);
     const nextPublic = !isGalleryPublic;
     setIsGalleryPublic(nextPublic);
     
     // Update user doc
     try {
-        await setDoc(doc(db, 'users', user.uid), { isGalleryPublic: nextPublic }, { merge: true });
+        await Promise.all([
+          setDoc(doc(db, 'users', user.uid), { isGalleryPublic: nextPublic }, { merge: true }),
+          setDoc(doc(db, 'public_profiles', user.uid), {
+            displayName: user.displayName || user.email?.split('@')[0] || 'User',
+            email: user.email
+          }, { merge: true })
+        ]);
         
         // Sync items
         if (nextPublic) {
@@ -428,7 +562,6 @@ function App() {
           for (const item of history) {
               const docId = item.id || (Date.now().toString() + Math.random().toString(36).substring(2));
               const docRef = doc(db, `public_items/${user.uid}/items`, docId);
-              console.log("Attempting to save item to public_items with ID:", docId, "item id:", item.id);
               await setDoc(docRef, { ...item, id: docId, userId: user.uid });
           }
         } else {
@@ -444,25 +577,26 @@ function App() {
         handleFirestoreError(err, OperationType.WRITE, `public_items/${user.uid}/items`);
         setIsGalleryPublic(!nextPublic);
         setError("Failed to update sharing settings.");
+    } finally {
+        setIsLoading(false);
     }
   };
 
-  const fetchPublicGallery = async (uid: string) => {
-      setIsLoading(true);
+  const fetchPublicGallery = async (uid: string, autoLoading = true) => {
+      if (autoLoading) setIsLoading(true);
       const path = `public_items/${uid}/items`;
       try {
         const q = query(collection(db, path));
         const querySnapshot = await getDocs(q);
         const items: HistoryItem[] = [];
         querySnapshot.forEach((doc) => {
-          items.push(doc.data() as HistoryItem);
+          items.push({ id: doc.id, ...doc.data() } as HistoryItem);
         });
         setHistory(items.sort((a, b) => b.timestamp - a.timestamp));
-        setView('galleries');
       } catch (err) {
         setError("Failed to load shared gallery.");
       } finally {
-          setIsLoading(false);
+        if (autoLoading) setIsLoading(false);
       }
   };
 
@@ -525,7 +659,7 @@ function App() {
             onClick={() => setView('galleries')} 
             className={`${view === 'galleries' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
           >
-            Knowledge Base
+            Gallery
           </button>
           <button 
             onClick={() => setView('bucketlist')} 
@@ -556,7 +690,7 @@ function App() {
               className="flex items-center gap-3 px-4 py-2 bg-artistic-ink text-artistic-bg rounded-full text-[9px] uppercase font-bold tracking-widest hover:bg-artistic-accent transition-all"
             >
               <LogIn className="w-3 h-3" />
-              <span>Sing In</span>
+              <span>Sign In</span>
             </button>
           )}
 
@@ -590,10 +724,6 @@ function App() {
             bucketListWorks={bucketList}
             onArtworkClick={findAndLoadFromHistoryId}
             onAddToBucketList={async (work) => {
-              if (!user) {
-                setError("Please sign in to save bucket list items.");
-                return;
-              }
               // Avoid duplicates
               if (bucketList.some(item => item.details.title === work.title && item.details.year === work.year)) {
                 return;
@@ -616,11 +746,31 @@ function App() {
                 details: favoriteDetails,
                 timestamp: Date.now()
               };
+
+              if (!user) {
+                // Add to local storage for guests
+                setBucketList(prev => {
+                  const updated = [newItem, ...prev].slice(0, 50);
+                  localStorage.setItem('art_curator_bucketlist', JSON.stringify(updated));
+                  return updated;
+                });
+                return;
+              }
+
               try {
                 await setDoc(doc(db, `users/${user.uid}/bucketlist`, newItem.id), {
                     ...newItem,
                     userId: user.uid
                 });
+                
+                // Also update public bucket list if sharing is ON
+                if (isBucketListPublic) {
+                  await setDoc(doc(db, `public_bucketlist/${user.uid}/items`, newItem.id), {
+                    ...newItem,
+                    userId: user.uid
+                  });
+                }
+                
                 setBucketList(prev => [newItem, ...prev].slice(0, 50));
               } catch (err) {
                 handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/bucketlist`);
@@ -634,8 +784,12 @@ function App() {
               <header className="mb-16">
                 <div className="flex justify-between items-end">
                   <div>
-                    <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-4">Your Curated Selections</span>
-                    <h2 className="text-5xl font-serif tracking-tighter italic">Bucket List</h2>
+                    <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-4">Curated Selections</span>
+                    <h2 className="text-5xl font-serif tracking-tighter italic">
+                      {isViewOnly 
+                        ? (sharedGalleryOwnerName ? `${sharedGalleryOwnerName}'s` : 'User\'s') 
+                        : (user ? (user.displayName || user.email?.split('@')[0] || 'My') : 'Guest')} Bucket List
+                    </h2>
                   </div>
                   {user && (
                     <div className="flex flex-col items-end gap-2">
@@ -689,12 +843,14 @@ function App() {
                         <div className="aspect-[4/5] bg-artistic-shadow p-4 mb-6 art-shadow transition-all group-hover:shadow-[40px_40px_0px_#E5E0D5]">
                           <div className="w-full h-full bg-gray-100 gallery-frame overflow-hidden relative">
                             <ValidatedImage src={item.image} alt={item.details.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
-                            <button 
-                              onClick={(e) => deleteBucketListItem(item.id, e)}
-                              className="absolute top-4 right-4 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!isViewOnly && (
+                              <button 
+                                onClick={(e) => deleteBucketListItem(item.id, e)}
+                                className="absolute top-4 right-4 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </div>
                         <h3 className="font-serif text-xl italic mb-1 group-hover:text-artistic-accent transition-colors">{item.details.title}</h3>
@@ -716,7 +872,11 @@ function App() {
               <header className="mb-16 flex justify-between items-end">
                 <div>
                   <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-4">Curated Collection</span>
-                  <h2 className="text-5xl font-serif tracking-tighter italic">Your Knowledge Base</h2>
+                  <h2 className="text-5xl font-serif tracking-tighter italic">
+                    {isViewOnly 
+                      ? (sharedGalleryOwnerName ? `${sharedGalleryOwnerName}'s` : 'User\'s') 
+                      : (user ? (user.displayName || user.email?.split('@')[0] || 'My') : 'Guest')} Gallery
+                  </h2>
                 </div>
                 <div className="flex gap-8 items-center">
                   {user && (
@@ -809,12 +969,14 @@ function App() {
                         <div className="aspect-[4/5] bg-artistic-shadow p-4 mb-6 art-shadow transition-all group-hover:shadow-[40px_40px_0px_#E5E0D5]">
                           <div className="w-full h-full bg-gray-100 gallery-frame overflow-hidden relative">
                             <ValidatedImage src={item.image} alt={item.details.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
-                            <button 
-                              onClick={(e) => deleteHistoryItem(item.id, e)}
-                              className="absolute top-4 right-4 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!isViewOnly && (
+                              <button 
+                                onClick={(e) => deleteHistoryItem(item.id, e)}
+                                className="absolute top-4 right-4 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </div>
                         <h3 className="font-serif text-xl italic mb-1 group-hover:text-artistic-accent transition-colors">{item.details.title}</h3>
@@ -858,7 +1020,7 @@ function App() {
                    <div className="w-16 h-16 border border-artistic-ink rounded-full flex items-center justify-center group-hover:bg-artistic-ink group-hover:text-artistic-bg transition-all mb-2">
                      <HistoryIcon className="w-6 h-6" />
                    </div>
-                   <span className="text-[10px] uppercase font-bold tracking-widest opacity-40">Your Knowledge Base</span>
+                   <span className="text-[10px] uppercase font-bold tracking-widest opacity-40">Your Gallery</span>
                 </div>
               </div>
               

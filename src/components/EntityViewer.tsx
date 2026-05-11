@@ -1,8 +1,19 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { BookOpen, MapPin, Calendar, ArrowRight, Star, Plus, Check } from 'lucide-react';
+import { BookOpen, MapPin, Calendar, ArrowRight, Star, Plus, Check, Search, Globe, Palette, Box, Building, Brush } from 'lucide-react';
 import { ValidatedImage } from './ValidatedImage';
 import { EntityDetails, ArtDetails } from '../services/artService';
+
+const getTypeIcon = (type: string) => {
+  const normalizedType = type.toLowerCase();
+  
+  if (normalizedType.includes('sculpt')) return Box;
+  if (normalizedType.includes('paint')) return Palette;
+  if (normalizedType.includes('architect')) return Building;
+  if (normalizedType.includes('brush') || normalizedType.includes('draw') || normalizedType.includes('sketch')) return Brush;
+  
+  return BookOpen; // Default icon
+};
 
 interface EntityViewerProps {
   details: EntityDetails;
@@ -28,7 +39,11 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
             animate={{ opacity: 1, y: 0 }}
             className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-8"
           >
-            Curatorial Report: {details.type === 'artist' ? 'The Master' : 'The Movement'}
+            Curatorial Report: {
+              details.type === 'artist' ? 'The Master' : 
+              details.type === 'movement' ? 'The Movement' : 
+              details.type === 'museum' ? 'The Institution' : 'The Category'
+            }
           </motion.span>
           
           <motion.h1 
@@ -128,9 +143,30 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                         </span>
                       )}
                     </div>
-                    {work.imageUrl && (
+                    {work.imageUrl ? (
                       <div className="w-12 h-12 overflow-hidden rounded-lg mr-2">
                           <ValidatedImage src={work.imageUrl} alt={work.title} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 mr-2">
+                        <a 
+                          href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(work.title + ' ' + (details.name || ''))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-10 h-10 flex items-center justify-center bg-artistic-shadow/50 rounded-lg hover:bg-artistic-shadow transition-colors"
+                          title="Search on Google Images"
+                        >
+                          <Search className="w-4 h-4 text-artistic-ink/40" />
+                        </a>
+                        <a 
+                          href={`https://www.wikiart.org/en/search/${encodeURIComponent(work.title + ' ' + (details.name || ''))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-10 h-10 flex items-center justify-center bg-artistic-shadow/50 rounded-lg hover:bg-artistic-shadow transition-colors"
+                          title="Search on WikiArt"
+                        >
+                          <Globe className="w-4 h-4 text-artistic-ink/40" />
+                        </a>
                       </div>
                     )}
                     <button 
@@ -175,8 +211,11 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                       />
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold truncate">{art.details.title}</p>
-                      <p className="text-[9px] opacity-40 uppercase tracking-widest mt-1">{art.details.year}</p>
+                      <p className="text-[10px] font-bold truncate flex items-center gap-1">
+                        {React.createElement(getTypeIcon(art.details.type), { className: 'w-3 h-3 text-artistic-accent' })}
+                        {art.details.title}
+                      </p>
+                      <p className="text-[9px] opacity-40 uppercase tracking-widest mt-1">{art.details.year} • {art.details.type}</p>
                     </div>
                   </div>
                 ))}
