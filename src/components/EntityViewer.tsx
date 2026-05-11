@@ -35,6 +35,13 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
     >
       {/* Visual / Introduction Side */}
       <div className="w-full lg:w-1/2 p-10 lg:p-20 flex flex-col justify-center bg-white border-r border-artistic-ink/5 relative lg:sticky lg:top-0 lg:h-screen overflow-y-auto">
+        <button 
+          onClick={onBack}
+          className="absolute top-8 left-8 flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest opacity-40 hover:opacity-100 hover:text-artistic-accent transition-all group"
+        >
+          <ArrowRight className="w-3 h-3 rotate-180 group-hover:-translate-x-1 transition-transform" />
+          <span>Back to previous</span>
+        </button>
         <div className="max-w-xl mx-auto">
           <motion.span 
             initial={{ opacity: 0, y: 10 }}

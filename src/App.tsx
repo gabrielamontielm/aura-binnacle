@@ -49,18 +49,46 @@ function App() {
   
   const [sharedGalleryOwnerName, setSharedGalleryOwnerName] = useState<string | null>(null);
   const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist'>('home');
+  const [navStack, setNavStack] = useState<{ view: typeof view, entity: EntityDetails | null, details: ArtDetails | null }[]>([]);
+
+  const navigateTo = (newView: typeof view, entity: EntityDetails | null = null) => {
+    setNavStack(prev => [...prev, { view, entity: selectedEntity, details }]);
+    if (newView !== 'home') {
+      setDetails(null);
+    }
+    setView(newView);
+    setSelectedEntity(entity);
+  };
+
+  const navigateBack = () => {
+    if (navStack.length === 0) {
+      setView('home');
+      setSelectedEntity(null);
+      setDetails(null);
+      return;
+    }
+    const previous = navStack[navStack.length - 1];
+    setNavStack(prev => prev.slice(0, -1));
+    setView(previous.view);
+    setSelectedEntity(previous.entity);
+    setDetails(previous.details || null);
+  };
   const [galleryMode, setGalleryMode] = useState<'grid' | 'graph'>('grid');
   const [bucketList, setBucketList] = useState<HistoryItem[]>([]);
   const [sharedUid, setSharedUid] = useState<string | null>(new URLSearchParams(window.location.search).get('sharedProfile'));
   const [isViewOnly, setIsViewOnly] = useState(new URLSearchParams(window.location.search).has('sharedProfile') || new URLSearchParams(window.location.search).has('sharedGallery') || new URLSearchParams(window.location.search).has('sharedBucketList'));
   
-  const openEntity = async (name: string, type: 'artist' | 'movement' | 'museum' | 'type') => {
-    if (!name || name.toLowerCase() === 'unknown' || name.toLowerCase() === 'various') return;
+  const openEntity = async (nameOrDetails: string | EntityDetails, type?: 'artist' | 'movement' | 'museum' | 'type') => {
+    const name = typeof nameOrDetails === 'string' ? nameOrDetails : nameOrDetails.name;
+    const entityType = typeof nameOrDetails === 'string' ? type : nameOrDetails.type;
+
+    if (!name || typeof name !== 'string' || name.toLowerCase() === 'unknown' || name.toLowerCase() === 'various') return;
     setIsLoading(true);
     try {
-      const entity = await getEntityDetails(name, type);
-      setSelectedEntity(entity);
-      setView('entity-viewer');
+      const entity = typeof nameOrDetails === 'string' 
+        ? await getEntityDetails(name, entityType!)
+        : nameOrDetails;
+      navigateTo('entity-viewer', entity);
     } catch (err) {
       console.error("Failed to fetch entity details", err);
       // Don't show error for now, just fallback
@@ -683,7 +711,7 @@ function App() {
         setDetails(item.details);
     }
     
-    setView('home');
+    navigateTo('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -733,19 +761,19 @@ function App() {
         <nav className="hidden md:flex space-x-12 uppercase text-[9px] tracking-[0.2em] font-bold">
           <button 
             disabled={isViewOnly}
-            onClick={() => { setView('home'); reset(); }} 
+            onClick={() => { navigateTo('home'); reset(); }} 
             className={`${view === 'home' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors ${isViewOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             Scanner
           </button>
           <button 
-            onClick={() => setView('galleries')} 
+            onClick={() => navigateTo('galleries')} 
             className={`${view === 'galleries' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
           >
             Gallery
           </button>
           <button 
-            onClick={() => setView('bucketlist')} 
+            onClick={() => navigateTo('bucketlist')} 
             className={`${view === 'bucketlist' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
           >
             Bucket List
@@ -861,7 +889,7 @@ function App() {
                 handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/bucketlist`);
               }
             }}
-            onBack={() => setView('galleries')} 
+            onBack={navigateBack} 
           />
             ) : view === 'bucketlist' ? (
           <section className="w-full h-full overflow-y-auto bg-white p-10 md:p-20">
@@ -1131,7 +1159,14 @@ function App() {
         ) : (
           <div className="w-full flex flex-col lg:flex-row overflow-hidden">
             {/* Image Preview Side (55%) */}
-            <div className="w-full lg:w-[55%] p-10 lg:p-20 flex flex-col justify-center items-center bg-white overflow-y-auto">
+            <div className="w-full lg:w-[55%] p-10 lg:p-20 flex flex-col justify-center items-center bg-white overflow-y-auto relative">
+              <button 
+                onClick={navigateBack}
+                className="absolute top-8 left-8 flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest opacity-40 hover:opacity-100 hover:text-artistic-accent transition-all group"
+              >
+                <ArrowRight className="w-3 h-3 rotate-180 group-hover:-translate-x-1 transition-transform" />
+                <span>Back to previous</span>
+              </button>
               <motion.div 
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1306,7 +1341,7 @@ function App() {
                         <span className="text-[10px] font-bold">DIGITAL_ARCHIVE_{details.title.toUpperCase().replace(/\s/g, '_')}</span>
                       </div>
                       <button 
-                        onClick={reset}
+                        onClick={navigateBack}
                         className="w-14 h-14 rounded-full bg-artistic-ink flex items-center justify-center hover:scale-105 transition-transform shadow-lg group"
                       >
                         <ArrowRight className="w-6 h-6 text-artistic-bg group-hover:translate-x-1 transition-transform" />
