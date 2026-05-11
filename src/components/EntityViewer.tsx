@@ -18,13 +18,15 @@ const getTypeIcon = (type: string) => {
 interface EntityViewerProps {
   details: EntityDetails;
   relatedArtworks: { id: string, image: string, details: ArtDetails }[];
+  history: { id: string, image: string, details: ArtDetails }[];
   onArtworkClick: (id: string) => void;
+  onEntityClick: (name: string, type: 'artist' | 'movement' | 'museum' | 'type') => void;
   onAddToBucketList: (work: any) => void;
   bucketListWorks: any[];
   onBack: () => void;
 }
 
-export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, onArtworkClick, onAddToBucketList, bucketListWorks, onBack }) => {
+export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, history, onArtworkClick, onEntityClick, onAddToBucketList, bucketListWorks, onBack }) => {
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -129,7 +131,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
             </span>
             <div className="space-y-3">
               {details.famousWorks
-                .filter(work => !relatedArtworks.some(art => 
+                .filter(work => !history.some(art => 
                   art.details.title.toLowerCase().includes(work.title.toLowerCase()) || 
                   work.title.toLowerCase().includes(art.details.title.toLowerCase())
                 ))
@@ -138,9 +140,22 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                     <div className="flex flex-col">
                       <span className="text-[10px] font-bold tracking-tight">{work.title} ({work.year})</span>
                       { (work.museum || work.location) && (
-                        <span className="text-[8px] uppercase tracking-widest opacity-40 mt-1">
-                          {work.museum} {work.museum && work.location ? '•' : ''} {work.location}
-                        </span>
+                        <div className="flex items-center gap-1 mt-1">
+                          {work.museum ? (
+                            <button 
+                              onClick={() => onEntityClick(work.museum!, 'museum')}
+                              className="text-[8px] uppercase tracking-widest opacity-40 hover:text-artistic-accent hover:opacity-100 transition-all font-bold"
+                            >
+                              {work.museum}
+                            </button>
+                          ) : null}
+                          {work.museum && work.location ? <span className="text-[8px] opacity-20">•</span> : null}
+                          {work.location ? (
+                            <span className="text-[8px] uppercase tracking-widest opacity-40">
+                              {work.location}
+                            </span>
+                          ) : null}
+                        </div>
                       )}
                     </div>
                     {work.imageUrl ? (
@@ -171,10 +186,10 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                     )}
                     <button 
                       onClick={() => onAddToBucketList(work)}
-                      disabled={bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year)}
+                      disabled={bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) || history.some(item => item.details.title === work.title)}
                       className="w-8 h-8 rounded-full border border-artistic-ink/10 flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity hover:bg-artistic-accent/10 disabled:opacity-30"
                     >
-                      {bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) ? (
+                      {bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) || history.some(item => item.details.title === work.title) ? (
                         <Check className="w-3 h-3" />
                       ) : (
                         <Plus className="w-3 h-3" />
@@ -182,7 +197,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                     </button>
                   </div>
                 ))}
-              {details.famousWorks.filter(work => !relatedArtworks.some(art => 
+              {details.famousWorks.filter(work => !history.some(art => 
                 art.details.title.toLowerCase().includes(work.title.toLowerCase()) || 
                 work.title.toLowerCase().includes(art.details.title.toLowerCase())
               )).length === 0 && (

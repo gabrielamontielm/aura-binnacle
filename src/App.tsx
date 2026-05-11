@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check } from 'lucide-react';
+import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as heic2anyModule from 'heic2any';
-import { identifyArtwork, identifyArtworkFromUrl, ArtDetails, EntityDetails } from './services/artService';
+import { identifyArtwork, identifyArtworkFromUrl, ArtDetails, EntityDetails, getEntityDetails } from './services/artService';
 import { KnowledgeGraph } from './components/KnowledgeGraph';
 import { EntityViewer } from './components/EntityViewer';
 import { auth, googleProvider, db, handleFirestoreError, OperationType } from './services/firebase';
@@ -35,6 +35,18 @@ function App() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isGalleryPublic, setIsGalleryPublic] = useState(false);
   const [isBucketListPublic, setIsBucketListPublic] = useState(false);
+
+  const deduplicateItems = (items: HistoryItem[]) => {
+    const seen = new Set<string>();
+    return items.filter(item => {
+      // Use Title + Artist (or Year if artist missing) as unique key
+      const key = `${item.details.title.trim()}-${(item.details.artist || item.details.year || '').trim()}`.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+  
   const [sharedGalleryOwnerName, setSharedGalleryOwnerName] = useState<string | null>(null);
   const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist'>('home');
   const [galleryMode, setGalleryMode] = useState<'grid' | 'graph'>('grid');
@@ -42,6 +54,20 @@ function App() {
   const [sharedUid, setSharedUid] = useState<string | null>(new URLSearchParams(window.location.search).get('sharedProfile'));
   const [isViewOnly, setIsViewOnly] = useState(new URLSearchParams(window.location.search).has('sharedProfile') || new URLSearchParams(window.location.search).has('sharedGallery') || new URLSearchParams(window.location.search).has('sharedBucketList'));
   
+  const openEntity = async (name: string, type: 'artist' | 'movement' | 'museum' | 'type') => {
+    if (!name || name.toLowerCase() === 'unknown' || name.toLowerCase() === 'various') return;
+    setIsLoading(true);
+    try {
+      const entity = await getEntityDetails(name, type);
+      setSelectedEntity(entity);
+      setView('entity-viewer');
+    } catch (err) {
+      console.error("Failed to fetch entity details", err);
+      // Don't show error for now, just fallback
+    } finally {
+      setIsLoading(false);
+    }
+  };
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sharedProfileUid = params.get('sharedProfile');
@@ -141,8 +167,9 @@ function App() {
       querySnapshot.forEach((doc) => {
         items.push({ id: doc.id, ...doc.data() } as HistoryItem);
       });
-      // Sort by timestamp descending
-      setHistory(items.sort((a, b) => b.timestamp - a.timestamp));
+      // Sort by timestamp descending and deduplicate
+      const sorted = items.sort((a, b) => b.timestamp - a.timestamp);
+      setHistory(deduplicateItems(sorted));
     } catch (err) {
       handleFirestoreError(err, OperationType.LIST, path);
     }
@@ -157,8 +184,9 @@ function App() {
       querySnapshot.forEach((doc) => {
         items.push({ id: doc.id, ...doc.data() } as HistoryItem);
       });
-      // Sort by timestamp descending
-      setBucketList(items.sort((a, b) => b.timestamp - a.timestamp));
+      // Sort by timestamp descending and deduplicate
+      const sorted = items.sort((a, b) => b.timestamp - a.timestamp);
+      setBucketList(deduplicateItems(sorted));
     } catch (err) {
       handleFirestoreError(err, OperationType.LIST, path);
     }
@@ -312,6 +340,17 @@ function App() {
       setProgress(100);
       setDetails(result);
       
+      // Duplicate Check: Stop if already in history
+      const isDuplicate = history.some(item => 
+        item.details.title === result.title && 
+        (item.details.artist === result.artist || item.details.year === result.year)
+      );
+
+      if (isDuplicate) {
+        setIsLoading(false);
+        return;
+      }
+      
       // Create a small thumbnail for the history to save localStorage space
       const thumbnailImg = await resizeImage(`data:${mimeType};base64,${base64}`, 400, 0.6);
       
@@ -322,12 +361,7 @@ function App() {
         timestamp: Date.now()
       };
       
-      setHistory(prev => {
-        const isDuplicate = prev.some(item => item.details.title === newItem.details.title && item.details.year === newItem.details.year);
-        if (isDuplicate) return prev;
-        const updated = [newItem, ...prev].slice(0, 50);
-        return updated;
-      });
+      setHistory(prev => [newItem, ...prev].slice(0, 50));
 
       // Persist to Firebase if logged in
       if (user) {
@@ -353,7 +387,10 @@ function App() {
         // Save to local storage for guest
         const saved = localStorage.getItem('art_curator_history');
         const local = saved ? JSON.parse(saved) : [];
-        localStorage.setItem('art_curator_history', JSON.stringify([newItem, ...local].slice(0, 50)));
+        // Secondary safety check for local storage
+        if (!local.some((item: HistoryItem) => item.details.title === newItem.details.title)) {
+          localStorage.setItem('art_curator_history', JSON.stringify([newItem, ...local].slice(0, 50)));
+        }
       }
     } catch (err) {
       console.error(err);
@@ -489,7 +526,8 @@ function App() {
         querySnapshot.forEach((doc) => {
           items.push({ id: doc.id, ...doc.data() } as HistoryItem);
         });
-        setBucketList(items.sort((a, b) => b.timestamp - a.timestamp));
+        const sorted = items.sort((a, b) => b.timestamp - a.timestamp);
+        setBucketList(deduplicateItems(sorted));
       } catch (err) {
         console.error("DEBUG: Failed to load shared bucket list:", err);
         setError("Failed to load shared bucket list.");
@@ -592,7 +630,8 @@ function App() {
         querySnapshot.forEach((doc) => {
           items.push({ id: doc.id, ...doc.data() } as HistoryItem);
         });
-        setHistory(items.sort((a, b) => b.timestamp - a.timestamp));
+        const sorted = items.sort((a, b) => b.timestamp - a.timestamp);
+        setHistory(deduplicateItems(sorted));
       } catch (err) {
         setError("Failed to load shared gallery.");
       } finally {
@@ -640,11 +679,28 @@ function App() {
     <div className="min-h-screen border-8 border-white box-border flex flex-col">
       {/* Navigation / Header */}
       <header className="h-20 flex justify-between items-center px-10 border-b border-artistic-ink/10 bg-artistic-bg/80 backdrop-blur-md z-50">
-        <div className="flex items-center space-x-4">
-          <div className="w-8 h-8 bg-artistic-ink rounded-full flex items-center justify-center">
-            <div className="w-4 h-4 border-2 border-artistic-bg rounded-full" />
+        <div 
+          className="flex items-center space-x-4 cursor-pointer group"
+          onClick={() => { setView('home'); reset(); }}
+        >
+          <div className="w-12 h-12 bg-white/50 backdrop-blur rounded-full flex items-center justify-center p-1.5 border border-artistic-ink/5 overflow-hidden shadow-sm group-hover:scale-105 transition-transform duration-500">
+            <img 
+              src="/logo.png" 
+              alt="Aura Logo" 
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  parent.className = "w-10 h-10 bg-artistic-ink rounded-full flex items-center justify-center";
+                  parent.innerHTML = '<div class="w-4 h-4 border-2 border-artistic-bg rounded-full"></div>';
+                }
+              }}
+            />
           </div>
-          <span className="uppercase tracking-[0.3em] font-bold text-[10px]">Aura v1.0</span>
+          <span className="uppercase tracking-[0.4em] font-black text-[11px] text-artistic-ink hover:text-artistic-accent transition-colors">Aura v1.0</span>
         </div>
         
         <nav className="hidden md:flex space-x-12 uppercase text-[9px] tracking-[0.2em] font-bold">
@@ -716,6 +772,8 @@ function App() {
         {view === 'entity-viewer' && selectedEntity ? (
           <EntityViewer 
             details={selectedEntity} 
+            history={history}
+            onEntityClick={openEntity}
             relatedArtworks={
               selectedEntity.type === 'artist' 
                 ? history.filter(h => h.details.artist === selectedEntity.name)
@@ -942,10 +1000,7 @@ function App() {
                     <KnowledgeGraph 
                       items={history} 
                       onArtworkClick={findAndLoadFromHistoryId} 
-                      onEntityClick={(details) => {
-                        setSelectedEntity(details);
-                        setView('entity-viewer');
-                      }}
+                      onEntityClick={openEntity}
                     />
                   </div>
                   <p className="mt-8 text-[9px] uppercase tracking-[0.2em] font-bold opacity-30 flex items-center gap-3">
@@ -1000,6 +1055,24 @@ function App() {
               transition={{ duration: 0.8 }}
               className="max-w-3xl"
             >
+              <div className="flex justify-center mb-12">
+                <div className="w-24 h-24 bg-white/50 backdrop-blur rounded-full flex items-center justify-center p-3 border border-artistic-ink/5 overflow-hidden shadow-xl">
+                  <img 
+                    src="/logo.png" 
+                    alt="Aura Logo" 
+                    className="w-full h-full object-contain"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        parent.style.display = 'none';
+                      }
+                    }}
+                  />
+                </div>
+              </div>
               <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-8">Intelligence meets Aesthetics</span>
               <h1 className="font-serif text-6xl md:text-8xl mb-12 leading-[1.0] tracking-tighter" style={{ fontFamily: 'Georgia, serif' }}>
                 AURA - The <br /> <span className="italic">Art Binnacle</span>
@@ -1141,7 +1214,13 @@ function App() {
                       </h1>
                       
                       <div className="flex items-baseline space-x-4 mb-12">
-                        <span className="text-2xl font-serif italic" style={{ fontFamily: 'Georgia, serif' }}>by {details.artist}</span>
+                        <button 
+                          onClick={() => openEntity(details.artist, 'artist')}
+                          className="text-2xl font-serif italic hover:text-artistic-accent transition-colors text-left" 
+                          style={{ fontFamily: 'Georgia, serif' }}
+                        >
+                          by {details.artist}
+                        </button>
                         <span className="w-12 h-px bg-artistic-ink/20" />
                         <span className="text-lg font-light opacity-60">{details.year}</span>
                       </div>
@@ -1155,23 +1234,32 @@ function App() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-8 mb-12">
-                          <div>
-                            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2">Movement</span>
-                            <span className="text-xs font-semibold">{details.movement}</span>
-                          </div>
+                          <button 
+                            onClick={() => openEntity(details.movement, 'movement')}
+                            className="text-left group"
+                          >
+                            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2 group-hover:text-artistic-accent group-hover:opacity-100 transition-all">Movement</span>
+                            <span className="text-xs font-semibold group-hover:text-artistic-accent transition-colors">{details.movement}</span>
+                          </button>
                           <div>
                             <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2">Medium</span>
                             <span className="text-xs font-semibold">{details.medium}</span>
                           </div>
-                          <div>
-                            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2">Type</span>
-                            <span className="text-xs font-semibold">{details.type}</span>
-                          </div>
+                          <button 
+                            onClick={() => openEntity(details.type, 'type')}
+                            className="text-left group"
+                          >
+                            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2 group-hover:text-artistic-accent group-hover:opacity-100 transition-all">Type</span>
+                            <span className="text-xs font-semibold group-hover:text-artistic-accent transition-colors">{details.type}</span>
+                          </button>
                           {details.museum && (
-                            <div>
-                              <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2">Collection</span>
-                              <span className="text-xs font-semibold">{details.museum}</span>
-                            </div>
+                            <button 
+                              onClick={() => openEntity(details.museum || '', 'museum')}
+                              className="text-left group"
+                            >
+                              <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2 group-hover:text-artistic-accent group-hover:opacity-100 transition-all">Collection</span>
+                              <span className="text-xs font-semibold group-hover:text-artistic-accent transition-colors">{details.museum}</span>
+                            </button>
                           )}
                           {details.location && (
                             <div className="col-span-2">
