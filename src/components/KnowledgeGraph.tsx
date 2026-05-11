@@ -14,7 +14,7 @@ interface HistoryItem {
 interface Node {
   id: string;
   name: string;
-  type: 'movement' | 'artist' | 'artwork' | 'location' | 'type';
+  type: 'movement' | 'artist' | 'artwork' | 'location' | 'type' | 'museum';
   val: number;
   color: string;
   icon: string;
@@ -35,6 +35,13 @@ interface KnowledgeGraphProps {
   onEntityClick: (details: EntityDetails) => void;
 }
 
+/**
+ * Interactive 2D Knowledge Graph component for visualizing art connections.
+ * 
+ * @param items List of scanned artworks in user history.
+ * @param onArtworkClick Callback when an artwork node or list item is clicked.
+ * @param onEntityClick Callback when "Full Curatorial Report" is requested for an artist/movement.
+ */
 export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtworkClick, onEntityClick }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<ForceGraphMethods>();
@@ -68,17 +75,24 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
     const artists = new Map<string, string>(); // Artist -> Movement
     const locations = new Set<string>();
     const types = new Set<string>();
+    const museums = new Set<string>();
+    const museumToLocation = new Map<string, string>(); // Museum name -> Location name
 
     items.forEach(item => {
       const m = item.details.movement || 'Unknown Movement';
       const a = item.details.artist || 'Unknown Artist';
       const l = item.details.location;
       const t = item.details.type;
+      const mus = item.details.museum;
       
       movements.add(m);
       artists.set(a, m);
       if (l) locations.add(l);
       if (t) types.add(t);
+      if (mus) {
+        museums.add(mus);
+        if (l) museumToLocation.set(mus, l);
+      }
     });
 
     // 1. Add Movement Nodes
@@ -134,11 +148,31 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
       });
     });
 
-    // 5. Add Artwork Nodes
+    // 5. Add Museum Nodes
+    museums.forEach(mus => {
+      nodes.push({
+        id: `mus_${mus}`,
+        name: mus,
+        type: 'museum',
+        val: 11,
+        color: '#8A2BE2',
+        icon: '🏛️',
+        info: `The cultural institution that preserves and displays this masterpiece.`
+      });
+
+      // Link Museum to its Location
+      const loc = museumToLocation.get(mus);
+      if (loc) {
+        links.push({ source: `loc_${loc}`, target: `mus_${mus}` });
+      }
+    });
+
+    // 6. Add Artwork Nodes
     items.forEach(item => {
       const a = item.details.artist || 'Unknown Artist';
       const l = item.details.location;
       const t = item.details.type;
+      const mus = item.details.museum;
 
       nodes.push({
         id: `work_${item.id}`,
@@ -151,8 +185,14 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
         info: `${item.details.title} (${item.details.year}). ${item.details.description?.substring(0, 100)}...`
       });
       links.push({ source: `art_${a}`, target: `work_${item.id}` });
-      if (l) links.push({ source: `loc_${l}`, target: `work_${item.id}` });
+      
+      // Map location to museum instead of painting if museum is available
+      if (l && !mus) {
+        links.push({ source: `loc_${l}`, target: `work_${item.id}` });
+      }
+      
       if (t) links.push({ source: `typ_${t}`, target: `work_${item.id}` });
+      if (mus) links.push({ source: `mus_${mus}`, target: `work_${item.id}` });
     });
 
     return { nodes, links };
@@ -238,6 +278,9 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
     }
     if (selectedNode.type === 'type') {
       return items.filter(item => item.details.type === selectedNode.name);
+    }
+    if (selectedNode.type === 'museum') {
+      return items.filter(item => item.details.museum === selectedNode.name);
     }
     return [];
   }, [selectedNode, items]);
@@ -381,6 +424,10 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
           <div className="flex items-center gap-3">
               <span className="text-lg">📍</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Locations</span>
+          </div>
+          <div className="flex items-center gap-3">
+              <span className="text-lg">🏛️</span>
+              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Museums</span>
           </div>
           <div className="flex items-center gap-3">
               <span className="text-lg">🏺</span>

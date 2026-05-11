@@ -1,14 +1,25 @@
 
+/**
+ * Art-related services using Gemini AI and Firestore.
+ */
 import { GoogleGenAI, Type } from "@google/genai";
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
+/**
+ * Sanitizes a string for use as a Firestore document ID.
+ * @param name The name to sanitize.
+ * @returns A lowercase, underscore-separated ID string.
+ */
 function sanitizeId(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '_');
 }
 
+/**
+ * Structure for artwork identification details.
+ */
 export interface ArtDetails {
   title: string;
   artist: string;
@@ -22,6 +33,12 @@ export interface ArtDetails {
   historicalContext: string;
 }
 
+/**
+ * Identifies an artwork from a base64 encoded image using Gemini AI.
+ * @param base64Image The base64 representation of the image.
+ * @param mimeType The mime type of the image (default: image/jpeg).
+ * @returns A promise resolving to identified artwork details.
+ */
 export async function identifyArtwork(base64Image: string, mimeType: string = "image/jpeg"): Promise<ArtDetails> {
   try {
     const response = await ai.models.generateContent({
@@ -121,6 +138,9 @@ export async function identifyArtworkFromUrl(imageUrl: string): Promise<ArtDetai
   }
 }
 
+/**
+ * Detailed information for an artist or art movement.
+ */
 export interface EntityDetails {
   name: string;
   type: 'artist' | 'movement';
@@ -134,6 +154,12 @@ export interface EntityDetails {
   famousWorks: { title: string; year: string; museum?: string; location?: string; imageUrl?: string }[];
 }
 
+/**
+ * Fetches comprehensive details for an artist or movement, with caching.
+ * @param name The name of the artist or movement.
+ * @param type The type of entity ('artist' or 'movement').
+ * @returns A promise resolving to entity details.
+ */
 export async function getEntityDetails(name: string, type: 'artist' | 'movement'): Promise<EntityDetails> {
   const collectionName = type === 'artist' ? 'metadata_artists' : 'metadata_movements';
   const id = sanitizeId(name);

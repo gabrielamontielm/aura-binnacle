@@ -20,7 +20,11 @@ interface HistoryItem {
   timestamp: number;
 }
 
-export default function App() {
+export default /**
+ * Main Application Component for Artistic Lens.
+ * Handles authentication, image processing, gallery management, and routing.
+ */
+function App() {
   const [user, setUser] = useState<User | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [details, setDetails] = useState<ArtDetails | null>(null);
@@ -639,7 +643,7 @@ export default function App() {
                         onClick={toggleBucketListPublic}
                         className={`text-[9px] uppercase font-bold tracking-widest ${isBucketListPublic ? 'text-artistic-accent' : 'text-artistic-ink/40'}`}
                       >
-                        {isBucketListPublic ? 'Bucket List is Public' : 'Make Bucket List Public'}
+                        {isBucketListPublic ? 'Profile sharing is ON' : 'Share Profile'}
                       </button>
                       {isBucketListPublic && (
                         <div className="flex items-center gap-2 bg-artistic-shadow/50 p-2 rounded-full mt-1">
@@ -721,7 +725,7 @@ export default function App() {
                         onClick={toggleGalleryPublic}
                         className={`text-[9px] uppercase font-bold tracking-widest ${isGalleryPublic ? 'text-artistic-accent' : 'text-artistic-ink/40'}`}
                       >
-                        {isGalleryPublic ? 'Gallery is Public' : 'Make Gallery Public'}
+                        {isGalleryPublic ? 'Profile sharing is ON' : 'Share Profile'}
                       </button>
                       {isGalleryPublic && (
                         <div className="flex items-center gap-2 bg-artistic-shadow/50 p-2 rounded-full mt-1">

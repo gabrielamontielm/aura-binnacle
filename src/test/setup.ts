@@ -10,6 +10,16 @@ global.ResizeObserver = vi.fn().mockImplementation(function() {
     };
 });
 
+// Mock Worker for heic2any
+global.Worker = vi.fn().mockImplementation(function() {
+  return {
+    postMessage: vi.fn(),
+    terminate: vi.fn(),
+    onmessage: vi.fn(),
+    onerror: vi.fn(),
+  };
+}) as any;
+
 // Mock HTMLCanvasElement.getContext as react-force-graph uses canvas
 // We provide a basic mock since we're not testing the actual drawing
 if (typeof window !== 'undefined') {
