@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass } from 'lucide-react';
+import { ImageOverrideModal } from './components/ImageOverrideModal';
+import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as heic2anyModule from 'heic2any';
 import { identifyArtwork, identifyArtworkFromUrl, ArtDetails, EntityDetails, getEntityDetails } from './services/artService';
@@ -8,7 +9,7 @@ import { EntityViewer } from './components/EntityViewer';
 import { auth, googleProvider, db, handleFirestoreError, OperationType } from './services/firebase';
 import { ValidatedImage } from './components/ValidatedImage';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 
 // Handle potential default import differences
 const heic2any = (heic2anyModule as any).default || heic2anyModule;
@@ -49,6 +50,22 @@ function App() {
   
   const [sharedGalleryOwnerName, setSharedGalleryOwnerName] = useState<string | null>(null);
   const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist'>('home');
+  const [overrideTarget, setOverrideTarget] = useState<{ id: string, type: 'history' | 'bucketlist' } | null>(null);
+  const updateArtworkImage = async (id: string, imageUrl: string, type: 'history' | 'bucketlist') => {
+    if (!user) return;
+    try {
+      if (type === 'history') {
+        setHistory(prev => prev.map(item => item.id === id ? { ...item, image: imageUrl } : item));
+        await updateDoc(doc(db, `users/${user.uid}/history`, id), { image: imageUrl });
+      } else {
+        setBucketList(prev => prev.map(item => item.id === id ? { ...item, image: imageUrl } : item));
+        await updateDoc(doc(db, `users/${user.uid}/bucketlist`, id), { image: imageUrl });
+      }
+    } catch (err) {
+      console.error("Failed to update artwork image:", err);
+    }
+  };
+
   const [navStack, setNavStack] = useState<{ view: typeof view, entity: EntityDetails | null, details: ArtDetails | null }[]>([]);
 
   const navigateTo = (newView: typeof view, entity: EntityDetails | null = null) => {
@@ -889,6 +906,31 @@ function App() {
                 handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/bucketlist`);
               }
             }}
+            onUpdateFamousWorkImage={async (workTitle, imageUrl) => {
+              if (selectedEntity) {
+                const updatedWorks = selectedEntity.famousWorks.map(w => 
+                  w.title === workTitle ? { ...w, imageUrl } : w
+                );
+                const updatedEntity = { ...selectedEntity, famousWorks: updatedWorks };
+                setSelectedEntity(updatedEntity);
+                
+                // Persist to Firestore
+                const collectionName = selectedEntity.type === 'artist' 
+                  ? 'metadata_artists' 
+                  : selectedEntity.type === 'movement' 
+                    ? 'metadata_movements'
+                    : selectedEntity.type === 'museum'
+                      ? 'metadata_museums'
+                      : 'metadata_types';
+                
+                const id = updatedEntity.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                try {
+                  await setDoc(doc(db, collectionName, id), updatedEntity);
+                } catch (err) {
+                  console.error("Failed to update entity metadata:", err);
+                }
+              }
+            }}
             onBack={navigateBack} 
           />
             ) : view === 'bucketlist' ? (
@@ -952,8 +994,37 @@ function App() {
                         className="group cursor-pointer"
                       >
                         <div className="aspect-[4/5] bg-artistic-shadow p-4 mb-6 art-shadow transition-all group-hover:shadow-[40px_40px_0px_#E5E0D5]">
-                          <div className="w-full h-full bg-gray-100 gallery-frame overflow-hidden relative">
-                            <ValidatedImage src={item.image} alt={item.details.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
+                          <div className="w-full h-full bg-gray-100 gallery-frame overflow-hidden relative group/img">
+                            <ValidatedImage 
+                              src={item.image} 
+                              alt={item.details.title} 
+                              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" 
+                              fallback={
+                                <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center">
+                                  <Palette className="w-8 h-8 opacity-10 mb-2" />
+                                  <div className="flex gap-4">
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOverrideTarget({ id: item.id, type: 'bucketlist' });
+                                      }}
+                                      className="text-[10px] uppercase font-bold tracking-widest text-artistic-accent hover:underline"
+                                    >
+                                      Assign Visual
+                                    </button>
+                                    <a 
+                                      href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.details.title + ' ' + (item.details.artist || ''))}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="text-[10px] uppercase font-bold tracking-widest text-artistic-ink/40 hover:text-artistic-accent hover:underline flex items-center gap-1"
+                                    >
+                                      Search Visual
+                                    </a>
+                                  </div>
+                                </div>
+                              }
+                            />
                             {!isViewOnly && (
                               <button 
                                 onClick={(e) => deleteBucketListItem(item.id, e)}
@@ -1072,8 +1143,37 @@ function App() {
                         className="group cursor-pointer"
                       >
                         <div className="aspect-[4/5] bg-artistic-shadow p-4 mb-6 art-shadow transition-all group-hover:shadow-[40px_40px_0px_#E5E0D5]">
-                          <div className="w-full h-full bg-gray-100 gallery-frame overflow-hidden relative">
-                            <ValidatedImage src={item.image} alt={item.details.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
+                          <div className="w-full h-full bg-gray-100 gallery-frame overflow-hidden relative group/img">
+                            <ValidatedImage 
+                              src={item.image} 
+                              alt={item.details.title} 
+                              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" 
+                              fallback={
+                                <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center">
+                                  <Palette className="w-8 h-8 opacity-10 mb-2" />
+                                  <div className="flex gap-4">
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOverrideTarget({ id: item.id, type: 'history' });
+                                      }}
+                                      className="text-[10px] uppercase font-bold tracking-widest text-artistic-accent hover:underline"
+                                    >
+                                      Assign Visual
+                                    </button>
+                                    <a 
+                                      href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.details.title + ' ' + (item.details.artist || ''))}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="text-[10px] uppercase font-bold tracking-widest text-artistic-ink/40 hover:text-artistic-accent hover:underline flex items-center gap-1"
+                                    >
+                                      Search Visual
+                                    </a>
+                                  </div>
+                                </div>
+                              }
+                            />
                             {!isViewOnly && (
                               <button 
                                 onClick={(e) => deleteHistoryItem(item.id, e)}
@@ -1172,11 +1272,39 @@ function App() {
                 animate={{ opacity: 1, x: 0 }}
                 className="relative aspect-[4/5] w-full max-w-[480px] bg-artistic-shadow p-8 art-shadow"
               >
-                <div className="w-full h-full bg-gray-100 gallery-frame flex items-center justify-center overflow-hidden relative">
-                  <img 
+                <div className="w-full h-full bg-gray-100 gallery-frame flex items-center justify-center overflow-hidden relative group/img">
+                  <ValidatedImage 
                     src={image} 
                     alt="Artwork Preview" 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover" 
+                    fallback={
+                      <div className="w-full h-full flex flex-col items-center justify-center p-12 text-center">
+                        <Palette className="w-12 h-12 opacity-10 mb-4" />
+                        <span className="text-[10px] uppercase font-bold tracking-widest opacity-20 mb-6">Visual Stream Disrupted</span>
+                        <div className="flex flex-col gap-2">
+                          <button 
+                            onClick={() => {
+                               // Find the current active artwork ID if possible
+                               const currentItem = history.find(h => h.image === image) || bucketList.find(b => b.image === image);
+                               if (currentItem) {
+                                 setOverrideTarget({ id: currentItem.id, type: history.find(h => h.image === image) ? 'history' : 'bucketlist' });
+                               }
+                            }}
+                            className="px-6 py-2 border border-artistic-ink/20 rounded-full text-[10px] uppercase font-bold hover:bg-artistic-ink hover:text-artistic-bg transition-all"
+                          >
+                            Manual Verification
+                          </button>
+                          <a 
+                            href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(details?.title + ' ' + (details?.artist || ''))}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-6 py-2 border border-artistic-ink/5 rounded-full text-[10px] uppercase font-bold text-artistic-ink/40 hover:text-artistic-accent transition-all text-center"
+                          >
+                            Search Visual
+                          </a>
+                        </div>
+                      </div>
+                    }
                   />
                   
                   {isLoading && (
@@ -1368,6 +1496,29 @@ function App() {
         )}
       </main>
 
+      <ImageOverrideModal 
+        isOpen={overrideTarget !== null}
+        onClose={() => setOverrideTarget(null)}
+        onUpdate={(url) => {
+          if (overrideTarget) {
+            updateArtworkImage(overrideTarget.id, url, overrideTarget.type);
+            // Also update the active 'image' state if it matches the current artwork
+            const item = overrideTarget.type === 'history' 
+              ? history.find(h => h.id === overrideTarget.id)
+              : bucketList.find(b => b.id === overrideTarget.id);
+            
+            if (item && image === item.image) {
+              setImage(url);
+            }
+          }
+        }}
+        title={overrideTarget ? (
+          overrideTarget.type === 'history' 
+            ? history.find(h => h.id === overrideTarget.id)?.details.title || 'Artwork'
+            : bucketList.find(b => b.id === overrideTarget.id)?.details.title || 'Artwork'
+        ) : 'Artwork'}
+        subtitle="Spectral Alignment Required"
+      />
       <footer className="h-12 bg-artistic-ink text-artistic-bg flex items-center justify-between px-10 text-[9px] uppercase tracking-[0.2em] font-medium shrink-0">
         <div className="flex items-center gap-6">
           <span>Art Curator Engine: Neural V4.2</span>

@@ -4,12 +4,17 @@ interface ValidatedImageProps {
   src: string;
   alt: string;
   className?: string;
+  fallback?: React.ReactNode;
 }
 
-export const ValidatedImage: React.FC<ValidatedImageProps> = ({ src, alt, className }) => {
+export const ValidatedImage: React.FC<ValidatedImageProps> = ({ src, alt, className, fallback }) => {
   const [isValid, setIsValid] = useState<boolean | null>(null);
 
   useEffect(() => {
+    if (!src) {
+      setIsValid(false);
+      return;
+    }
     const img = new Image();
     img.src = src;
     img.onload = () => setIsValid(true);
@@ -17,8 +22,9 @@ export const ValidatedImage: React.FC<ValidatedImageProps> = ({ src, alt, classN
   }, [src]);
 
   if (isValid === false) {
+    if (fallback) return <>{fallback}</>;
     return (
-      <div className={`${className} bg-gray-200 flex items-center justify-center`}>
+      <div className={`${className} bg-gray-200 flex items-center justify-center p-2 text-center`}>
         <span className="text-[10px] text-gray-400">Artwork not available</span>
       </div>
     );

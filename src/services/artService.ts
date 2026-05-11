@@ -201,13 +201,14 @@ export async function getEntityDetails(name: string, type: 'artist' | 'movement'
               - keyCharacteristics: A list of 3-4 defining traits or styles or collections
               - historicalImpact: Their long-term legacy (2-3 sentences)
               - curatorialSummary: An engaging short summary (around 200 characters) for a quick overview
-              - famousWorks: A list of 3-5 most famous artworks associated. For each work include title, year, museum, location if known, and a URL string for an image. Validate that the URL is valid and returns a image, the file is found and is a valid image in JPG or PNG format.`,
+              - famousWorks: A list of 3-5 most famous artworks associated. For each work include title, year, museum, location if known, and a URL string for a high-quality, stable public domain image (e.g., from Wikimedia Commons or a major museum website). ONLY provide a URL if you are certain it is stable and publicly accessible; otherwise, omit the imageUrl field or set it to null.`,
             },
           ],
         },
       ],
       config: {
         responseMimeType: "application/json",
+        tools: [{ googleSearch: {} }],
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -229,7 +230,10 @@ export async function getEntityDetails(name: string, type: 'artist' | 'movement'
                   year: { type: Type.STRING },
                   museum: { type: Type.STRING },
                   location: { type: Type.STRING },
-                  imageUrl: { type: Type.STRING }
+                  imageUrl: { 
+                    type: Type.STRING, 
+                    description: "A DIRECT, stable URL to an image of the artwork. Prefer wikimedia.org, metmuseum.org, or artic.edu. NEVER use relative paths or placeholders. If no direct link is found, omit this field."
+                  }
                 },
                 required: ["title", "year"]
               }

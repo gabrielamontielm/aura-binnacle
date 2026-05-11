@@ -24,9 +24,14 @@ interface EntityViewerProps {
   onAddToBucketList: (work: any) => void;
   bucketListWorks: any[];
   onBack: () => void;
+  onUpdateFamousWorkImage: (workTitle: string, imageUrl: string) => void;
 }
 
-export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, history, onArtworkClick, onEntityClick, onAddToBucketList, bucketListWorks, onBack }) => {
+import { ImageOverrideModal } from './ImageOverrideModal';
+
+export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, history, onArtworkClick, onEntityClick, onAddToBucketList, bucketListWorks, onBack, onUpdateFamousWorkImage }) => {
+  const [editingWorkIndex, setEditingWorkIndex] = React.useState<number | null>(null);
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -166,44 +171,48 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                       )}
                     </div>
                     {work.imageUrl ? (
-                      <div className="w-12 h-12 overflow-hidden rounded-lg mr-2">
-                          <ValidatedImage src={work.imageUrl} alt={work.title} className="w-full h-full object-cover" />
+                      <div className="w-12 h-12 overflow-hidden rounded-lg mr-2 bg-artistic-shadow/10 flex items-center justify-center border border-artistic-ink/5 relative group/img">
+                          <ValidatedImage 
+                            src={work.imageUrl} 
+                            alt={work.title} 
+                            className="w-full h-full object-cover" 
+                          />
                       </div>
                     ) : (
-                      <div className="flex gap-2 mr-2">
-                        <a 
-                          href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(work.title + ' ' + (details.name || ''))}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-10 h-10 flex items-center justify-center bg-artistic-shadow/50 rounded-lg hover:bg-artistic-shadow transition-colors"
-                          title="Search on Google Images"
-                        >
-                          <Search className="w-4 h-4 text-artistic-ink/40" />
-                        </a>
-                        <a 
-                          href={`https://www.wikiart.org/en/search/${encodeURIComponent(work.title + ' ' + (details.name || ''))}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-10 h-10 flex items-center justify-center bg-artistic-shadow/50 rounded-lg hover:bg-artistic-shadow transition-colors"
-                          title="Search on WikiArt"
-                        >
-                          <Globe className="w-4 h-4 text-artistic-ink/40" />
-                        </a>
-                      </div>
+                      <button 
+                        onClick={() => setEditingWorkIndex(i)}
+                        className="w-12 h-12 overflow-hidden rounded-lg mr-2 bg-artistic-shadow/10 flex items-center justify-center border border-artistic-ink/5 hover:bg-artistic-accent/10 transition-colors"
+                        title="Upload artwork image"
+                      >
+                        <Plus className="w-4 h-4 text-artistic-ink/20" />
+                      </button>
                     )}
-                    <button 
-                      onClick={() => onAddToBucketList(work)}
-                      disabled={bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) || history.some(item => item.details.title === work.title)}
-                      className="w-8 h-8 rounded-full border border-artistic-ink/10 flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity hover:bg-artistic-accent/10 disabled:opacity-30"
-                    >
-                      {bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) || history.some(item => item.details.title === work.title) ? (
-                        <Check className="w-3 h-3" />
-                      ) : (
-                        <Plus className="w-3 h-3" />
-                      )}
-                    </button>
+                    <div className="flex-1 flex justify-end">
+                      <button 
+                        onClick={() => onAddToBucketList(work)}
+                        disabled={bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) || history.some(item => item.details.title === work.title)}
+                        className="w-8 h-8 rounded-full border border-artistic-ink/10 flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity hover:bg-artistic-accent/10 disabled:opacity-30"
+                      >
+                        {bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) || history.some(item => item.details.title === work.title) ? (
+                          <Check className="w-3 h-3" />
+                        ) : (
+                          <Plus className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 ))}
+                <ImageOverrideModal 
+                  isOpen={editingWorkIndex !== null}
+                  onClose={() => setEditingWorkIndex(null)}
+                  title={editingWorkIndex !== null ? details.famousWorks[editingWorkIndex].title : ''}
+                  subtitle="Curatorial Archive Sync"
+                  onUpdate={(url) => {
+                    if (editingWorkIndex !== null) {
+                      onUpdateFamousWorkImage(details.famousWorks[editingWorkIndex].title, url);
+                    }
+                  }}
+                />
               {details.famousWorks.filter(work => !history.some(art => 
                 art.details.title.toLowerCase().includes(work.title.toLowerCase()) || 
                 work.title.toLowerCase().includes(art.details.title.toLowerCase())
