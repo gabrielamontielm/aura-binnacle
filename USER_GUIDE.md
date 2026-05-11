@@ -37,11 +37,16 @@ Identify any masterpiece instantly using our AI-powered scanner.
 Everything you scan is automatically saved to your **Gallery**.
 
 ### Viewing Modes
--   **Grid View**: Browse your collection as a beautiful visual archive.
--   **Knowledge Graph**: Visualize the connections between your artworks, artists, and art movements. Click on nodes to explore relationships.
+-   **Grid View**: Browse your collection as a beautiful visual archive. Use the **Filters** menu to narrow down items by Artist, Medium, Museum, or Year Range. You can select multiple options in the dropdowns.
+-   **Knowledge Graph**: Visualize the connections between your artworks, artists, and art movements.
+    -   **Navigation**: Pan to move, scroll to zoom.
+    -   **Context Menus**: Right-click on a node to access special actions like **Collapse Recursively**.
+    -   **Highlighting**: Click a node to highlight its direct connections and dim the rest of the graph for better focus.
+    -   **Detail Levels**: Zoom in to see edge labels (e.g., "Created", "Influences") and node names.
 
 ### Actions
 -   **View Details**: Click on any artwork card to see the full AI analysis.
+-   **Filtering**: Click the **Filters** button to open the advanced search panel. The orange dot indicates active filters.
 -   **Delete**: Hover over an artwork card and click the trash icon to remove it from your archive.
 
 ---

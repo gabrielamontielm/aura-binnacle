@@ -220,6 +220,11 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
     });
   };
 
+  /**
+   * Toggles the collapsed state of a node. 
+   * Collapsing a node hides all its incoming edges and recursively hides upstream nodes
+   * that only connected to the graph through this path.
+   */
   const toggleCollapse = (nodeId: string) => {
     setCollapsedNodes(prev => {
       const next = new Set(prev);
@@ -229,6 +234,11 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
     });
   };
 
+  /**
+   * Memoized graph data based on visibility filters, collapsed states, and focus modes.
+   * Includes recursive collapse logic: if a target node is collapsed, its source nodes
+   * are also hidden if they become "orphaned" in the current view.
+   */
   const filteredGraphData = useMemo(() => {
     const { nodes, links } = graphData;
     
@@ -291,6 +301,27 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
     return { nodes: visibleNodes, links: visibleLinks };
   }, [graphData, visibleTypes, collapsedNodes, hideAllLinks, focusSelectedOnly, selectedNode]);
 
+  // Track neighbors and neighbor links for highlighting
+  const { neighbors, neighborLinks } = useMemo(() => {
+    const neighbors = new Set<string>();
+    const neighborLinks = new Set<string>();
+    
+    if (selectedNode) {
+      filteredGraphData.links.forEach(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
+        const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
+        
+        if (sourceId === selectedNode.id || targetId === selectedNode.id) {
+          neighbors.add(sourceId);
+          neighbors.add(targetId);
+          neighborLinks.add(`${sourceId}-${targetId}`);
+        }
+      });
+    }
+    
+    return { neighbors, neighborLinks };
+  }, [selectedNode, filteredGraphData.links]);
+
   // Fetch Entity Logic
   const fetchEntity = useCallback(async (node: Node, forceRefresh = false) => {
     if (!(node.type === 'artist' || node.type === 'movement' || node.type === 'museum' || node.type === 'type' || node.type === 'location')) return;
@@ -332,6 +363,15 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
     const fontSize = 12 / globalScale;
     const size = node.val;
     
+    const isSelected = selectedNode?.id === node.id;
+    const isNeighbor = neighbors.has(node.id);
+    const isDimmed = selectedNode && !isSelected && !isNeighbor;
+
+    ctx.save();
+    if (isDimmed) {
+      ctx.globalAlpha = 0.15;
+    }
+
     // Draw Icon
     ctx.font = `${size * 1.5}px serif`;
     ctx.textAlign = 'center';
@@ -351,16 +391,17 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
 
     // Draw Label
     if (globalScale > 1.5) {
-      ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+      ctx.font = isSelected ? `bold ${fontSize * 1.1}px Inter, sans-serif` : `bold ${fontSize}px Inter, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillStyle = '#101010';
+      ctx.fillStyle = isSelected ? '#FF4B4B' : '#101010';
       ctx.shadowBlur = 4 / globalScale;
       ctx.shadowColor = 'rgba(255,255,255,0.8)';
       ctx.fillText(label, node.x, node.y + size + 2);
       ctx.shadowBlur = 0;
     }
-  }, [collapsedNodes]);
+    ctx.restore();
+  }, [collapsedNodes, selectedNode, neighbors]);
 
   const renderLink = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const MAX_FONT_SIZE = 4;
@@ -368,8 +409,16 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
     const start = link.source;
     const end = link.target;
 
+    const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
+    const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
+    const isHighlighted = neighborLinks.has(`${sourceId}-${targetId}`);
+    const isDimmed = selectedNode && !isHighlighted;
+
     // Only render labels if they exist and zoom is high enough
     if (!link.label || globalScale < 2.5) return;
+
+    // If node selected, only show labels for highlighted links
+    if (selectedNode && !isHighlighted) return;
 
     // Calculate position
     const textPos = {
@@ -468,7 +517,20 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
           linkDirectionalArrowLength={3.5}
           linkDirectionalArrowRelPos={1}
           linkCurvature={0.2}
-          linkColor={() => 'rgba(26, 26, 26, 0.15)'}
+          linkColor={(link: any) => {
+            if (!selectedNode) return 'rgba(26, 26, 26, 0.15)';
+            const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
+            const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
+            return neighborLinks.has(`${sourceId}-${targetId}`) 
+              ? 'rgba(255, 75, 75, 0.4)' 
+              : 'rgba(26, 26, 26, 0.05)';
+          }}
+          linkWidth={(link: any) => {
+            if (!selectedNode) return 1;
+            const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
+            const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
+            return neighborLinks.has(`${sourceId}-${targetId}`) ? 2 : 0.5;
+          }}
           linkCanvasObject={renderLink}
           linkCanvasObjectMode={() => 'after'}
           onNodeClick={handleNodeClick}
@@ -727,45 +789,63 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
         )}
       </AnimatePresence>
 
-      <div className="absolute bottom-6 left-6 flex flex-col gap-2 p-5 bg-white/70 backdrop-blur-md rounded-2xl border border-artistic-ink/5 shadow-sm">
+      <div className="absolute bottom-6 left-6 flex flex-col gap-2 p-5 bg-white/70 backdrop-blur-md rounded-2xl border border-artistic-ink/5 shadow-sm min-w-[200px]">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-artistic-ink/40">Filters</span>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setVisibleTypes(new Set(['movement', 'artist', 'artwork', 'location', 'type', 'museum']))}
+                className="text-[8px] uppercase font-bold text-artistic-accent hover:underline"
+              >
+                All
+              </button>
+              <button 
+                onClick={() => setVisibleTypes(new Set())}
+                className="text-[8px] uppercase font-bold text-artistic-ink/40 hover:text-red-500 transition-colors"
+              >
+                None
+              </button>
+            </div>
+          </div>
+
           <div 
             onClick={() => toggleType('movement')}
-            className={`flex items-center gap-3 cursor-pointer transition-opacity ${visibleTypes.has('movement') ? 'opacity-100' : 'opacity-30'}`}
+            className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('movement') ? 'opacity-100' : 'opacity-30'}`}
           >
               <span className="text-lg">🎨</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Styles / Movements</span>
           </div>
           <div 
             onClick={() => toggleType('artist')}
-            className={`flex items-center gap-3 cursor-pointer transition-opacity ${visibleTypes.has('artist') ? 'opacity-100' : 'opacity-30'}`}
+            className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('artist') ? 'opacity-100' : 'opacity-30'}`}
           >
               <span className="text-lg">👨‍🎨</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Artists</span>
           </div>
           <div 
             onClick={() => toggleType('artwork')}
-            className={`flex items-center gap-3 cursor-pointer transition-opacity ${visibleTypes.has('artwork') ? 'opacity-100' : 'opacity-30'}`}
+            className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('artwork') ? 'opacity-100' : 'opacity-30'}`}
           >
               <span className="text-lg">🖼️</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Paintings</span>
           </div>
           <div 
             onClick={() => toggleType('location')}
-            className={`flex items-center gap-3 cursor-pointer transition-opacity ${visibleTypes.has('location') ? 'opacity-100' : 'opacity-30'}`}
+            className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('location') ? 'opacity-100' : 'opacity-30'}`}
           >
               <span className="text-lg">📍</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Locations</span>
           </div>
           <div 
             onClick={() => toggleType('museum')}
-            className={`flex items-center gap-3 cursor-pointer transition-opacity ${visibleTypes.has('museum') ? 'opacity-100' : 'opacity-30'}`}
+            className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('museum') ? 'opacity-100' : 'opacity-30'}`}
           >
               <span className="text-lg">🏛️</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Museums</span>
           </div>
           <div 
             onClick={() => toggleType('type')}
-            className={`flex items-center gap-3 cursor-pointer transition-opacity ${visibleTypes.has('type') ? 'opacity-100' : 'opacity-30'}`}
+            className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('type') ? 'opacity-100' : 'opacity-30'}`}
           >
               <span className="text-lg">🏺</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Masterpiece Types</span>

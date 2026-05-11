@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ImageOverrideModal } from './components/ImageOverrideModal';
-import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus } from 'lucide-react';
+import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus, Filter, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as heic2anyModule from 'heic2any';
 import { identifyArtwork, identifyArtworkFromUrl, ArtDetails, EntityDetails, getEntityDetails } from './services/artService';
@@ -122,6 +122,116 @@ function App() {
   };
   const [galleryMode, setGalleryMode] = useState<'grid' | 'graph'>('grid');
   const [bucketList, setBucketList] = useState<HistoryItem[]>([]);
+  
+  // Filtering State for the Gallery and Bucket List
+  const [showFilters, setShowFilters] = useState(false);
+  const [mediumFilters, setMediumFilters] = useState<string[]>([]);
+  const [museumFilters, setMuseumFilters] = useState<string[]>([]);
+  const [yearMin, setYearMin] = useState<number>(-20000); // 20,000 BCE default
+  const [yearMax, setYearMax] = useState<number>(new Date().getFullYear());
+
+  /**
+   * Toggles a filter value in an array of strings.
+   * Used for multi-select filtering logic.
+   */
+  const toggleFilter = (set: React.Dispatch<React.SetStateAction<string[]>>, val: string) => {
+    set(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+
+  /**
+   * Filter Section component used in both Gallery and Bucket List views.
+   */
+  const FilterSection = () => (
+    <AnimatePresence>
+      {showFilters && (
+        <motion.div 
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="overflow-hidden mb-12"
+        >
+          <div className="p-8 bg-artistic-shadow/30 rounded-3xl border border-artistic-ink/5 grid grid-cols-1 md:grid-cols-3 gap-8 text-artistic-ink">
+            {/* Medium Filter */}
+            <div className="space-y-4">
+              <label className="text-[9px] uppercase tracking-widest font-bold opacity-40 block">Filter by Medium</label>
+              <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto pr-2 custom-scrollbar">
+                {allMediums.map(m => (
+                  <button
+                    key={m}
+                    onClick={() => toggleFilter(setMediumFilters, m)}
+                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${mediumFilters.includes(m) ? 'bg-artistic-ink text-artistic-bg border-artistic-ink' : 'bg-white text-artistic-ink border-artistic-ink/10 hover:border-artistic-ink/30'}`}
+                  >
+                    {m}
+                  </button>
+                ))}
+                {allMediums.length === 0 && <span className="text-[10px] italic opacity-30">No mediums found</span>}
+              </div>
+            </div>
+
+            {/* Museum Filter */}
+            <div className="space-y-4">
+              <label className="text-[9px] uppercase tracking-widest font-bold opacity-40 block">Filter by Museum</label>
+              <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto pr-2 custom-scrollbar">
+                {allMuseums.map(m => (
+                  <button
+                    key={m}
+                    onClick={() => toggleFilter(setMuseumFilters, m)}
+                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${museumFilters.includes(m) ? 'bg-artistic-ink text-artistic-bg border-artistic-ink' : 'bg-white text-artistic-ink border-artistic-ink/10 hover:border-artistic-ink/30'}`}
+                  >
+                    {m}
+                  </button>
+                ))}
+                {allMuseums.length === 0 && <span className="text-[10px] italic opacity-30">No museums found</span>}
+              </div>
+            </div>
+
+            {/* Year Range Filter */}
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <label className="text-[9px] uppercase tracking-widest font-bold opacity-40 block">Year Range</label>
+                <span className="text-[9px] font-mono opacity-60">
+                  {yearMin < 0 ? `${Math.abs(yearMin)} BCE` : yearMin} — {yearMax}
+                </span>
+              </div>
+              <div className="flex gap-4 items-center">
+                <input 
+                  type="number" 
+                  placeholder="Min"
+                  value={yearMin}
+                  onChange={(e) => setYearMin(parseInt(e.target.value) || -20000)}
+                  className="w-full bg-white border border-artistic-ink/10 rounded-xl px-4 py-2 text-xs font-mono outline-none focus:border-artistic-accent transition-colors"
+                />
+                <span className="opacity-20 text-xs">to</span>
+                <input 
+                  type="number" 
+                  placeholder="Max"
+                  value={yearMax}
+                  onChange={(e) => setYearMax(parseInt(e.target.value) || new Date().getFullYear())}
+                  className="w-full bg-white border border-artistic-ink/10 rounded-xl px-4 py-2 text-xs font-mono outline-none focus:border-artistic-accent transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="md:col-span-3 flex justify-end">
+              <button 
+                onClick={() => {
+                  setMediumFilters([]);
+                  setMuseumFilters([]);
+                  setYearMin(-20000);
+                  setYearMax(new Date().getFullYear());
+                }}
+                className="text-[9px] uppercase font-bold tracking-[0.2em] opacity-40 hover:opacity-100 hover:text-red-500 transition-all flex items-center gap-2"
+              >
+                <Trash2 className="w-3 h-3" />
+                Clear All Filters
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   const [sharedUid, setSharedUid] = useState<string | null>(new URLSearchParams(window.location.search).get('sharedProfile'));
   const [isViewOnly, setIsViewOnly] = useState(new URLSearchParams(window.location.search).has('sharedProfile') || new URLSearchParams(window.location.search).has('sharedGallery') || new URLSearchParams(window.location.search).has('sharedBucketList'));
   
@@ -809,6 +919,36 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const allMediums = useMemo(() => {
+    const mediums = new Set<string>();
+    history.forEach(h => h.details.medium && mediums.add(h.details.medium));
+    bucketList.forEach(b => b.details.medium && mediums.add(b.details.medium));
+    return Array.from(mediums).sort();
+  }, [history, bucketList]);
+
+  const allMuseums = useMemo(() => {
+    const museums = new Set<string>();
+    history.forEach(h => h.details.museum && museums.add(h.details.museum));
+    bucketList.forEach(b => b.details.museum && museums.add(b.details.museum));
+    return Array.from(museums).sort();
+  }, [history, bucketList]);
+
+  const filterItem = (item: HistoryItem) => {
+    if (mediumFilters.length > 0 && item.details.medium && !mediumFilters.includes(item.details.medium)) return false;
+    if (museumFilters.length > 0 && item.details.museum && !museumFilters.includes(item.details.museum)) return false;
+    
+    // Year range parsing
+    const yearMatch = item.details.year?.match(/-?\d+/);
+    if (yearMatch) {
+      const y = parseInt(yearMatch[0]);
+      if (y < yearMin || y > yearMax) return false;
+    }
+    return true;
+  };
+
+  const filteredHistory = useMemo(() => history.filter(filterItem), [history, mediumFilters, museumFilters, yearMin, yearMax]);
+  const filteredBucketList = useMemo(() => bucketList.filter(filterItem), [bucketList, mediumFilters, museumFilters, yearMin, yearMax]);
+
   const findAndLoadFromHistoryId = (id: string) => {
     const item = history.find(i => i.id === id) || bucketList.find(i => i.id === id);
     if (item) loadFromHistory(item);
@@ -1029,7 +1169,7 @@ function App() {
           <section className="w-full h-full overflow-y-auto bg-white p-10 md:p-20">
             <div className="max-w-6xl mx-auto">
               <header className="mb-16">
-                <div className="flex justify-between items-end">
+                <div className="flex justify-between items-end gap-6 flex-wrap">
                   <div>
                     <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-4">Curated Selections</span>
                     <h2 className="text-5xl font-serif tracking-tighter italic">
@@ -1038,44 +1178,63 @@ function App() {
                         : (user ? (user.displayName || user.email?.split('@')[0] || 'My') : 'Guest')} Bucket List
                     </h2>
                   </div>
-                  {user && (
-                    <div className="flex flex-col items-end gap-2">
-                       <button 
-                        onClick={toggleBucketListPublic}
-                        className={`text-[9px] uppercase font-bold tracking-widest ${isBucketListPublic ? 'text-artistic-accent' : 'text-artistic-ink/40'}`}
-                      >
-                        {isBucketListPublic ? 'Profile sharing is ON' : 'Share Profile'}
-                      </button>
-                      {isBucketListPublic && (
-                        <div className="flex items-center gap-2 bg-artistic-shadow/50 p-2 rounded-full mt-1">
-                          <input 
-                            type="text" 
-                            readOnly 
-                            value={`${window.location.origin}/?sharedProfile=${user.uid}`}
-                            className="text-[8px] max-w-[120px] font-bold bg-transparent italic outline-none truncate"
-                          />
-                          <button 
-                            onClick={() => handleShare(`${window.location.origin}/?sharedProfile=${user.uid}`)}
-                            className="text-artistic-accent hover:text-artistic-ink transition-colors"
-                            title="Share link"
-                          >
-                            <Share2 className="w-3 h-3" />
-                          </button>
-                        </div>
+                  <div className="flex items-center gap-6 flex-wrap">
+                    <button 
+                      onClick={() => setShowFilters(!showFilters)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] uppercase font-bold tracking-widest transition-all ${showFilters ? 'bg-artistic-ink text-artistic-bg border-artistic-ink' : 'bg-white text-artistic-ink border-artistic-ink/10 hover:border-artistic-ink'}`}
+                    >
+                      <Filter className="w-3 h-3" />
+                      <span>Filters</span>
+                      {(mediumFilters.length > 0 || museumFilters.length > 0 || yearMin !== -20000 || yearMax !== new Date().getFullYear()) && (
+                        <span className="w-2 h-2 bg-artistic-accent rounded-full" />
                       )}
-                    </div>
-                  )}
+                    </button>
+
+                    {user && (
+                      <div className="flex flex-col items-end gap-2">
+                         <button 
+                          onClick={toggleBucketListPublic}
+                          className={`text-[9px] uppercase font-bold tracking-widest ${isBucketListPublic ? 'text-artistic-accent' : 'text-artistic-ink/40'}`}
+                        >
+                          {isBucketListPublic ? 'Profile sharing is ON' : 'Share Profile'}
+                        </button>
+                        {isBucketListPublic && (
+                          <div className="flex items-center gap-2 bg-artistic-shadow/50 p-2 rounded-full mt-1">
+                            <input 
+                              type="text" 
+                              readOnly 
+                              value={`${window.location.origin}/?sharedProfile=${user.uid}`}
+                              className="text-[8px] max-w-[120px] font-bold bg-transparent italic outline-none truncate"
+                            />
+                            <button 
+                              onClick={() => handleShare(`${window.location.origin}/?sharedProfile=${user.uid}`)}
+                              className="text-artistic-accent hover:text-artistic-ink transition-colors"
+                              title="Share link"
+                            >
+                              <Share2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                  </div>
               </header>
 
-              {bucketList.length === 0 ? (
+              <FilterSection />
+
+              {filteredBucketList.length === 0 ? (
                 <div className="h-[40vh] flex flex-col items-center justify-center text-center">
-                  <p className="text-artistic-ink/40 text-sm italic">You haven't added anything to your bucket list.</p>
+                  <p className="text-artistic-ink/40 text-sm italic">
+                    {bucketList.length === 0 
+                      ? "You haven't added anything to your bucket list." 
+                      : "No items match your active filters."}
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                   <AnimatePresence>
-                    {bucketList.map((item) => (
+                    {filteredBucketList.map((item) => (
                       <motion.div
                         key={item.id}
                         initial={{ opacity: 0, y: 20 }}
@@ -1153,7 +1312,7 @@ function App() {
         ) : view === 'galleries' ? (
           <section className="w-full h-full overflow-y-auto bg-white p-10 md:p-20">
             <div className="max-w-6xl mx-auto">
-              <header className="mb-16 flex justify-between items-end">
+              <header className="mb-16 flex justify-between items-end gap-6 flex-wrap">
                 <div>
                   <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-4">Curated Collection</span>
                   <h2 className="text-5xl font-serif tracking-tighter italic">
@@ -1162,7 +1321,7 @@ function App() {
                       : (user ? (user.displayName || user.email?.split('@')[0] || 'My') : 'Guest')} Gallery
                   </h2>
                 </div>
-                <div className="flex gap-8 items-center">
+                <div className="flex gap-8 items-center flex-wrap">
                   {user && (
                     <div className="flex flex-col items-end gap-2">
                       <button 
@@ -1190,25 +1349,42 @@ function App() {
                       )}
                     </div>
                   )}
-                  <div className="flex p-1 bg-artistic-shadow rounded-full border border-artistic-ink/5">
+
+                  <div className="flex items-center gap-4">
                     <button 
-                      onClick={() => setGalleryMode('grid')}
-                      className={`p-2 rounded-full transition-all ${galleryMode === 'grid' ? 'bg-artistic-ink text-artistic-bg' : 'text-artistic-ink hover:bg-artistic-ink/5'}`}
+                      onClick={() => setShowFilters(!showFilters)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] uppercase font-bold tracking-widest transition-all ${showFilters ? 'bg-artistic-ink text-artistic-bg border-artistic-ink' : 'bg-white text-artistic-ink border-artistic-ink/10 hover:border-artistic-ink'}`}
                     >
-                      <LayoutGrid className="w-4 h-4" />
+                      <Filter className="w-3 h-3" />
+                      <span>Filters</span>
+                      {(mediumFilters.length > 0 || museumFilters.length > 0 || yearMin !== -20000 || yearMax !== new Date().getFullYear()) && (
+                        <span className="w-2 h-2 bg-artistic-accent rounded-full" />
+                      )}
                     </button>
-                    <button 
-                      onClick={() => setGalleryMode('graph')}
-                      className={`p-2 rounded-full transition-all ${galleryMode === 'graph' ? 'bg-artistic-ink text-artistic-bg' : 'text-artistic-ink hover:bg-artistic-ink/5'}`}
-                    >
-                      <Network className="w-4 h-4" />
-                    </button>
+
+                    <div className="flex p-1 bg-artistic-shadow rounded-full border border-artistic-ink/5">
+                      <button 
+                        onClick={() => setGalleryMode('grid')}
+                        className={`p-2 rounded-full transition-all ${galleryMode === 'grid' ? 'bg-artistic-ink text-artistic-bg' : 'text-artistic-ink hover:bg-artistic-ink/5'}`}
+                      >
+                        <LayoutGrid className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => setGalleryMode('graph')}
+                        className={`p-2 rounded-full transition-all ${galleryMode === 'graph' ? 'bg-artistic-ink text-artistic-bg' : 'text-artistic-ink hover:bg-artistic-ink/5'}`}
+                      >
+                        <Network className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
+
                   <div className="flex gap-4 items-center opacity-40 text-[9px] uppercase font-bold tracking-widest border-l border-artistic-ink/10 pl-8">
-                    <span>{history.length} Masterpieces cataloged</span>
+                    <span>{filteredHistory.length} Masterpieces cataloged</span>
                   </div>
                 </div>
               </header>
+
+              <FilterSection />
 
               {(history.length === 0 && bucketList.length === 0) ? (
                 <div className="h-[40vh] flex flex-col items-center justify-center text-center">
@@ -1221,8 +1397,8 @@ function App() {
                 <div className="w-full bg-artistic-shadow/30 rounded-3xl border border-artistic-ink/5 p-4 md:p-8 flex flex-col items-center">
                   <div className="w-full h-[700px] bg-white rounded-3xl shadow-sm border border-artistic-ink/5 relative overflow-hidden">
                     <KnowledgeGraph 
-                      items={history} 
-                      bucketListItems={bucketList}
+                      items={filteredHistory} 
+                      bucketListItems={filteredBucketList}
                       onArtworkClick={findAndLoadFromHistoryId} 
                       onEntityClick={openEntity}
                     />
@@ -1235,7 +1411,12 @@ function App() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                   <AnimatePresence>
-                    {history.map((item) => (
+                    {filteredHistory.length === 0 && history.length > 0 && (
+                      <div className="col-span-full h-[30vh] flex flex-col items-center justify-center text-center">
+                        <p className="text-artistic-ink/40 text-sm italic">No masterpieces match your active filters.</p>
+                      </div>
+                    )}
+                    {filteredHistory.map((item) => (
                       <motion.div
                         key={item.id}
                         initial={{ opacity: 0, y: 20 }}
@@ -1336,13 +1517,13 @@ function App() {
 
               <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
                 <button
-                  disabled={isViewOnly}
+                  disabled={isViewOnly || isLoading}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`w-16 h-16 bg-artistic-ink text-artistic-bg rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl ${isViewOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`w-16 h-16 bg-artistic-ink text-artistic-bg rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl ${isViewOnly || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <Upload className="w-6 h-6" />
+                  {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Upload className="w-6 h-6" />}
                 </button>
-                <div onClick={() => setView('galleries')} className="cursor-pointer group flex flex-col items-center">
+                <div onClick={() => !isLoading && setView('galleries')} className={`cursor-pointer group flex flex-col items-center ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
                    <div className="w-16 h-16 border border-artistic-ink rounded-full flex items-center justify-center group-hover:bg-artistic-ink group-hover:text-artistic-bg transition-all mb-2">
                      <HistoryIcon className="w-6 h-6" />
                    </div>
@@ -1411,23 +1592,49 @@ function App() {
                   />
                   
                   {isLoading && (
-                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center p-12">
-                      <div className="w-full max-w-[200px] space-y-4">
-                        <div className="flex justify-between items-end">
-                          <p className="text-[9px] uppercase tracking-[0.3em] font-bold opacity-40">Neural Analysis</p>
-                          <span className="text-[9px] font-mono opacity-40">{progress}%</span>
-                        </div>
-                        <div className="h-[2px] w-full bg-black/5 overflow-hidden">
+                    <div className="absolute inset-0 bg-white/90 backdrop-blur-md flex flex-col items-center justify-center p-12 z-20">
+                      <div className="w-full max-w-[240px] flex flex-col items-center space-y-8">
+                        <div className="relative">
+                          <div className="w-20 h-20 border-2 border-artistic-ink/5 rounded-full flex items-center justify-center">
+                            <Loader2 className="w-8 h-8 animate-spin text-artistic-accent" />
+                          </div>
+                          {/* Pulsing ring around loader */}
                           <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
-                            className="h-full bg-artistic-accent"
+                            animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.3, 0.1] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="absolute inset-0 border-2 border-artistic-accent rounded-full"
                           />
                         </div>
-                      </div>
-                      <div className="mt-8 flex items-center gap-3">
-                        <Loader2 className="w-3 h-3 animate-spin opacity-20" />
-                        <p className="text-[10px] uppercase tracking-[0.1em] font-bold opacity-20">Transcoding Vision...</p>
+
+                        <div className="w-full space-y-4">
+                          <div className="flex justify-between items-end">
+                            <p className="text-[9px] uppercase tracking-[0.3em] font-bold text-artistic-ink/60">Neural Analysis</p>
+                            <span className="text-[10px] font-mono font-bold text-artistic-accent">{progress}%</span>
+                          </div>
+                          <div className="h-[3px] w-full bg-artistic-ink/5 rounded-full overflow-hidden">
+                            <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${progress}%` }}
+                              className="h-full bg-artistic-accent"
+                            />
+                          </div>
+                          <div className="h-4 flex items-center justify-center">
+                             <AnimatePresence mode="wait">
+                               <motion.p 
+                                 key={progress < 30 ? 'p1' : progress < 60 ? 'p2' : progress < 90 ? 'p3' : 'p4'}
+                                 initial={{ opacity: 0, y: 5 }}
+                                 animate={{ opacity: 1, y: 0 }}
+                                 exit={{ opacity: 0, y: -5 }}
+                                 className="text-[9px] uppercase tracking-[0.1em] font-bold text-artistic-ink/40"
+                               >
+                                 {progress < 30 ? "Initializing Neural Lens..." : 
+                                  progress < 60 ? "Deconstructing Elements..." : 
+                                  progress < 90 ? "Cross-referencing Archives..." : 
+                                  "Finalizing Identifications..."}
+                               </motion.p>
+                             </AnimatePresence>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}

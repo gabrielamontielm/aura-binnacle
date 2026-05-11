@@ -9,9 +9,12 @@ AURA is a mobile-first web application designed for art enthusiasts to scan, ide
 ## 🌟 Key Features
 
 - **Artwork Scanning & Identification**: Instantly identify artworks using Google Gemini AI. Get details on artist, year, movement, medium, and historical context.
-- **Personal Gallery**: Catalog your discoveries in a personal knowledge base.
+- **Advanced Gallery Filtering**: Filter your curated collection by medium, museum, and year range with support for multiple selections.
+- **Interactive Knowledge Graph**: Visualize relationships between artists, movements, and museums with directional edges and edge labels. Features include:
+    - **Recursive Collapsing**: Collapse nodes to simplify complex views.
+    - **Contextual Highlighting**: Select a node to highlight its neighborhood and dim the rest of the graph.
+    - **Adaptive Detail**: Labels and icons scale based on zoom level.
 - **Bucket List**: Keep track of masterpieces you wish to see in person. Support for Guest mode allows use without an account.
-- **Interactive Knowledge Graph**: Visualize relationships between artists, movements, and museums in 2D.
 - **Social Sharing**: Share your curated gallery or bucket list with unique public profile links. Support for view-only modes.
 
 ## 🛠️ System Requirements & Prerequisites
