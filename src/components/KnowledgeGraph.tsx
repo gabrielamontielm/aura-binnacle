@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import ForceGraph2D, { ForceGraphMethods } from 'react-force-graph-2d';
 import { ArtDetails, getEntityDetails, EntityDetails } from '../services/artService';
-import { Info, X, ExternalLink, Network, Loader2, BookOpen, RefreshCw } from 'lucide-react';
+import { Info, X, ExternalLink, Network, Loader2, BookOpen, RefreshCw, Eye, EyeOff, MousePointer2, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface HistoryItem {
@@ -27,6 +27,7 @@ interface Node {
 interface Link {
   source: string;
   target: string;
+  label: string;
 }
 
 interface KnowledgeGraphProps {
@@ -50,6 +51,18 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [entityDetails, setEntityDetails] = useState<Record<string, EntityDetails>>({});
+  const [visibleTypes, setVisibleTypes] = useState<Set<string>>(new Set(['movement', 'artist', 'artwork', 'location', 'type', 'museum']));
+  const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
+  const [hideAllLinks, setHideAllLinks] = useState(false);
+  const [focusSelectedOnly, setFocusSelectedOnly] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, node: Node } | null>(null);
+
+  // Close context menu on click anywhere else
+  useEffect(() => {
+    const handleGlobalClick = () => setContextMenu(null);
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
 
   // Explicit dimension tracking
   useEffect(() => {
@@ -120,7 +133,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
         icon: '👨‍🎨',
         info: `A notable creator whose work contributes to the ${m} movement.`
       });
-      links.push({ source: `mov_${m}`, target: `art_${a}` });
+      links.push({ source: `mov_${m}`, target: `art_${a}`, label: 'Influences' });
     });
 
     // 3. Add Location Nodes
@@ -164,7 +177,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
       // Link Museum to its Location
       const loc = museumToLocation.get(mus);
       if (loc) {
-        links.push({ source: `loc_${loc}`, target: `mus_${mus}` });
+        links.push({ source: `loc_${loc}`, target: `mus_${mus}`, label: 'Located In' });
       }
     });
 
@@ -185,18 +198,98 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
         itemId: item.id,
         info: `${item.details.title} (${item.details.year}). ${item.details.description?.substring(0, 100)}...`
       });
-      links.push({ source: `art_${a}`, target: `work_${item.id}` });
+      links.push({ source: `art_${a}`, target: `work_${item.id}`, label: 'Created' });
       
       // Map location to museum instead of painting if museum is available
       if (l && !mus) {
-        links.push({ source: `loc_${l}`, target: `work_${item.id}` });
+        links.push({ source: `loc_${l}`, target: `work_${item.id}`, label: 'Located In' });
       }
-      if (t) links.push({ source: `typ_${t}`, target: `work_${item.id}` });
-      if (mus) links.push({ source: `mus_${mus}`, target: `work_${item.id}` });
+      if (t) links.push({ source: `typ_${t}`, target: `work_${item.id}`, label: 'Categorized As' });
+      if (mus) links.push({ source: `mus_${mus}`, target: `work_${item.id}`, label: 'Exhibited At' });
     });
     
     return { nodes, links };
   }, [items, bucketListItems]);
+
+  const toggleType = (type: string) => {
+    setVisibleTypes(prev => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
+
+  const toggleCollapse = (nodeId: string) => {
+    setCollapsedNodes(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
+      return next;
+    });
+  };
+
+  const filteredGraphData = useMemo(() => {
+    const { nodes, links } = graphData;
+    
+    // Filter nodes by type first
+    const visibleByTypeNodes = nodes.filter(n => visibleTypes.has(n.type));
+    const visibleByTypeIds = new Set(visibleByTypeNodes.map(n => n.id));
+
+    // Determine nodes hidden by collapse recursion (upstream from collapsed incoming edges)
+    const hiddenNodes = new Set<string>();
+    const queue: string[] = [];
+
+    // Initialize queue with nodes that point TO a collapsed target
+    links.forEach(l => {
+      const sourceId = typeof l.source === 'string' ? l.source : (l.source as any).id;
+      const targetId = typeof l.target === 'string' ? l.target : (l.target as any).id;
+      
+      if (collapsedNodes.has(targetId) && visibleByTypeIds.has(sourceId)) {
+        hiddenNodes.add(sourceId);
+        queue.push(sourceId);
+      }
+    });
+
+    // BFS upwards
+    while(queue.length > 0) {
+      const currentId = queue.shift()!;
+      links.forEach(l => {
+        const sourceId = typeof l.source === 'string' ? l.source : (l.source as any).id;
+        const targetId = typeof l.target === 'string' ? l.target : (l.target as any).id;
+        if (targetId === currentId && !hiddenNodes.has(sourceId) && visibleByTypeIds.has(sourceId)) {
+          hiddenNodes.add(sourceId);
+          queue.push(sourceId);
+        }
+      });
+    }
+
+    const visibleNodes = visibleByTypeNodes.filter(n => !hiddenNodes.has(n.id));
+    const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
+
+    // Links are visible only if both source and target nodes are visible
+    // AND if global visibility settings allow
+    const visibleLinks = links.filter(l => {
+      const sourceId = typeof l.source === 'string' ? l.source : (l.source as any).id;
+      const targetId = typeof l.target === 'string' ? l.target : (l.target as any).id;
+      
+      const isVisible = visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId);
+      if (!isVisible) return false;
+
+      // Global Hide Toggle
+      if (hideAllLinks) return false;
+
+      // Focus Mode: only show links for selected node
+      if (focusSelectedOnly && selectedNode) {
+        return sourceId === selectedNode.id || targetId === selectedNode.id;
+      }
+
+      // Per-node collapse - hide incoming edges to collapsed nodes
+      return !collapsedNodes.has(targetId);
+    });
+
+    return { nodes: visibleNodes, links: visibleLinks };
+  }, [graphData, visibleTypes, collapsedNodes, hideAllLinks, focusSelectedOnly, selectedNode]);
 
   // Fetch Entity Logic
   const fetchEntity = useCallback(async (node: Node, forceRefresh = false) => {
@@ -239,24 +332,22 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
     const fontSize = 12 / globalScale;
     const size = node.val;
     
-    /* 
-    // Removed background circle as requested
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
-    ctx.fillStyle = node.color;
-    ctx.fill();
-    
-    // Draw border
-    ctx.strokeStyle = '#1A1A1A';
-    ctx.lineWidth = 1 / globalScale;
-    ctx.stroke();
-    */
-
     // Draw Icon
     ctx.font = `${size * 1.5}px serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(node.icon, node.x, node.y);
+
+    // Draw Collapsed Indicator
+    if (collapsedNodes.has(node.id)) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, size * 1.2, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#C4A484';
+      ctx.setLineDash([2, 2]);
+      ctx.lineWidth = 1 / globalScale;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
 
     // Draw Label
     if (globalScale > 1.5) {
@@ -269,6 +360,54 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
       ctx.fillText(label, node.x, node.y + size + 2);
       ctx.shadowBlur = 0;
     }
+  }, [collapsedNodes]);
+
+  const renderLink = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const MAX_FONT_SIZE = 4;
+    const LABEL_NODE_MARGIN = 2; // Extra margin so labels don't overlap icons
+    const start = link.source;
+    const end = link.target;
+
+    // Only render labels if they exist and zoom is high enough
+    if (!link.label || globalScale < 2.5) return;
+
+    // Calculate position
+    const textPos = {
+      x: start.x + (end.x - start.x) / 2,
+      y: start.y + (end.y - start.y) / 2
+    };
+
+    const relLink = { x: end.x - start.x, y: end.y - start.y };
+    const distance = Math.sqrt(relLink.x * relLink.x + relLink.y * relLink.y);
+
+    // Don't render labels if they're too cramped
+    if (distance < 20) return;
+
+    let textAngle = Math.atan2(relLink.y, relLink.x);
+
+    // Maintain label readability (top-to-bottom)
+    if (textAngle > Math.PI / 2) textAngle -= Math.PI;
+    if (textAngle < -Math.PI / 2) textAngle += Math.PI;
+
+    const fontSize = Math.min(MAX_FONT_SIZE, (distance - LABEL_NODE_MARGIN * 2) / link.label.length);
+
+    ctx.save();
+    ctx.translate(textPos.x, textPos.y);
+    ctx.rotate(textAngle);
+
+    ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.4)';
+    
+    // Draw background white box for readability
+    const textWidth = ctx.measureText(link.label).width;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.fillRect(-textWidth/2 - 1, -fontSize/2 - 1, textWidth + 2, fontSize + 2);
+    
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.5)';
+    ctx.fillText(link.label, 0, 0);
+    ctx.restore();
   }, []);
 
   const relatedArtworks = useMemo(() => {
@@ -313,12 +452,12 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
 
   return (
     <div ref={containerRef} className="w-full h-full relative overflow-hidden">
-      {(graphData.nodes.length > 0) ? (
+      {(filteredGraphData.nodes.length > 0) ? (
         <ForceGraph2D
           ref={fgRef}
           width={dimensions.width}
           height={dimensions.height}
-          graphData={graphData}
+          graphData={filteredGraphData}
           nodeCanvasObject={renderNode}
           nodePointerAreaPaint={(node: any, color, ctx) => {
             ctx.fillStyle = color;
@@ -326,8 +465,21 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
             ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI, false);
             ctx.fill();
           }}
-          linkColor={() => 'rgba(26, 26, 26, 0.1)'}
+          linkDirectionalArrowLength={3.5}
+          linkDirectionalArrowRelPos={1}
+          linkCurvature={0.2}
+          linkColor={() => 'rgba(26, 26, 26, 0.15)'}
+          linkCanvasObject={renderLink}
+          linkCanvasObjectMode={() => 'after'}
           onNodeClick={handleNodeClick}
+          onNodeRightClick={(node: any, event) => {
+            event.preventDefault();
+            setContextMenu({ 
+              x: event.clientX, 
+              y: event.clientY, 
+              node: node as Node 
+            });
+          }}
           cooldownTicks={100}
         />
       ) : (
@@ -337,6 +489,102 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
           <p className="text-[10px] uppercase tracking-widest font-bold mt-2">Scan artworks to populate the graph</p>
         </div>
       )}
+
+      <AnimatePresence>
+        {contextMenu && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            className="fixed z-[100] min-w-[160px] bg-white/95 backdrop-blur-xl border border-artistic-ink/10 rounded-2xl shadow-2xl p-2 flex flex-col gap-1 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-3 py-2 border-b border-artistic-ink/5 mb-1">
+              <p className="text-[10px] font-bold truncate text-artistic-ink/60 uppercase tracking-widest">{contextMenu.node.name}</p>
+            </div>
+
+            <button 
+              onClick={() => {
+                setCollapsedNodes(prev => {
+                  const next = new Set(prev);
+                  next.delete(contextMenu.node.id);
+                  return next;
+                });
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-artistic-ink/80 hover:bg-artistic-accent hover:text-white rounded-xl transition-all"
+            >
+              <Network className="w-3.5 h-3.5" />
+              <span>Expand Connections</span>
+            </button>
+
+            <button 
+              onClick={() => {
+                setCollapsedNodes(prev => {
+                  const next = new Set(prev);
+                  next.add(contextMenu.node.id);
+                  return next;
+                });
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-artistic-ink/80 hover:bg-artistic-accent hover:text-white rounded-xl transition-all"
+            >
+              <Network className="w-3.5 h-3.5 opacity-40" />
+              <span>Collapse Connections</span>
+            </button>
+
+            <button 
+              onClick={() => {
+                setSelectedNode(contextMenu.node);
+                setFocusSelectedOnly(!focusSelectedOnly);
+                setContextMenu(null);
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2 text-[10px] uppercase tracking-wider font-bold ${focusSelectedOnly ? 'text-artistic-accent' : 'text-artistic-ink/80'} hover:bg-artistic-accent hover:text-white rounded-xl transition-all`}
+            >
+              <MousePointer2 className="w-3.5 h-3.5" />
+              <span>{focusSelectedOnly ? 'Disable Focus Mode' : 'Focus Connections'}</span>
+            </button>
+
+            <div className="h-px bg-artistic-ink/5 my-1" />
+
+            <button 
+              onClick={() => {
+                handleNodeClick(contextMenu.node);
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-artistic-ink/80 hover:bg-artistic-accent hover:text-white rounded-xl transition-all"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>Center View</span>
+            </button>
+
+            {(contextMenu.node.type === 'artwork' || contextMenu.node.itemId) && (
+              <button 
+                onClick={() => {
+                  if (contextMenu.node.itemId) onArtworkClick(contextMenu.node.itemId);
+                  setContextMenu(null);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-artistic-ink/80 hover:bg-artistic-accent hover:text-white rounded-xl transition-all"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>View Details</span>
+              </button>
+            )}
+
+            <button 
+              onClick={() => {
+                fetchEntity(contextMenu.node, true);
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-[10px] uppercase tracking-wider font-bold text-artistic-ink/80 hover:bg-artistic-accent hover:text-white rounded-xl transition-all"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Force Refresh Data</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Info Panel Overlay */}
       <AnimatePresence>
@@ -355,6 +603,13 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
                 </span>
               </div>
               <div className="flex gap-2">
+                <button 
+                  onClick={() => toggleCollapse(selectedNode.id)}
+                  className={`p-1 rounded-full transition-colors ${collapsedNodes.has(selectedNode.id) ? 'bg-artistic-accent text-white' : 'hover:bg-artistic-shadow'}`}
+                  title={collapsedNodes.has(selectedNode.id) ? "Expand Connections" : "Collapse Connections"}
+                >
+                  {collapsedNodes.has(selectedNode.id) ? <Network className="w-4 h-4" /> : <Network className="w-4 h-4 opacity-40" />}
+                </button>
                 <button 
                   onClick={() => fetchEntity(selectedNode, true)}
                   className="p-1 hover:bg-artistic-shadow rounded-full transition-colors"
@@ -472,30 +727,67 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
         )}
       </AnimatePresence>
 
-      <div className="absolute bottom-6 left-6 flex flex-col gap-2 p-5 bg-white/70 backdrop-blur-md rounded-2xl border border-artistic-ink/5 shadow-sm pointer-events-none">
-          <div className="flex items-center gap-3">
+      <div className="absolute bottom-6 left-6 flex flex-col gap-2 p-5 bg-white/70 backdrop-blur-md rounded-2xl border border-artistic-ink/5 shadow-sm">
+          <div 
+            onClick={() => toggleType('movement')}
+            className={`flex items-center gap-3 cursor-pointer transition-opacity ${visibleTypes.has('movement') ? 'opacity-100' : 'opacity-30'}`}
+          >
               <span className="text-lg">🎨</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Styles / Movements</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div 
+            onClick={() => toggleType('artist')}
+            className={`flex items-center gap-3 cursor-pointer transition-opacity ${visibleTypes.has('artist') ? 'opacity-100' : 'opacity-30'}`}
+          >
               <span className="text-lg">👨‍🎨</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Artists</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div 
+            onClick={() => toggleType('artwork')}
+            className={`flex items-center gap-3 cursor-pointer transition-opacity ${visibleTypes.has('artwork') ? 'opacity-100' : 'opacity-30'}`}
+          >
               <span className="text-lg">🖼️</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Paintings</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div 
+            onClick={() => toggleType('location')}
+            className={`flex items-center gap-3 cursor-pointer transition-opacity ${visibleTypes.has('location') ? 'opacity-100' : 'opacity-30'}`}
+          >
               <span className="text-lg">📍</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Locations</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div 
+            onClick={() => toggleType('museum')}
+            className={`flex items-center gap-3 cursor-pointer transition-opacity ${visibleTypes.has('museum') ? 'opacity-100' : 'opacity-30'}`}
+          >
               <span className="text-lg">🏛️</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Museums</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div 
+            onClick={() => toggleType('type')}
+            className={`flex items-center gap-3 cursor-pointer transition-opacity ${visibleTypes.has('type') ? 'opacity-100' : 'opacity-30'}`}
+          >
               <span className="text-lg">🏺</span>
               <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Masterpiece Types</span>
+          </div>
+
+          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-artistic-ink/5">
+            <button 
+              onClick={() => setHideAllLinks(!hideAllLinks)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${hideAllLinks ? 'bg-red-50 border-red-200 text-red-600' : 'bg-artistic-shadow/10 border-transparent text-artistic-ink/60'}`}
+              title={hideAllLinks ? "Show All Connections" : "Hide All Connections"}
+            >
+              {hideAllLinks ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+              <span className="text-[8px] uppercase tracking-wider font-bold">Connections</span>
+            </button>
+            <button 
+              onClick={() => setFocusSelectedOnly(!focusSelectedOnly)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${focusSelectedOnly ? 'bg-artistic-accent text-white border-artistic-accent' : 'bg-artistic-shadow/10 border-transparent text-artistic-ink/60'}`}
+              title={focusSelectedOnly ? "Show All Connections" : "Focus Selected Connections"}
+            >
+              <MousePointer2 className="w-3 h-3" />
+              <span className="text-[8px] uppercase tracking-wider font-bold">Focus</span>
+            </button>
           </div>
       </div>
     </div>

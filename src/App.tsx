@@ -589,6 +589,52 @@ function App() {
     }
   };
 
+  const moveBucketToGallery = async (item: HistoryItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user && isViewOnly) return;
+
+    // 1. Remove from bucket list
+    setBucketList(prev => prev.filter(i => i.id !== item.id));
+    
+    // 2. Add to history
+    const newItem = {
+      ...item,
+      timestamp: Date.now() // Update timestamp to now so it appears at top of gallery
+    };
+    setHistory(prev => [newItem, ...prev].slice(0, 50));
+
+    if (user) {
+      try {
+        const bucketPath = `users/${user.uid}/bucketlist`;
+        const historyPath = `users/${user.uid}/items`;
+        
+        await Promise.all([
+          deleteDoc(doc(db, bucketPath, item.id)),
+          setDoc(doc(db, historyPath, item.id), { ...newItem, userId: user.uid })
+        ]);
+
+        if (isBucketListPublic) {
+          await deleteDoc(doc(db, `public_bucketlist/${user.uid}/items`, item.id));
+        }
+        if (isGalleryPublic) {
+          await setDoc(doc(db, `public_items/${user.uid}/items`, item.id), { ...newItem, userId: user.uid });
+        }
+      } catch (err) {
+        console.error("Failed to move item to gallery:", err);
+      }
+    } else {
+      // Guest local storage
+      const savedBucket = localStorage.getItem('art_curator_bucketlist');
+      if (savedBucket) {
+        const localBucket = JSON.parse(savedBucket).filter((i: any) => i.id !== item.id);
+        localStorage.setItem('art_curator_bucketlist', JSON.stringify(localBucket));
+      }
+      const savedHistory = localStorage.getItem('art_curator_history');
+      const localHistory = savedHistory ? JSON.parse(savedHistory) : [];
+      localStorage.setItem('art_curator_history', JSON.stringify([newItem, ...localHistory].slice(0, 50)));
+    }
+  };
+
   const fetchPublicBucketList = async (uid: string, autoLoading = true) => {
       if (autoLoading) setIsLoading(true);
       const path = `public_bucketlist/${uid}/items`;
@@ -1072,12 +1118,22 @@ function App() {
                               }
                             />
                             {!isViewOnly && (
-                              <button 
-                                onClick={(e) => deleteBucketListItem(item.id, e)}
-                                className="absolute top-4 right-4 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button 
+                                  onClick={(e) => moveBucketToGallery(item, e)}
+                                  className="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-artistic-accent hover:bg-artistic-accent/10"
+                                  title="Move to Gallery"
+                                >
+                                  <HistoryIcon className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={(e) => deleteBucketListItem(item.id, e)}
+                                  className="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-red-500 hover:bg-red-50"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
