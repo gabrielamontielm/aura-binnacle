@@ -93,16 +93,31 @@ export async function identifyArtwork(base64Image: string, mimeType: string = "i
   }
 }
 
-export async function identifyArtworkFromUrl(imageUrl: string): Promise<ArtDetails> {
+export async function identifyArtworkFromUrl(imageUrl: string, titleHint?: string, artistHint?: string): Promise<ArtDetails> {
   try {
+    const isBase64 = imageUrl.startsWith('data:');
+    const imagePart = isBase64 ? {
+      inlineData: {
+        mimeType: imageUrl.split(';')[0].split(':')[1],
+        data: imageUrl.split(',')[1]
+      }
+    } : {
+      text: `Identify the artwork shown at this URL: ${imageUrl}.`
+    };
+
+    const hintText = (titleHint || artistHint) 
+      ? ` Contextual Hint: This is believed to be "${titleHint || 'unknown title'}" by ${artistHint || 'unknown artist'}. Use this to provide accurate historical details.` 
+      : "";
+
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [
         {
           parts: [
             {
-              text: `Identify the artwork shown at this URL: ${imageUrl}. Provide details in a structured format: title, artist, year, movement, medium, museum, location, type (e.g. Painting), description, and historicalContext.`,
+              text: `Identify the artwork provided. Provide details in a structured format: title, artist, year, movement, medium, museum, location, type (e.g. Painting), description, and historicalContext.${hintText}`,
             },
+            ...(isBase64 ? [imagePart] : [imagePart as any]), // Handle slightly differently for typing if needed, but this works
           ],
         },
       ],
@@ -116,9 +131,9 @@ export async function identifyArtworkFromUrl(imageUrl: string): Promise<ArtDetai
             year: { type: Type.STRING },
             movement: { type: Type.STRING },
             medium: { type: Type.STRING },
-            museum: { type: Type.STRING, description: "The museum where the piece resides, if known" },
-            location: { type: Type.STRING, description: "The city and country where the piece resides, if known" },
-            type: { type: Type.STRING, description: "The category of artwork, e.g., Painting, Sculpture" },
+            museum: { type: Type.STRING },
+            location: { type: Type.STRING },
+            type: { type: Type.STRING },
             description: { type: Type.STRING },
             historicalContext: { type: Type.STRING },
           },
@@ -143,7 +158,7 @@ export async function identifyArtworkFromUrl(imageUrl: string): Promise<ArtDetai
  */
 export interface EntityDetails {
   name: string;
-  type: 'artist' | 'movement' | 'museum' | 'type';
+  type: 'artist' | 'movement' | 'museum' | 'type' | 'location';
   yearsOrPeriod: string;
   originOrRegion: string;
   significance: string;
@@ -155,20 +170,22 @@ export interface EntityDetails {
 }
 
 /**
- * Fetches comprehensive details for an artist, movement, museum, or type, with caching.
- * @param name The name of the artist, movement, museum, or type.
- * @param type The type of entity ('artist' | 'movement' | 'museum' | 'type').
+ * Fetches comprehensive details for an artist, movement, museum, type, or location, with caching.
+ * @param name The name of the artist, movement, museum, type, or location.
+ * @param type The type of entity ('artist' | 'movement' | 'museum' | 'type' | 'location').
  * @param forceRefresh If true, bypasses cache.
  * @returns A promise resolving to entity details.
  */
-export async function getEntityDetails(name: string, type: 'artist' | 'movement' | 'museum' | 'type', forceRefresh: boolean = false): Promise<EntityDetails> {
+export async function getEntityDetails(name: string, type: 'artist' | 'movement' | 'museum' | 'type' | 'location', forceRefresh: boolean = false): Promise<EntityDetails> {
   const collectionName = type === 'artist' 
     ? 'metadata_artists' 
     : type === 'movement' 
         ? 'metadata_movements'
         : type === 'museum'
             ? 'metadata_museums'
-            : 'metadata_types';
+            : type === 'location'
+                ? 'metadata_locations'
+                : 'metadata_types';
   const id = sanitizeId(name);
   const docRef = doc(db, collectionName, id);
 
@@ -194,14 +211,14 @@ export async function getEntityDetails(name: string, type: 'artist' | 'movement'
               Format the response as JSON with the following fields:
               - name: The full name of the ${type}
               - type: "${type}"
-              - yearsOrPeriod: Life spans for artists, active period for movements or founding date for museums
-              - originOrRegion: Birthplace/National origin or geographical center of movement or location of museum
-              - significance: Why they are important in art history (1-2 sentences)
-              - detailedDescription: A deep dive into their style, philosophy, evolution, or history (3-4 paragraphs)
-              - keyCharacteristics: A list of 3-4 defining traits or styles or collections
-              - historicalImpact: Their long-term legacy (2-3 sentences)
+              - yearsOrPeriod: Life spans for artists, active period for movements, founding date for museums, or historical era for locations
+              - originOrRegion: Birthplace/National origin for artists, geographical center for movements, location for museums, or the broader region/country for locations
+              - significance: Why they or the place is important in art history (1-2 sentences)
+              - detailedDescription: A deep dive into style, philosophy, evolution, or history of the person, movement, or location (3-4 paragraphs)
+              - keyCharacteristics: A list of 3-4 defining traits, styles, or cultural significance
+              - historicalImpact: Long-term legacy or influence on global culture (2-3 sentences)
               - curatorialSummary: An engaging short summary (around 200 characters) for a quick overview
-              - famousWorks: A list of 3-5 most famous artworks associated. For each work include title, year, museum, location if known, and a URL string for a high-quality, stable public domain image (e.g., from Wikimedia Commons or a major museum website). ONLY provide a URL if you are certain it is stable and publicly accessible; otherwise, omit the imageUrl field or set it to null.`,
+              - famousWorks: A list of 3-5 most famous artworks associated with this person, movement, museum, or created/held in this location. For each work include title, year, museum, location if known, and a URL string for a high-quality, stable public domain image (e.g., from Wikimedia Commons or a major museum website). ONLY provide a URL if you are certain it is stable and publicly accessible; otherwise, omit the imageUrl field or set it to null.`,
             },
           ],
         },

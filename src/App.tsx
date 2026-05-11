@@ -54,12 +54,42 @@ function App() {
   const updateArtworkImage = async (id: string, imageUrl: string, type: 'history' | 'bucketlist') => {
     if (!user) return;
     try {
+      let updatedDetails: ArtDetails | null = null;
+      
+      // If it's a bucket list item or history item with placeholder description, try to identify it now
+      const currentItem = type === 'history' 
+        ? history.find(h => h.id === id) 
+        : bucketList.find(b => b.id === id);
+        
+      if (currentItem && (currentItem.details.description.startsWith('Bucket list work') || currentItem.details.medium === 'Unknown')) {
+        try {
+          updatedDetails = await identifyArtworkFromUrl(imageUrl, currentItem.details.title, currentItem.details.artist);
+        } catch (e) {
+          console.error("Auto-identification failed during image update:", e);
+        }
+      }
+
+      const updateData: any = { image: imageUrl };
+      if (updatedDetails) {
+        updateData.details = updatedDetails;
+      }
+
       if (type === 'history') {
-        setHistory(prev => prev.map(item => item.id === id ? { ...item, image: imageUrl } : item));
-        await updateDoc(doc(db, `users/${user.uid}/history`, id), { image: imageUrl });
+        const path = `users/${user.uid}/items`;
+        setHistory(prev => prev.map(item => item.id === id ? { ...item, image: imageUrl, details: updatedDetails || item.details } : item));
+        await updateDoc(doc(db, path, id), updateData);
+        
+        if (isGalleryPublic) {
+          await updateDoc(doc(db, `public_items/${user.uid}/items`, id), updateData);
+        }
       } else {
-        setBucketList(prev => prev.map(item => item.id === id ? { ...item, image: imageUrl } : item));
-        await updateDoc(doc(db, `users/${user.uid}/bucketlist`, id), { image: imageUrl });
+        const path = `users/${user.uid}/bucketlist`;
+        setBucketList(prev => prev.map(item => item.id === id ? { ...item, image: imageUrl, details: updatedDetails || item.details } : item));
+        await updateDoc(doc(db, path, id), updateData);
+        
+        if (isBucketListPublic) {
+          await updateDoc(doc(db, `public_bucketlist/${user.uid}/items`, id), updateData);
+        }
       }
     } catch (err) {
       console.error("Failed to update artwork image:", err);
@@ -95,7 +125,7 @@ function App() {
   const [sharedUid, setSharedUid] = useState<string | null>(new URLSearchParams(window.location.search).get('sharedProfile'));
   const [isViewOnly, setIsViewOnly] = useState(new URLSearchParams(window.location.search).has('sharedProfile') || new URLSearchParams(window.location.search).has('sharedGallery') || new URLSearchParams(window.location.search).has('sharedBucketList'));
   
-  const openEntity = async (nameOrDetails: string | EntityDetails, type?: 'artist' | 'movement' | 'museum' | 'type') => {
+  const openEntity = async (nameOrDetails: string | EntityDetails, type?: 'artist' | 'movement' | 'museum' | 'type' | 'location') => {
     const name = typeof nameOrDetails === 'string' ? nameOrDetails : nameOrDetails.name;
     const entityType = typeof nameOrDetails === 'string' ? type : nameOrDetails.type;
 
@@ -717,7 +747,8 @@ function App() {
     // Check if details look like placeholder
     if (item.details.description.startsWith('Bucket list work by') || item.details.medium === 'Unknown') {
        try {
-         const newDetails = await identifyArtworkFromUrl(item.image);
+         // Pass existing title and artist as hints to prevent AI from messing up identified details
+         const newDetails = await identifyArtworkFromUrl(item.image, item.details.title, item.details.artist);
          setDetails(newDetails);
          // Optionally update bucket list/history in state and db
        } catch (err) {
@@ -733,7 +764,7 @@ function App() {
   };
 
   const findAndLoadFromHistoryId = (id: string) => {
-    const item = history.find(i => i.id === id);
+    const item = history.find(i => i.id === id) || bucketList.find(i => i.id === id);
     if (item) loadFromHistory(item);
   };
 
@@ -847,9 +878,22 @@ function App() {
             history={history}
             onEntityClick={openEntity}
             relatedArtworks={
-              selectedEntity.type === 'artist' 
-                ? history.filter(h => h.details.artist === selectedEntity.name)
-                : history.filter(h => h.details.movement === selectedEntity.name)
+              history.filter(h => {
+                if (selectedEntity.type === 'artist') return h.details.artist === selectedEntity.name;
+                if (selectedEntity.type === 'movement') return h.details.movement === selectedEntity.name;
+                if (selectedEntity.type === 'museum') return h.details.museum === selectedEntity.name;
+                if (selectedEntity.type === 'type') return h.details.type === selectedEntity.name;
+                return false;
+              })
+            }
+            relatedBucketList={
+              bucketList.filter(h => {
+                if (selectedEntity.type === 'artist') return h.details.artist === selectedEntity.name;
+                if (selectedEntity.type === 'movement') return h.details.movement === selectedEntity.name;
+                if (selectedEntity.type === 'museum') return h.details.museum === selectedEntity.name;
+                if (selectedEntity.type === 'type') return h.details.type === selectedEntity.name;
+                return false;
+              })
             }
             bucketListWorks={bucketList}
             onArtworkClick={findAndLoadFromHistoryId}
@@ -921,7 +965,9 @@ function App() {
                     ? 'metadata_movements'
                     : selectedEntity.type === 'museum'
                       ? 'metadata_museums'
-                      : 'metadata_types';
+                      : selectedEntity.type === 'location'
+                        ? 'metadata_locations'
+                        : 'metadata_types';
                 
                 const id = updatedEntity.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
                 try {
@@ -1108,7 +1154,7 @@ function App() {
                 </div>
               </header>
 
-              {history.length === 0 ? (
+              {(history.length === 0 && bucketList.length === 0) ? (
                 <div className="h-[40vh] flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 border border-artistic-ink/10 rounded-full flex items-center justify-center mb-6">
                     <Clock className="w-6 h-6 opacity-20" />
@@ -1120,6 +1166,7 @@ function App() {
                   <div className="w-full h-[700px] bg-white rounded-3xl shadow-sm border border-artistic-ink/5 relative overflow-hidden">
                     <KnowledgeGraph 
                       items={history} 
+                      bucketListItems={bucketList}
                       onArtworkClick={findAndLoadFromHistoryId} 
                       onEntityClick={openEntity}
                     />
@@ -1447,10 +1494,13 @@ function App() {
                             </button>
                           )}
                           {details.location && (
-                            <div className="col-span-2">
-                              <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2">Location</span>
-                              <span className="text-xs font-semibold">{details.location}</span>
-                            </div>
+                            <button 
+                              onClick={() => openEntity(details.location || '', 'location')}
+                              className="col-span-2 text-left group"
+                            >
+                              <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2 group-hover:text-artistic-accent group-hover:opacity-100 transition-all">Location</span>
+                              <span className="text-xs font-semibold group-hover:text-artistic-accent transition-colors">{details.location}</span>
+                            </button>
                           )}
                         </div>
 

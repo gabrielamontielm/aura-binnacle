@@ -20,16 +20,17 @@ interface EntityViewerProps {
   relatedArtworks: { id: string, image: string, details: ArtDetails }[];
   history: { id: string, image: string, details: ArtDetails }[];
   onArtworkClick: (id: string) => void;
-  onEntityClick: (name: string, type: 'artist' | 'movement' | 'museum' | 'type') => void;
+  onEntityClick: (name: string, type: 'artist' | 'movement' | 'museum' | 'type' | 'location') => void;
   onAddToBucketList: (work: any) => void;
   bucketListWorks: any[];
+  relatedBucketList: { id: string, image: string, details: ArtDetails }[];
   onBack: () => void;
   onUpdateFamousWorkImage: (workTitle: string, imageUrl: string) => void;
 }
 
 import { ImageOverrideModal } from './ImageOverrideModal';
 
-export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, history, onArtworkClick, onEntityClick, onAddToBucketList, bucketListWorks, onBack, onUpdateFamousWorkImage }) => {
+export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, history, onArtworkClick, onEntityClick, onAddToBucketList, bucketListWorks, relatedBucketList, onBack, onUpdateFamousWorkImage }) => {
   const [editingWorkIndex, setEditingWorkIndex] = React.useState<number | null>(null);
 
   return (
@@ -56,7 +57,8 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
             Curatorial Report: {
               details.type === 'artist' ? 'The Master' : 
               details.type === 'movement' ? 'The Movement' : 
-              details.type === 'museum' ? 'The Institution' : 'The Category'
+              details.type === 'museum' ? 'The Institution' : 
+              details.type === 'location' ? 'The Destination' : 'The Category'
             }
           </motion.span>
           
@@ -136,83 +138,85 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
             </div>
           </section>
 
-          {/* Missing Masterpieces Section */}
           <section>
             <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6 px-1">
               Missing Masterpieces
             </span>
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {details.famousWorks
                 .filter(work => !history.some(art => 
                   art.details.title.toLowerCase().includes(work.title.toLowerCase()) || 
                   work.title.toLowerCase().includes(art.details.title.toLowerCase())
                 ))
                 .map((work, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 bg-white/30 border border-dashed border-artistic-ink/10 rounded-xl group hover:border-artistic-accent/30 transition-colors">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold tracking-tight">{work.title} ({work.year})</span>
-                      { (work.museum || work.location) && (
-                        <div className="flex items-center gap-1 mt-1">
-                          {work.museum ? (
+                  <div key={i} className="group flex flex-col gap-3 p-3 bg-white/30 border border-dashed border-artistic-ink/10 rounded-2xl transition-all hover:border-artistic-accent/30 relative">
+                    <div className="aspect-[4/3] rounded-xl overflow-hidden bg-artistic-shadow relative">
+                      {work.imageUrl ? (
+                        <ValidatedImage 
+                          src={work.imageUrl} 
+                          alt={work.title} 
+                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" 
+                        />
+                      ) : (
+                        <button 
+                          onClick={() => setEditingWorkIndex(i)}
+                          className="w-full h-full flex flex-col items-center justify-center gap-2 hover:bg-artistic-accent/5 transition-colors"
+                          title="Upload artwork image"
+                        >
+                          <Plus className="w-6 h-6 text-artistic-ink/20" />
+                          <span className="text-[8px] uppercase tracking-[0.2em] font-bold opacity-20">No Visual Found</span>
+                        </button>
+                      )}
+                      
+                      <div className="absolute top-3 right-3 flex flex-col gap-2">
+                        <button 
+                          onClick={() => onAddToBucketList(work)}
+                          disabled={bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) || history.some(item => item.details.title === work.title)}
+                          className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-md shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-artistic-accent hover:text-white disabled:opacity-30"
+                        >
+                          {bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) || history.some(item => item.details.title === work.title) ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <Plus className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-bold truncate leading-tight mb-1">{work.title}</p>
+                      <div className="flex items-center gap-1.5 opacity-40 uppercase text-[8px] tracking-widest font-bold">
+                        <span>{work.year}</span>
+                        {work.museum && (
+                          <>
+                            <span>•</span>
                             <button 
                               onClick={() => onEntityClick(work.museum!, 'museum')}
-                              className="text-[8px] uppercase tracking-widest opacity-40 hover:text-artistic-accent hover:opacity-100 transition-all font-bold"
+                              className="hover:text-artistic-accent transition-colors truncate text-left"
                             >
                               {work.museum}
                             </button>
-                          ) : null}
-                          {work.museum && work.location ? <span className="text-[8px] opacity-20">•</span> : null}
-                          {work.location ? (
-                            <span className="text-[8px] uppercase tracking-widest opacity-40">
-                              {work.location}
-                            </span>
-                          ) : null}
-                        </div>
-                      )}
-                    </div>
-                    {work.imageUrl ? (
-                      <div className="w-12 h-12 overflow-hidden rounded-lg mr-2 bg-artistic-shadow/10 flex items-center justify-center border border-artistic-ink/5 relative group/img">
-                          <ValidatedImage 
-                            src={work.imageUrl} 
-                            alt={work.title} 
-                            className="w-full h-full object-cover" 
-                          />
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={() => setEditingWorkIndex(i)}
-                        className="w-12 h-12 overflow-hidden rounded-lg mr-2 bg-artistic-shadow/10 flex items-center justify-center border border-artistic-ink/5 hover:bg-artistic-accent/10 transition-colors"
-                        title="Upload artwork image"
-                      >
-                        <Plus className="w-4 h-4 text-artistic-ink/20" />
-                      </button>
-                    )}
-                    <div className="flex-1 flex justify-end">
-                      <button 
-                        onClick={() => onAddToBucketList(work)}
-                        disabled={bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) || history.some(item => item.details.title === work.title)}
-                        className="w-8 h-8 rounded-full border border-artistic-ink/10 flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity hover:bg-artistic-accent/10 disabled:opacity-30"
-                      >
-                        {bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) || history.some(item => item.details.title === work.title) ? (
-                          <Check className="w-3 h-3" />
-                        ) : (
-                          <Plus className="w-3 h-3" />
+                          </>
                         )}
-                      </button>
+                      </div>
                     </div>
                   </div>
                 ))}
-                <ImageOverrideModal 
-                  isOpen={editingWorkIndex !== null}
-                  onClose={() => setEditingWorkIndex(null)}
-                  title={editingWorkIndex !== null ? details.famousWorks[editingWorkIndex].title : ''}
-                  subtitle="Curatorial Archive Sync"
-                  onUpdate={(url) => {
-                    if (editingWorkIndex !== null) {
-                      onUpdateFamousWorkImage(details.famousWorks[editingWorkIndex].title, url);
-                    }
-                  }}
-                />
+            </div>
+            
+            <ImageOverrideModal 
+              isOpen={editingWorkIndex !== null}
+              onClose={() => setEditingWorkIndex(null)}
+              title={editingWorkIndex !== null ? details.famousWorks[editingWorkIndex].title : ''}
+              subtitle="Curatorial Archive Sync"
+              onUpdate={(url) => {
+                if (editingWorkIndex !== null) {
+                  onUpdateFamousWorkImage(details.famousWorks[editingWorkIndex].title, url);
+                }
+              }}
+            />
+
+            <div className="mt-6">
               {details.famousWorks.filter(work => !history.some(art => 
                 art.details.title.toLowerCase().includes(work.title.toLowerCase()) || 
                 work.title.toLowerCase().includes(art.details.title.toLowerCase())
@@ -221,6 +225,38 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
               )}
             </div>
           </section>
+
+          {relatedBucketList.length > 0 && (
+            <section>
+              <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6 px-1">
+                In Your Bucket List ({relatedBucketList.length})
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {relatedBucketList.map(art => (
+                  <div 
+                    key={art.id}
+                    onClick={() => onArtworkClick(art.id)}
+                    className="group flex flex-col gap-3 p-3 bg-white/40 hover:bg-white/80 rounded-2xl cursor-pointer transition-all border border-artistic-ink/5"
+                  >
+                    <div className="aspect-[4/3] rounded-xl overflow-hidden bg-artistic-shadow">
+                      <ValidatedImage 
+                        src={art.image} 
+                        alt={art.details.title} 
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold truncate flex items-center gap-1">
+                        {React.createElement(getTypeIcon(art.details.type), { className: 'w-3 h-3 text-artistic-accent' })}
+                        {art.details.title}
+                      </p>
+                      <p className="text-[9px] opacity-40 uppercase tracking-widest mt-1">{art.details.year} • {art.details.type}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {relatedArtworks.length > 0 && (
             <section>

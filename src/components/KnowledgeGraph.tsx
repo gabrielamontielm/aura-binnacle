@@ -31,6 +31,7 @@ interface Link {
 
 interface KnowledgeGraphProps {
   items: HistoryItem[];
+  bucketListItems: HistoryItem[];
   onArtworkClick: (itemId: string) => void;
   onEntityClick: (details: EntityDetails) => void;
 }
@@ -42,7 +43,7 @@ interface KnowledgeGraphProps {
  * @param onArtworkClick Callback when an artwork node or list item is clicked.
  * @param onEntityClick Callback when "Full Curatorial Report" is requested for an artist/movement.
  */
-export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtworkClick, onEntityClick }) => {
+export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketListItems, onArtworkClick, onEntityClick }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<ForceGraphMethods>();
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -167,7 +168,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
       }
     });
 
-    // 6. Add Artwork Nodes
+    // 6. Add Artwork Nodes (History)
     items.forEach(item => {
       const a = item.details.artist || 'Unknown Artist';
       const l = item.details.location;
@@ -190,23 +191,22 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
       if (l && !mus) {
         links.push({ source: `loc_${l}`, target: `work_${item.id}` });
       }
-      
       if (t) links.push({ source: `typ_${t}`, target: `work_${item.id}` });
       if (mus) links.push({ source: `mus_${mus}`, target: `work_${item.id}` });
     });
-
+    
     return { nodes, links };
-  }, [items]);
+  }, [items, bucketListItems]);
 
   // Fetch Entity Logic
   const fetchEntity = useCallback(async (node: Node, forceRefresh = false) => {
-    if (!(node.type === 'artist' || node.type === 'movement' || node.type === 'museum' || node.type === 'type')) return;
+    if (!(node.type === 'artist' || node.type === 'movement' || node.type === 'museum' || node.type === 'type' || node.type === 'location')) return;
 
     if (!forceRefresh && entityDetails[node.id]) return;
 
     setIsLoadingMore(true);
     try {
-      const details = await getEntityDetails(node.name, node.type as 'artist' | 'movement' | 'museum' | 'type', forceRefresh);
+      const details = await getEntityDetails(node.name, node.type as 'artist' | 'movement' | 'museum' | 'type' | 'location', forceRefresh);
       setEntityDetails(prev => ({
         ...prev,
         [node.id]: details
@@ -291,9 +291,29 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
     return [];
   }, [selectedNode, items]);
 
+  const relatedBucketList = useMemo(() => {
+    if (!selectedNode) return [];
+    if (selectedNode.type === 'artist') {
+      return bucketListItems.filter(item => item.details.artist === selectedNode.name);
+    }
+    if (selectedNode.type === 'movement') {
+      return bucketListItems.filter(item => item.details.movement === selectedNode.name);
+    }
+    if (selectedNode.type === 'location') {
+      return bucketListItems.filter(item => item.details.location === selectedNode.name);
+    }
+    if (selectedNode.type === 'type') {
+      return bucketListItems.filter(item => item.details.type === selectedNode.name);
+    }
+    if (selectedNode.type === 'museum') {
+      return bucketListItems.filter(item => item.details.museum === selectedNode.name);
+    }
+    return [];
+  }, [selectedNode, bucketListItems]);
+
   return (
     <div ref={containerRef} className="w-full h-full relative overflow-hidden">
-      {items.length > 0 ? (
+      {(graphData.nodes.length > 0) ? (
         <ForceGraph2D
           ref={fgRef}
           width={dimensions.width}
@@ -368,7 +388,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
                     {entityDetails[selectedNode.id]?.curatorialSummary || selectedNode.info}
                   </p>
                   
-                  {(selectedNode.type === 'artist' || selectedNode.type === 'movement' || selectedNode.type === 'museum' || selectedNode.type === 'type') && entityDetails[selectedNode.id] && (
+                  {(selectedNode.type === 'artist' || selectedNode.type === 'movement' || selectedNode.type === 'museum' || selectedNode.type === 'type' || selectedNode.type === 'location') && entityDetails[selectedNode.id] && (
                     <button 
                       onClick={() => onEntityClick(entityDetails[selectedNode.id])}
                       className="w-full py-4 bg-artistic-ink text-white text-[10px] uppercase font-bold tracking-[0.2em] rounded-xl flex items-center justify-center gap-3 hover:bg-artistic-accent transition-colors shadow-lg shadow-artistic-ink/20 mb-8"
@@ -388,6 +408,35 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, onArtwork
                 </h4>
                 <div className="space-y-4">
                   {relatedArtworks.map(art => (
+                    <div 
+                      key={art.id}
+                      onClick={() => onArtworkClick(art.id)}
+                      className="group flex items-center gap-4 p-2 hover:bg-artistic-shadow rounded-xl cursor-pointer transition-all border border-transparent hover:border-artistic-ink/5"
+                    >
+                      <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-artistic-shadow">
+                        <img 
+                          src={art.image} 
+                          alt={art.details.title} 
+                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold truncate leading-tight">{art.details.title}</p>
+                        <p className="text-[9px] opacity-40 uppercase tracking-widest mt-0.5">{art.details.year}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {relatedBucketList.length > 0 && (
+              <div className="mb-8">
+                <h4 className="text-[9px] uppercase tracking-widest font-bold text-artistic-ink/40 mb-4 px-1">
+                  In Your Bucket List ({relatedBucketList.length})
+                </h4>
+                <div className="space-y-4">
+                  {relatedBucketList.map(art => (
                     <div 
                       key={art.id}
                       onClick={() => onArtworkClick(art.id)}

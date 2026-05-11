@@ -125,5 +125,13 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isSignedIn();
     }
+    match /metadata_locations/{locationId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
   }
 }
