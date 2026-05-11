@@ -21,7 +21,7 @@ interface HistoryItem {
 }
 
 export default /**
- * Main Application Component for Artistic Lens.
+ * Main Application Component for AURA.
  * Handles authentication, image processing, gallery management, and routing.
  */
 function App() {
@@ -536,6 +536,33 @@ function App() {
       }
   };
 
+  const handleShare = async (url: string) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'AURA - Art Binnacle',
+          text: 'Check out my curated art collection on AURA!',
+          url: url,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Error sharing:', err);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        // Simple fallback feedback
+        const btn = document.activeElement as HTMLButtonElement;
+        const originalTitle = btn.title;
+        btn.title = "Copied!";
+        setTimeout(() => { btn.title = originalTitle; }, 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    }
+  };
+
   const toggleBucketListPublic = async () => {
     if (!user) return;
     setIsLoading(true);
@@ -866,11 +893,9 @@ function App() {
                             className="text-[8px] max-w-[120px] font-bold bg-transparent italic outline-none truncate"
                           />
                           <button 
-                            onClick={() => {
-                                navigator.clipboard.writeText(`${window.location.origin}/?sharedProfile=${user.uid}`);
-                            }}
+                            onClick={() => handleShare(`${window.location.origin}/?sharedProfile=${user.uid}`)}
                             className="text-artistic-accent hover:text-artistic-ink transition-colors"
-                            title="Copy link"
+                            title="Share link"
                           >
                             <Share2 className="w-3 h-3" />
                           </button>
@@ -954,12 +979,9 @@ function App() {
                             className="text-[8px] max-w-[120px] font-bold bg-transparent italic outline-none truncate"
                           />
                           <button 
-                            onClick={() => {
-                                navigator.clipboard.writeText(`${window.location.origin}/?sharedProfile=${user.uid}`);
-                                // Would be nice to add feedback toast here, but for now just copy.
-                            }}
+                            onClick={() => handleShare(`${window.location.origin}/?sharedProfile=${user.uid}`)}
                             className="text-artistic-accent hover:text-artistic-ink transition-colors"
-                            title="Copy link"
+                            title="Share link"
                           >
                             <Share2 className="w-3 h-3" />
                           </button>
