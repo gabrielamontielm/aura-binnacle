@@ -18,7 +18,13 @@
 }
 
 .art-shadow {
-  box-shadow: 30px 30px 0px var(--color-artistic-shadow);
+  box-shadow: 15px 15px 0px var(--color-artistic-shadow);
+}
+
+@media (min-width: 768px) {
+  .art-shadow {
+    box-shadow: 30px 30px 0px var(--color-artistic-shadow);
+  }
 }
 
 .gallery-frame {

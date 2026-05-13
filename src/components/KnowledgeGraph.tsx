@@ -1,15 +1,9 @@
 import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import ForceGraph2D, { ForceGraphMethods } from 'react-force-graph-2d';
-import { ArtDetails, getEntityDetails, EntityDetails } from '../services/artService';
-import { Info, X, ExternalLink, Network, Loader2, BookOpen, RefreshCw, Eye, EyeOff, MousePointer2, Maximize2 } from 'lucide-react';
+import { ArtDetails, getEntityDetails, EntityDetails, sanitizeId, normalizeName } from '../services/artService';
+import { HistoryItem } from '../types';
+import { Info, X, ExternalLink, Network, Loader2, BookOpen, RefreshCw, Eye, EyeOff, MousePointer2, Maximize2, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-interface HistoryItem {
-  id: string;
-  image: string;
-  details: ArtDetails;
-  timestamp: number;
-}
 
 interface Node {
   id: string;
@@ -30,6 +24,15 @@ interface Link {
   label: string;
 }
 
+const typeColors = {
+  movement: '#C4A484',
+  artist: '#1A1A1A',
+  artwork: '#E5E0D5',
+  location: '#FF4B4B',
+  type: '#4B7BFF', // Match Blue
+  museum: '#8A2BE2' // Royal Purple
+};
+
 interface KnowledgeGraphProps {
   items: HistoryItem[];
   bucketListItems: HistoryItem[];
@@ -48,6 +51,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<ForceGraphMethods>();
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [isInfoPanelVisible, setIsInfoPanelVisible] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [entityDetails, setEntityDetails] = useState<Record<string, EntityDetails>>({});
@@ -56,6 +60,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
   const [hideAllLinks, setHideAllLinks] = useState(false);
   const [focusSelectedOnly, setFocusSelectedOnly] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, node: Node } | null>(null);
+  const [isFiltersMinimized, setIsFiltersMinimized] = useState(false);
 
   // Close context menu on click anywhere else
   useEffect(() => {
@@ -93,11 +98,11 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
     const museumToLocation = new Map<string, string>(); // Museum name -> Location name
 
     items.forEach(item => {
-      const m = item.details.movement || 'Unknown Movement';
-      const a = item.details.artist || 'Unknown Artist';
-      const l = item.details.location;
-      const t = item.details.type;
-      const mus = item.details.museum;
+      const m = normalizeName(item.details.movement || 'Unknown Movement');
+      const a = normalizeName(item.details.artist || 'Unknown Artist');
+      const l = item.details.location ? normalizeName(item.details.location) : null;
+      const t = item.details.type ? normalizeName(item.details.type) : null;
+      const mus = item.details.museum ? normalizeName(item.details.museum) : null;
       
       movements.add(m);
       artists.set(a, m);
@@ -111,12 +116,13 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
 
     // 1. Add Movement Nodes
     movements.forEach(m => {
+      const mid = sanitizeId(m);
       nodes.push({
-        id: `mov_${m}`,
+        id: `mov_${mid}`,
         name: m,
         type: 'movement',
         val: 12,
-        color: '#C4A484',
+        color: typeColors.movement,
         icon: '🎨',
         info: `An artistic movement characterized by specific styles and philosophies during its era.`
       });
@@ -124,26 +130,29 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
 
     // 2. Add Artist Nodes
     artists.forEach((m, a) => {
+      const aid = sanitizeId(a);
+      const mid = sanitizeId(m);
       nodes.push({
-        id: `art_${a}`,
+        id: `art_${aid}`,
         name: a,
         type: 'artist',
         val: 10,
-        color: '#1A1A1A',
+        color: typeColors.artist,
         icon: '👨‍🎨',
         info: `A notable creator whose work contributes to the ${m} movement.`
       });
-      links.push({ source: `mov_${m}`, target: `art_${a}`, label: 'Influences' });
+      links.push({ source: `mov_${mid}`, target: `art_${aid}`, label: 'Influences' });
     });
 
     // 3. Add Location Nodes
     locations.forEach(l => {
+      const lid = sanitizeId(l);
       nodes.push({
-        id: `loc_${l}`,
+        id: `loc_${lid}`,
         name: l,
         type: 'location',
         val: 10,
-        color: '#FF4B4B',
+        color: typeColors.location,
         icon: '📍',
         info: `A geographical location where significant artworks are currently housed or originated.`
       });
@@ -151,12 +160,13 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
 
     // 4. Add Type Nodes
     types.forEach(t => {
+      const tid = sanitizeId(t);
       nodes.push({
-        id: `typ_${t}`,
+        id: `typ_${tid}`,
         name: t,
         type: 'type',
         val: 10,
-        color: '#4B7BFF',
+        color: typeColors.type,
         icon: '🏺',
         info: `The medium and format of the masterpiece, classifying it as a ${t}.`
       });
@@ -164,12 +174,13 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
 
     // 5. Add Museum Nodes
     museums.forEach(mus => {
+      const musId = sanitizeId(mus);
       nodes.push({
-        id: `mus_${mus}`,
+        id: `mus_${musId}`,
         name: mus,
         type: 'museum',
         val: 11,
-        color: '#8A2BE2',
+        color: typeColors.museum,
         icon: '🏛️',
         info: `The cultural institution that preserves and displays this masterpiece.`
       });
@@ -177,35 +188,41 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
       // Link Museum to its Location
       const loc = museumToLocation.get(mus);
       if (loc) {
-        links.push({ source: `loc_${loc}`, target: `mus_${mus}`, label: 'Located In' });
+        const lid = sanitizeId(loc);
+        links.push({ source: `loc_${lid}`, target: `mus_${musId}`, label: 'Located In' });
       }
     });
 
     // 6. Add Artwork Nodes (History)
     items.forEach(item => {
-      const a = item.details.artist || 'Unknown Artist';
-      const l = item.details.location;
-      const t = item.details.type;
-      const mus = item.details.museum;
+      const a = normalizeName(item.details.artist || 'Unknown Artist');
+      const l = item.details.location ? normalizeName(item.details.location) : null;
+      const t = item.details.type ? normalizeName(item.details.type) : null;
+      const mus = item.details.museum ? normalizeName(item.details.museum) : null;
+
+      const aid = sanitizeId(a);
+      const lid = l ? sanitizeId(l) : null;
+      const tid = t ? sanitizeId(t) : null;
+      const musId = mus ? sanitizeId(mus) : null;
 
       nodes.push({
         id: `work_${item.id}`,
         name: item.details.title,
         type: 'artwork',
         val: 8,
-        color: '#E5E0D5',
+        color: typeColors.artwork,
         icon: '🖼️',
         itemId: item.id,
         info: `${item.details.title} (${item.details.year}). ${item.details.description?.substring(0, 100)}...`
       });
-      links.push({ source: `art_${a}`, target: `work_${item.id}`, label: 'Created' });
+      links.push({ source: `art_${aid}`, target: `work_${item.id}`, label: 'Created' });
       
       // Map location to museum instead of painting if museum is available
-      if (l && !mus) {
-        links.push({ source: `loc_${l}`, target: `work_${item.id}`, label: 'Located In' });
+      if (lid && !musId) {
+        links.push({ source: `loc_${lid}`, target: `work_${item.id}`, label: 'Located In' });
       }
-      if (t) links.push({ source: `typ_${t}`, target: `work_${item.id}`, label: 'Categorized As' });
-      if (mus) links.push({ source: `mus_${mus}`, target: `work_${item.id}`, label: 'Exhibited At' });
+      if (tid) links.push({ source: `typ_${tid}`, target: `work_${item.id}`, label: 'Categorized As' });
+      if (musId) links.push({ source: `mus_${musId}`, target: `work_${item.id}`, label: 'Exhibited At' });
     });
     
     return { nodes, links };
@@ -347,6 +364,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
     const n = node as Node;
     
     setSelectedNode(n);
+    setIsInfoPanelVisible(true);
 
     // Zoom and center
     if (fgRef.current) {
@@ -536,11 +554,16 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
           onNodeClick={handleNodeClick}
           onNodeRightClick={(node: any, event) => {
             event.preventDefault();
+            setSelectedNode(node as Node);
             setContextMenu({ 
               x: event.clientX, 
               y: event.clientY, 
               node: node as Node 
             });
+          }}
+          onBackgroundClick={() => {
+            setIsInfoPanelVisible(false);
+            setSelectedNode(null);
           }}
           cooldownTicks={100}
         />
@@ -650,12 +673,12 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
 
       {/* Info Panel Overlay */}
       <AnimatePresence>
-        {selectedNode && (
+        {selectedNode && isInfoPanelVisible && (
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="absolute top-6 right-6 w-80 bg-white/95 shadow-2xl border border-artistic-ink/10 rounded-2xl p-6 z-10 backdrop-blur-md max-h-[85vh] overflow-y-auto"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="absolute bottom-0 left-0 right-0 md:top-6 md:right-6 md:left-auto md:bottom-auto w-full md:w-80 bg-white shadow-2xl border-t md:border border-artistic-ink/10 rounded-t-3xl md:rounded-2xl p-6 z-[110] backdrop-blur-md max-h-[70vh] md:max-h-[85vh] overflow-y-auto"
           >
             <div className="flex justify-between items-start mb-6 sticky top-0 bg-white/95 pt-2 pb-2 -mt-2 -mx-2 px-2 z-20 backdrop-blur-md">
               <div className="flex items-center gap-3">
@@ -673,6 +696,13 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
                   {collapsedNodes.has(selectedNode.id) ? <Network className="w-4 h-4" /> : <Network className="w-4 h-4 opacity-40" />}
                 </button>
                 <button 
+                  onClick={() => setFocusSelectedOnly(!focusSelectedOnly)}
+                  className={`p-1 rounded-full transition-colors ${focusSelectedOnly ? 'bg-artistic-accent text-white' : 'hover:bg-artistic-shadow text-artistic-ink/40'}`}
+                  title={focusSelectedOnly ? "Show All Connections" : "Focus Selected Connections"}
+                >
+                  <MousePointer2 className="w-4 h-4" />
+                </button>
+                <button 
                   onClick={() => fetchEntity(selectedNode, true)}
                   className="p-1 hover:bg-artistic-shadow rounded-full transition-colors"
                   title="Refresh Data"
@@ -680,7 +710,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
                   <RefreshCw className="w-4 h-4" />
                 </button>
                 <button 
-                  onClick={() => setSelectedNode(null)}
+                  onClick={() => setIsInfoPanelVisible(false)}
                   className="p-1 hover:bg-artistic-shadow rounded-full transition-colors"
                 >
                   <X className="w-4 h-4" />
@@ -789,86 +819,103 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
         )}
       </AnimatePresence>
 
-      <div className="absolute bottom-6 left-6 flex flex-col gap-2 p-5 bg-white/70 backdrop-blur-md rounded-2xl border border-artistic-ink/5 shadow-sm min-w-[200px]">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-artistic-ink/40">Filters</span>
-            <div className="flex gap-2">
+      <div className={`absolute bottom-6 left-6 flex flex-col gap-2 bg-white/70 backdrop-blur-md rounded-2xl border border-artistic-ink/5 shadow-sm z-10 transition-all duration-300 ${isFiltersMinimized ? 'p-2 w-auto md:min-w-0' : 'p-4 md:p-5 w-[calc(100%-3rem)] md:w-auto md:min-w-[200px]'}`}>
+          <div className="flex items-center justify-between gap-4 mb-2">
+            {!isFiltersMinimized && <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-artistic-ink/40">Filters</span>}
+            <div className="flex gap-2 items-center">
+              {!isFiltersMinimized && (
+                <>
+                  <button 
+                    onClick={() => setVisibleTypes(new Set(['movement', 'artist', 'artwork', 'location', 'type', 'museum']))}
+                    className="text-[8px] uppercase font-bold text-artistic-accent hover:underline"
+                  >
+                    All
+                  </button>
+                  <button 
+                    onClick={() => setVisibleTypes(new Set())}
+                    className="text-[8px] uppercase font-bold text-artistic-ink/40 hover:text-red-500 transition-colors"
+                  >
+                    None
+                  </button>
+                </>
+              )}
               <button 
-                onClick={() => setVisibleTypes(new Set(['movement', 'artist', 'artwork', 'location', 'type', 'museum']))}
-                className="text-[8px] uppercase font-bold text-artistic-accent hover:underline"
+                onClick={() => setIsFiltersMinimized(!isFiltersMinimized)}
+                className="p-1 hover:bg-artistic-ink/5 rounded-full transition-colors"
+                title={isFiltersMinimized ? "Expand Filters" : "Minimize Filters"}
               >
-                All
-              </button>
-              <button 
-                onClick={() => setVisibleTypes(new Set())}
-                className="text-[8px] uppercase font-bold text-artistic-ink/40 hover:text-red-500 transition-colors"
-              >
-                None
+                {isFiltersMinimized ? <SlidersHorizontal className="w-3.5 h-3.5 opacity-40" /> : <ChevronDown className="w-3.5 h-3.5 opacity-40" />}
               </button>
             </div>
           </div>
 
-          <div 
-            onClick={() => toggleType('movement')}
-            className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('movement') ? 'opacity-100' : 'opacity-30'}`}
-          >
-              <span className="text-lg">🎨</span>
-              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Styles / Movements</span>
-          </div>
-          <div 
-            onClick={() => toggleType('artist')}
-            className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('artist') ? 'opacity-100' : 'opacity-30'}`}
-          >
-              <span className="text-lg">👨‍🎨</span>
-              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Artists</span>
-          </div>
-          <div 
-            onClick={() => toggleType('artwork')}
-            className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('artwork') ? 'opacity-100' : 'opacity-30'}`}
-          >
-              <span className="text-lg">🖼️</span>
-              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Paintings</span>
-          </div>
-          <div 
-            onClick={() => toggleType('location')}
-            className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('location') ? 'opacity-100' : 'opacity-30'}`}
-          >
-              <span className="text-lg">📍</span>
-              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Locations</span>
-          </div>
-          <div 
-            onClick={() => toggleType('museum')}
-            className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('museum') ? 'opacity-100' : 'opacity-30'}`}
-          >
-              <span className="text-lg">🏛️</span>
-              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Museums</span>
-          </div>
-          <div 
-            onClick={() => toggleType('type')}
-            className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('type') ? 'opacity-100' : 'opacity-30'}`}
-          >
-              <span className="text-lg">🏺</span>
-              <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Masterpiece Types</span>
-          </div>
+          {!isFiltersMinimized && (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-1 gap-x-4">
+                <div 
+                  onClick={() => toggleType('movement')}
+                  className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('movement') ? 'opacity-100' : 'opacity-30'}`}
+                >
+                    <span className="text-lg">🎨</span>
+                    <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Styles</span>
+                </div>
+                <div 
+                  onClick={() => toggleType('artist')}
+                  className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('artist') ? 'opacity-100' : 'opacity-30'}`}
+                >
+                    <span className="text-lg">👨‍🎨</span>
+                    <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Artists</span>
+                </div>
+                <div 
+                  onClick={() => toggleType('artwork')}
+                  className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('artwork') ? 'opacity-100' : 'opacity-30'}`}
+                >
+                    <span className="text-lg">🖼️</span>
+                    <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Paintings</span>
+                </div>
+                <div 
+                  onClick={() => toggleType('location')}
+                  className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('location') ? 'opacity-100' : 'opacity-30'}`}
+                >
+                    <span className="text-lg">📍</span>
+                    <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Locations</span>
+                </div>
+                <div 
+                  onClick={() => toggleType('museum')}
+                  className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('museum') ? 'opacity-100' : 'opacity-30'}`}
+                >
+                    <span className="text-lg">🏛️</span>
+                    <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Museums</span>
+                </div>
+                <div 
+                  onClick={() => toggleType('type')}
+                  className={`flex items-center gap-3 cursor-pointer transition-all hover:bg-white/50 p-1.5 rounded-lg -mx-1.5 ${visibleTypes.has('type') ? 'opacity-100' : 'opacity-30'}`}
+                >
+                    <span className="text-lg">🏺</span>
+                    <span className="text-[9px] uppercase tracking-widest font-bold opacity-60">Types</span>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-artistic-ink/5">
-            <button 
-              onClick={() => setHideAllLinks(!hideAllLinks)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${hideAllLinks ? 'bg-red-50 border-red-200 text-red-600' : 'bg-artistic-shadow/10 border-transparent text-artistic-ink/60'}`}
-              title={hideAllLinks ? "Show All Connections" : "Hide All Connections"}
-            >
-              {hideAllLinks ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-              <span className="text-[8px] uppercase tracking-wider font-bold">Connections</span>
-            </button>
-            <button 
-              onClick={() => setFocusSelectedOnly(!focusSelectedOnly)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${focusSelectedOnly ? 'bg-artistic-accent text-white border-artistic-accent' : 'bg-artistic-shadow/10 border-transparent text-artistic-ink/60'}`}
-              title={focusSelectedOnly ? "Show All Connections" : "Focus Selected Connections"}
-            >
-              <MousePointer2 className="w-3 h-3" />
-              <span className="text-[8px] uppercase tracking-wider font-bold">Focus</span>
-            </button>
-          </div>
+              <div className="flex items-center gap-4 mt-4 pt-4 border-t border-artistic-ink/5">
+                <button 
+                  onClick={() => setHideAllLinks(!hideAllLinks)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${hideAllLinks ? 'bg-red-50 border-red-200 text-red-600' : 'bg-artistic-shadow/10 border-transparent text-artistic-ink/60'}`}
+                  title={hideAllLinks ? "Show All Connections" : "Hide All Connections"}
+                >
+                  {hideAllLinks ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  <span className="text-[8px] uppercase tracking-wider font-bold">Connections</span>
+                </button>
+                <button 
+                  onClick={() => setFocusSelectedOnly(!focusSelectedOnly)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${focusSelectedOnly ? 'bg-artistic-accent text-white border-artistic-accent' : 'bg-artistic-shadow/10 border-transparent text-artistic-ink/60'}`}
+                  title={focusSelectedOnly ? "Show All Connections" : "Focus Selected Connections"}
+                >
+                  <MousePointer2 className="w-3 h-3" />
+                  <span className="text-[8px] uppercase tracking-wider font-bold">Focus</span>
+                </button>
+              </div>
+            </>
+          )}
       </div>
     </div>
   );

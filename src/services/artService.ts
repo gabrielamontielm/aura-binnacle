@@ -13,8 +13,30 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
  * @param name The name to sanitize.
  * @returns A lowercase, underscore-separated ID string.
  */
-function sanitizeId(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+export function sanitizeId(name: string): string {
+  if (!name) return 'unknown';
+  return name.toLowerCase().trim().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+}
+
+/**
+ * Normalizes a name string for consistency (e.g., " Vincent  van Gogh " -> "Vincent van Gogh").
+ */
+export function normalizeName(name: string): string {
+  if (!name) return 'Unknown';
+  const normalized = name.trim().replace(/\s+/g, ' ');
+  // Capitals for first letters of words in names usually looks better
+  return normalized.split(' ').map(word => {
+    if (word.length === 0) return '';
+    if (word.includes('.') || word.length < 2) return word; // Handle initials or single letters
+    return word[0].toUpperCase() + word.slice(1).toLowerCase();
+  }).join(' ');
+}
+
+/**
+ * Returns a canonical document ID for an entity.
+ */
+export function getCanonicalId(name: string): string {
+  return sanitizeId(name);
 }
 
 /**
@@ -83,7 +105,19 @@ export async function identifyArtwork(base64Image: string, mimeType: string = "i
       throw new Error("No identification text received from AI");
     }
 
-    return JSON.parse(response.text);
+    const data: ArtDetails = JSON.parse(response.text);
+
+    // Normalize results after parsing
+    data.artist = normalizeName(data.artist);
+    data.movement = normalizeName(data.movement);
+    if (data.museum) data.museum = normalizeName(data.museum);
+    if (data.location) data.location = normalizeName(data.location);
+    data.type = normalizeName(data.type);
+
+    // Seed entity metadata in background
+    syncArtworkEntities(data).catch(e => console.warn("Background Sync Error:", e));
+
+    return data;
   } catch (error: any) {
     console.error("AI Identify Error:", error);
     if (error?.message?.includes("RESOURCE_EXHAUSTED") || error?.message?.includes("429")) {
@@ -146,7 +180,19 @@ export async function identifyArtworkFromUrl(imageUrl: string, titleHint?: strin
       throw new Error("No identification text received from AI");
     }
 
-    return JSON.parse(response.text);
+    const data: ArtDetails = JSON.parse(response.text);
+
+    // Normalize results after parsing
+    data.artist = normalizeName(data.artist);
+    data.movement = normalizeName(data.movement);
+    if (data.museum) data.museum = normalizeName(data.museum);
+    if (data.location) data.location = normalizeName(data.location);
+    data.type = normalizeName(data.type);
+
+    // Seed entity metadata in background
+    syncArtworkEntities(data).catch(e => console.warn("Background Sync Error:", e));
+
+    return data;
   } catch (error: any) {
     console.error("AI Identify URL Error:", error);
     throw error;
@@ -176,6 +222,30 @@ export interface EntityDetails {
  * @param forceRefresh If true, bypasses cache.
  * @returns A promise resolving to entity details.
  */
+/**
+ * Triggers entity metadata synchronization for all entities found in an artwork.
+ */
+export async function syncArtworkEntities(details: ArtDetails) {
+  const entities = [
+    { name: details.artist, type: 'artist' },
+    { name: details.movement, type: 'movement' },
+    { name: details.museum, type: 'museum' },
+    { name: details.location, type: 'location' },
+    { name: details.type, type: 'type' }
+  ];
+
+  for (const entity of entities) {
+    if (entity.name && entity.name !== 'Unknown' && entity.name !== 'unknown') {
+      try {
+        // We trigger getEntityDetails which handles the fetching and caching.
+        // The user requested unconditional overwrite to keep metadata fresh.
+        await getEntityDetails(entity.name, entity.type as any, true);
+      } catch (err) {
+        console.warn(`Could not sync entity ${entity.name}:`, err);
+      }
+    }
+  }
+}
 export async function getEntityDetails(name: string, type: 'artist' | 'movement' | 'museum' | 'type' | 'location', forceRefresh: boolean = false): Promise<EntityDetails> {
   const collectionName = type === 'artist' 
     ? 'metadata_artists' 
@@ -189,36 +259,45 @@ export async function getEntityDetails(name: string, type: 'artist' | 'movement'
   const id = sanitizeId(name);
   const docRef = doc(db, collectionName, id);
 
-  if (!forceRefresh) {
-    try {
-      const cachedDoc = await getDoc(docRef);
-      if (cachedDoc.exists()) {
-        return cachedDoc.data() as EntityDetails;
-      }
-    } catch (error) {
-      console.error("Cache Read Error:", error);
+  let existingData: EntityDetails | null = null;
+  try {
+    const cachedDoc = await getDoc(docRef);
+    if (cachedDoc.exists()) {
+      existingData = cachedDoc.data() as EntityDetails;
+      if (!forceRefresh) return existingData;
     }
+  } catch (error) {
+    console.error("Metadata Fetch Error:", error);
   }
 
   try {
+    const contextPrompt = existingData 
+      ? `\n\nCRITICAL: We already have some metadata for this entity: ${JSON.stringify(existingData)}. 
+         Please SYNTHESIZE and ENRICH this information with fresh insights. 
+         - Do not repeat yourself verbatim; instead, expand on style, evolution, and specific historical details.
+         - Merge the 'famousWorks' list, ensuring we have a diverse representation of their career. 
+         - Improve the 'detailedDescription' by making it more comprehensive based on the integration of new and old knowledge.`
+      : "";
+
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [
         {
           parts: [
             {
-              text: `Provide a comprehensive curatorial report for the following ${type}: "${name}". 
+              text: `Provide a comprehensive curatorial report for the following ${type}: "${name}". ${contextPrompt}
+              
               Format the response as JSON with the following fields:
               - name: The full name of the ${type}
               - type: "${type}"
               - yearsOrPeriod: Life spans for artists, active period for movements, founding date for museums, or historical era for locations
               - originOrRegion: Birthplace/National origin for artists, geographical center for movements, location for museums, or the broader region/country for locations
               - significance: Why they or the place is important in art history (1-2 sentences)
-              - detailedDescription: A deep dive into style, philosophy, evolution, or history of the person, movement, or location (3-4 paragraphs)
-              - keyCharacteristics: A list of 3-4 defining traits, styles, or cultural significance
+              - detailedDescription: A deep dive into style, philosophy, evolution, or history of the person, movement, or location (3-4 paragraphs of enriched text)
+              - keyCharacteristics: A list of 4-6 defining traits, styles, or cultural significance
               - historicalImpact: Long-term legacy or influence on global culture (2-3 sentences)
               - curatorialSummary: An engaging short summary (around 200 characters) for a quick overview
-              - famousWorks: A list of 3-5 most famous artworks associated with this person, movement, museum, or created/held in this location. For each work include title, year, museum, location if known, and a URL string for a high-quality, stable public domain image (e.g., from Wikimedia Commons or a major museum website). ONLY provide a URL if you are certain it is stable and publicly accessible; otherwise, omit the imageUrl field or set it to null.`,
+              - famousWorks: A list of 8-10 most famous artworks associated with this person, movement, museum, or created/held in this location. For each work include title, year, museum, location if known, and a URL string for a high-quality, stable public domain image (e.g., from Wikimedia Commons or a major museum website). ONLY provide a URL if you are certain it is stable and publicly accessible; otherwise, omit the imageUrl field or set it to null.`,
             },
           ],
         },

@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ImageOverrideModal } from './components/ImageOverrideModal';
-import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus, Filter, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus, Filter, SlidersHorizontal, ChevronDown, MapPin, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as heic2anyModule from 'heic2any';
 import { identifyArtwork, identifyArtworkFromUrl, ArtDetails, EntityDetails, getEntityDetails } from './services/artService';
+import { MuseumMap } from './components/MuseumMap';
+import { HistoryItem } from './types';
 import { KnowledgeGraph } from './components/KnowledgeGraph';
 import { EntityViewer } from './components/EntityViewer';
 import { auth, googleProvider, db, handleFirestoreError, OperationType } from './services/firebase';
@@ -13,13 +15,6 @@ import { collection, query, where, getDocs, addDoc, deleteDoc, doc, setDoc, getD
 
 // Handle potential default import differences
 const heic2any = (heic2anyModule as any).default || heic2anyModule;
-
-interface HistoryItem {
-  id: string;
-  image: string;
-  details: ArtDetails;
-  timestamp: number;
-}
 
 export default /**
  * Main Application Component for AURA.
@@ -120,8 +115,9 @@ function App() {
     setSelectedEntity(previous.entity);
     setDetails(previous.details || null);
   };
-  const [galleryMode, setGalleryMode] = useState<'grid' | 'graph'>('grid');
+  const [galleryMode, setGalleryMode] = useState<'grid' | 'graph' | 'map'>('grid');
   const [bucketList, setBucketList] = useState<HistoryItem[]>([]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Filtering State for the Gallery and Bucket List
   const [showFilters, setShowFilters] = useState(false);
@@ -380,7 +376,10 @@ function App() {
   const handleLogin = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user') {
+        return; // User closed the popup, not a real error
+      }
       console.error("Login failed", err);
       setError("Login failed. Please try again.");
     }
@@ -794,32 +793,46 @@ function App() {
     }
   };
 
-  const toggleBucketListPublic = async () => {
+  const toggleProfilePublic = async () => {
     if (!user) return;
     setIsLoading(true);
-    const nextPublic = !isBucketListPublic;
+    const nextPublic = !(isGalleryPublic || isBucketListPublic);
+    setIsGalleryPublic(nextPublic);
     setIsBucketListPublic(nextPublic);
     
-    // Update user doc
     try {
         await Promise.all([
-          setDoc(doc(db, 'users', user.uid), { isBucketListPublic: nextPublic }, { merge: true }),
+          setDoc(doc(db, 'users', user.uid), { 
+            isGalleryPublic: nextPublic,
+            isBucketListPublic: nextPublic 
+          }, { merge: true }),
           setDoc(doc(db, 'public_profiles', user.uid), {
             displayName: user.displayName || user.email?.split('@')[0] || 'User',
             email: user.email
           }, { merge: true })
         ]);
         
-        // Sync items
+        // Sync Gallery items
         if (nextPublic) {
-          // Copy all items to public_bucketlist/{uid}/items
-          for (const item of bucketList) {
-              const docId = item.id || (Date.now().toString() + Math.random().toString(36).substring(2));
-              const docRef = doc(db, `public_bucketlist/${user.uid}/items`, docId);
-              await setDoc(docRef, { ...item, id: docId, userId: user.uid });
+          for (const item of history) {
+              const docRef = doc(db, `public_items/${user.uid}/items`, item.id);
+              await setDoc(docRef, { ...item, userId: user.uid });
           }
         } else {
-          // Delete all items in public_bucketlist/{uid}/items
+          const q = query(collection(db, `public_items/${user.uid}/items`));
+          const snapshot = await getDocs(q);
+          for (const docSnapshot of snapshot.docs) {
+              await deleteDoc(docSnapshot.ref);
+          }
+        }
+
+        // Sync Bucket List items
+        if (nextPublic) {
+          for (const item of bucketList) {
+              const docRef = doc(db, `public_bucketlist/${user.uid}/items`, item.id);
+              await setDoc(docRef, { ...item, userId: user.uid });
+          }
+        } else {
           const q = query(collection(db, `public_bucketlist/${user.uid}/items`));
           const snapshot = await getDocs(q);
           for (const docSnapshot of snapshot.docs) {
@@ -827,55 +840,23 @@ function App() {
           }
         }
     } catch (err) {
-        console.error("Sync failed", err);
-        handleFirestoreError(err, OperationType.WRITE, `public_bucketlist/${user.uid}/items`);
+        console.error("Profile sync failed", err);
+        setError("Failed to update profile sharing settings.");
+        setIsGalleryPublic(!nextPublic);
         setIsBucketListPublic(!nextPublic);
-        setError("Failed to update bucket list sharing settings.");
     } finally {
         setIsLoading(false);
     }
   };
 
+  const toggleBucketListPublic = async () => {
+    // Deprecated in favor of toggleProfilePublic
+    await toggleProfilePublic();
+  };
+
   const toggleGalleryPublic = async () => {
-    if (!user) return;
-    setIsLoading(true);
-    const nextPublic = !isGalleryPublic;
-    setIsGalleryPublic(nextPublic);
-    
-    // Update user doc
-    try {
-        await Promise.all([
-          setDoc(doc(db, 'users', user.uid), { isGalleryPublic: nextPublic }, { merge: true }),
-          setDoc(doc(db, 'public_profiles', user.uid), {
-            displayName: user.displayName || user.email?.split('@')[0] || 'User',
-            email: user.email
-          }, { merge: true })
-        ]);
-        
-        // Sync items
-        if (nextPublic) {
-          // Copy all items to public_items/{uid}/items
-          for (const item of history) {
-              const docId = item.id || (Date.now().toString() + Math.random().toString(36).substring(2));
-              const docRef = doc(db, `public_items/${user.uid}/items`, docId);
-              await setDoc(docRef, { ...item, id: docId, userId: user.uid });
-          }
-        } else {
-          // Delete all items in public_items/{uid}/items
-          const q = query(collection(db, `public_items/${user.uid}/items`));
-          const snapshot = await getDocs(q);
-          for (const docSnapshot of snapshot.docs) {
-              await deleteDoc(docSnapshot.ref);
-          }
-        }
-    } catch (err) {
-        console.error("Sync failed", err);
-        handleFirestoreError(err, OperationType.WRITE, `public_items/${user.uid}/items`);
-        setIsGalleryPublic(!nextPublic);
-        setError("Failed to update sharing settings.");
-    } finally {
-        setIsLoading(false);
-    }
+    // Deprecated in favor of toggleProfilePublic
+    await toggleProfilePublic();
   };
 
   const fetchPublicGallery = async (uid: string, autoLoading = true) => {
@@ -966,33 +947,50 @@ function App() {
 
   return (
     <div className="min-h-screen border-8 border-white box-border flex flex-col">
-      {/* Navigation / Header */}
-      <header className="h-20 flex justify-between items-center px-10 border-b border-artistic-ink/10 bg-artistic-bg/80 backdrop-blur-md z-50">
-        <div 
-          className="flex items-center space-x-4 cursor-pointer group"
-          onClick={() => { setView('home'); reset(); }}
+      {/* Shared Profile Banner */}
+      {isViewOnly && sharedGalleryOwnerName && (
+        <motion.div 
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          className="bg-artistic-ink text-artistic-bg py-3 px-10 text-[9px] uppercase font-bold tracking-[0.3em] flex items-center justify-between z-[60]"
         >
-          <div className="w-12 h-12 bg-white/50 backdrop-blur rounded-full flex items-center justify-center p-1.5 border border-artistic-ink/5 overflow-hidden shadow-sm group-hover:scale-105 transition-transform duration-500">
+          <div className="flex items-center gap-4">
+            <span className="w-2 h-2 bg-artistic-accent rounded-full animate-pulse" />
+            <span>Viewing {sharedGalleryOwnerName}'s Curated Heritage Binnacle</span>
+          </div>
+          <button 
+            onClick={() => {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('sharedProfile');
+              url.searchParams.delete('sharedGallery');
+              url.searchParams.delete('sharedBucketList');
+              window.location.href = url.origin;
+            }}
+            className="px-4 py-1 border border-white/20 rounded-full hover:bg-white hover:text-artistic-ink transition-all"
+          >
+            {user ? 'Return to my collection' : 'Start my own collection'}
+          </button>
+        </motion.div>
+      )}
+
+      {/* Navigation / Header */}
+      <header className="h-16 md:h-20 flex justify-between items-center px-4 md:px-10 border-b border-artistic-ink/10 bg-artistic-bg/80 backdrop-blur-md z-50">
+        <div 
+          className="flex items-center space-x-2 md:space-x-4 cursor-pointer group"
+          onClick={() => { setView('home'); reset(); setIsMobileMenuOpen(false); }}
+        >
+          <div className="w-8 h-8 md:w-12 md:h-12 bg-white/50 backdrop-blur rounded-full flex items-center justify-center p-1.5 border border-artistic-ink/5 overflow-hidden shadow-sm group-hover:scale-105 transition-transform duration-500">
             <img 
               src="/logo.png" 
               alt="Aura Logo" 
               className="w-full h-full object-contain"
               referrerPolicy="no-referrer"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent) {
-                  parent.className = "w-10 h-10 bg-artistic-ink rounded-full flex items-center justify-center";
-                  parent.innerHTML = '<div class="w-4 h-4 border-2 border-artistic-bg rounded-full"></div>';
-                }
-              }}
             />
           </div>
-          <span className="uppercase tracking-[0.4em] font-black text-[11px] text-artistic-ink hover:text-artistic-accent transition-colors">Aura v1.0</span>
+          <span className="uppercase tracking-[0.2em] md:tracking-[0.4em] font-black text-[9px] md:text-[11px] text-artistic-ink hover:text-artistic-accent transition-colors">Aura</span>
         </div>
         
-        <nav className="hidden md:flex space-x-12 uppercase text-[9px] tracking-[0.2em] font-bold">
+        <nav className="hidden lg:flex space-x-12 uppercase text-[9px] tracking-[0.2em] font-bold">
           <button 
             disabled={isViewOnly}
             onClick={() => { navigateTo('home'); reset(); }} 
@@ -1014,13 +1012,42 @@ function App() {
           </button>
         </nav>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 md:gap-6">
+          {/* Mobile Menu Toggle */}
+          <button 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 lg:hidden text-artistic-ink hover:bg-artistic-shadow rounded-full transition-colors"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
           {user ? (
-            <div className="flex items-center gap-4 border-l border-artistic-ink/10 pl-6">
-              <div className="flex flex-col items-end">
+            <div className="hidden sm:flex items-center gap-4 border-l border-artistic-ink/10 pl-6">
+              <div className="flex flex-col items-end mr-2">
                 <span className="text-[8px] uppercase tracking-widest font-bold opacity-40">Collector</span>
-                <span className="text-[9px] font-bold">{user.displayName || user.email}</span>
+                <span className="text-[9px] font-bold truncate max-w-[80px]">{user.displayName || user.email?.split('@')[0]}</span>
               </div>
+              
+              <div className="flex items-center gap-2 border-x border-artistic-ink/5 px-2 md:px-4 h-10">
+                <button 
+                  onClick={toggleProfilePublic}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] uppercase font-bold tracking-widest transition-all ${isGalleryPublic || isBucketListPublic ? 'bg-artistic-accent text-white shadow-lg shadow-artistic-accent/20' : 'bg-artistic-shadow text-artistic-ink/40 hover:text-artistic-ink'}`}
+                >
+                  <Share2 className="w-3 h-3" />
+                  <span className="hidden md:inline">{isGalleryPublic || isBucketListPublic ? 'Public' : 'Share Profile'}</span>
+                </button>
+                
+                {(isGalleryPublic || isBucketListPublic) && (
+                  <button 
+                    onClick={() => handleShare(`${window.location.origin}/?sharedProfile=${user.uid}`)}
+                    className="p-2 hover:bg-artistic-shadow rounded-full text-artistic-ink transition-colors"
+                    title="Copy Profile Link"
+                  >
+                    <Plus className="w-3.5 h-3.5 rotate-45" />
+                  </button>
+                )}
+              </div>
+
               <button 
                 onClick={handleLogout}
                 className="p-2 hover:bg-red-50 text-red-500 rounded-full transition-colors"
@@ -1032,7 +1059,7 @@ function App() {
           ) : (
             <button 
               onClick={handleLogin}
-              className="flex items-center gap-3 px-4 py-2 bg-artistic-ink text-artistic-bg rounded-full text-[9px] uppercase font-bold tracking-widest hover:bg-artistic-accent transition-all"
+              className="hidden sm:flex items-center gap-3 px-4 py-2 bg-artistic-ink text-artistic-bg rounded-full text-[9px] uppercase font-bold tracking-widest hover:bg-artistic-accent transition-all"
             >
               <LogIn className="w-3 h-3" />
               <span>Sign In</span>
@@ -1042,7 +1069,7 @@ function App() {
           {image && (
             <button 
               onClick={reset}
-              className="text-[9px] font-bold uppercase tracking-[0.2em] text-artistic-ink/40 hover:text-artistic-ink transition-colors"
+              className="hidden md:block text-[9px] font-bold uppercase tracking-[0.2em] text-artistic-ink/40 hover:text-artistic-ink transition-colors"
             >
               Reset
             </button>
@@ -1050,12 +1077,109 @@ function App() {
           <button 
             disabled={isViewOnly}
             onClick={() => fileInputRef.current?.click()}
-            className={`px-5 py-2 border border-artistic-ink rounded-full text-[10px] uppercase font-bold tracking-tight hover:bg-artistic-ink hover:text-artistic-bg transition-all ${isViewOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`px-3 md:px-5 py-2 border border-artistic-ink rounded-full text-[9px] md:text-[10px] uppercase font-bold tracking-tight hover:bg-artistic-ink hover:text-artistic-bg transition-all ${isViewOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            Capture Art
+            {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Capture'}
           </button>
         </div>
       </header>
+
+      {/* Mobile Navigation Drawer */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 bg-artistic-ink/20 backdrop-blur-sm z-[90]"
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 bottom-0 w-[280px] bg-artistic-bg z-[100] p-6 shadow-2xl flex flex-col border-l border-artistic-ink/5"
+            >
+              <div className="flex justify-between items-center mb-10">
+                <span className="uppercase tracking-[0.4em] font-black text-[9px] text-artistic-ink/40">Navigator</span>
+                <button 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 transition-colors hover:bg-artistic-shadow rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <nav className="flex flex-col space-y-8 uppercase text-lg tracking-[0.2em] font-serif italic">
+                <button 
+                  disabled={isViewOnly}
+                  onClick={() => { navigateTo('home'); reset(); setIsMobileMenuOpen(false); }} 
+                  className={`${view === 'home' ? 'text-artistic-accent' : 'text-artistic-ink/60'} text-left flex items-center justify-between group`}
+                >
+                  <span>Scanner</span>
+                  {view === 'home' && <div className="w-1.5 h-1.5 bg-artistic-accent rounded-full" />}
+                </button>
+                <button 
+                  onClick={() => { navigateTo('galleries'); setIsMobileMenuOpen(false); }} 
+                  className={`${view === 'galleries' ? 'text-artistic-accent' : 'text-artistic-ink/60'} text-left flex items-center justify-between group`}
+                >
+                  <span>Gallery</span>
+                  {view === 'galleries' && <div className="w-1.5 h-1.5 bg-artistic-accent rounded-full" />}
+                </button>
+                <button 
+                  onClick={() => { navigateTo('bucketlist'); setIsMobileMenuOpen(false); }} 
+                  className={`${view === 'bucketlist' ? 'text-artistic-accent' : 'text-artistic-ink/60'} text-left flex items-center justify-between group`}
+                >
+                  <span>Bucket List</span>
+                  {view === 'bucketlist' && <div className="w-1.5 h-1.5 bg-artistic-accent rounded-full" />}
+                </button>
+              </nav>
+
+              <div className="mt-auto border-t border-artistic-ink/10 pt-8 space-y-6">
+                {user ? (
+                  <div className="flex flex-col gap-6">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] uppercase tracking-widest font-bold opacity-30 italic">Identified as</span>
+                      <span className="text-[11px] font-bold truncate">{user.displayName || user.email}</span>
+                    </div>
+                    
+                    <button 
+                      onClick={() => { toggleProfilePublic(); setIsMobileMenuOpen(false); }}
+                      className={`flex items-center justify-between w-full p-3 rounded-xl transition-all ${isGalleryPublic || isBucketListPublic ? 'bg-artistic-accent text-white shadow-lg shadow-artistic-accent/20' : 'bg-artistic-shadow text-artistic-ink/60'}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Share2 className="w-4 h-4" />
+                        <span className="text-[9px] uppercase font-bold tracking-widest">Visibility</span>
+                      </div>
+                      <div className={`w-7 h-3.5 rounded-full relative ${isGalleryPublic || isBucketListPublic ? 'bg-white/30' : 'bg-artistic-ink/10'}`}>
+                        <div className={`absolute top-0.5 w-2.5 h-2.5 rounded-full transition-all ${isGalleryPublic || isBucketListPublic ? 'right-0.5 bg-white' : 'left-0.5 bg-artistic-ink/40'}`} />
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}
+                      className="flex items-center gap-2 text-red-500/60 hover:text-red-500 transition-colors font-bold uppercase tracking-widest text-[8px]"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => { handleLogin(); setIsMobileMenuOpen(false); }}
+                    className="w-full py-3.5 bg-artistic-ink text-artistic-bg rounded-xl text-[9px] uppercase font-bold tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg shadow-artistic-ink/20"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    Sign In
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <main className="flex-1 flex overflow-hidden">
         {view === 'entity-viewer' && selectedEntity ? (
@@ -1166,22 +1290,22 @@ function App() {
             onBack={navigateBack} 
           />
             ) : view === 'bucketlist' ? (
-          <section className="w-full h-full overflow-y-auto bg-white p-10 md:p-20">
+          <section className="w-full h-full overflow-y-auto bg-white p-6 md:p-20">
             <div className="max-w-6xl mx-auto">
-              <header className="mb-16">
+              <header className="mb-10 md:mb-16">
                 <div className="flex justify-between items-end gap-6 flex-wrap">
                   <div>
-                    <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-4">Curated Selections</span>
-                    <h2 className="text-5xl font-serif tracking-tighter italic">
+                    <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-2 md:mb-4">Curated Selections</span>
+                    <h2 className="text-3xl md:text-5xl font-serif tracking-tighter italic">
                       {isViewOnly 
                         ? (sharedGalleryOwnerName ? `${sharedGalleryOwnerName}'s` : 'User\'s') 
                         : (user ? (user.displayName || user.email?.split('@')[0] || 'My') : 'Guest')} Bucket List
                     </h2>
                   </div>
-                  <div className="flex items-center gap-6 flex-wrap">
+                  <div className="flex items-center gap-4 md:gap-6 flex-wrap">
                     <button 
                       onClick={() => setShowFilters(!showFilters)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] uppercase font-bold tracking-widest transition-all ${showFilters ? 'bg-artistic-ink text-artistic-bg border-artistic-ink' : 'bg-white text-artistic-ink border-artistic-ink/10 hover:border-artistic-ink'}`}
+                      className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border text-[9px] md:text-[10px] uppercase font-bold tracking-widest transition-all ${showFilters ? 'bg-artistic-ink text-artistic-bg border-artistic-ink' : 'bg-white text-artistic-ink border-artistic-ink/10 hover:border-artistic-ink'}`}
                     >
                       <Filter className="w-3 h-3" />
                       <span>Filters</span>
@@ -1189,36 +1313,22 @@ function App() {
                         <span className="w-2 h-2 bg-artistic-accent rounded-full" />
                       )}
                     </button>
-
-                    {user && (
-                      <div className="flex flex-col items-end gap-2">
-                         <button 
-                          onClick={toggleBucketListPublic}
-                          className={`text-[9px] uppercase font-bold tracking-widest ${isBucketListPublic ? 'text-artistic-accent' : 'text-artistic-ink/40'}`}
-                        >
-                          {isBucketListPublic ? 'Profile sharing is ON' : 'Share Profile'}
-                        </button>
-                        {isBucketListPublic && (
-                          <div className="flex items-center gap-2 bg-artistic-shadow/50 p-2 rounded-full mt-1">
-                            <input 
-                              type="text" 
-                              readOnly 
-                              value={`${window.location.origin}/?sharedProfile=${user.uid}`}
-                              className="text-[8px] max-w-[120px] font-bold bg-transparent italic outline-none truncate"
-                            />
-                            <button 
-                              onClick={() => handleShare(`${window.location.origin}/?sharedProfile=${user.uid}`)}
-                              className="text-artistic-accent hover:text-artistic-ink transition-colors"
-                              title="Share link"
-                            >
-                              <Share2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
-                 </div>
+                  <div className="md:col-span-3 flex justify-end">
+                    <button 
+                      onClick={() => {
+                        setMediumFilters([]);
+                        setMuseumFilters([]);
+                        setYearMin(-20000);
+                        setYearMax(new Date().getFullYear());
+                      }}
+                      className="text-[9px] uppercase font-bold tracking-[0.2em] opacity-40 hover:opacity-100 hover:text-red-500 transition-all flex items-center gap-2"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Clear All Filters
+                    </button>
+                  </div>
+                </div>
               </header>
 
               <FilterSection />
@@ -1232,7 +1342,7 @@ function App() {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
                   <AnimatePresence>
                     {filteredBucketList.map((item) => (
                       <motion.div
@@ -1310,53 +1420,25 @@ function App() {
             </div>
           </section>
         ) : view === 'galleries' ? (
-          <section className="w-full h-full overflow-y-auto bg-white p-10 md:p-20">
+          <section className="w-full h-full overflow-y-auto bg-white p-6 md:p-20">
             <div className="max-w-6xl mx-auto">
-              <header className="mb-16 flex justify-between items-end gap-6 flex-wrap">
+              <header className="mb-10 md:mb-16 flex justify-between items-end gap-6 flex-wrap">
                 <div>
-                  <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-4">Curated Collection</span>
-                  <h2 className="text-5xl font-serif tracking-tighter italic">
+                  <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-2 md:mb-4">Curated Collection</span>
+                  <h2 className="text-3xl md:text-5xl font-serif tracking-tighter italic">
                     {isViewOnly 
                       ? (sharedGalleryOwnerName ? `${sharedGalleryOwnerName}'s` : 'User\'s') 
                       : (user ? (user.displayName || user.email?.split('@')[0] || 'My') : 'Guest')} Gallery
                   </h2>
                 </div>
-                <div className="flex gap-8 items-center flex-wrap">
-                  {user && (
-                    <div className="flex flex-col items-end gap-2">
-                      <button 
-                        onClick={toggleGalleryPublic}
-                        className={`text-[9px] uppercase font-bold tracking-widest ${isGalleryPublic ? 'text-artistic-accent' : 'text-artistic-ink/40'}`}
-                      >
-                        {isGalleryPublic ? 'Profile sharing is ON' : 'Share Profile'}
-                      </button>
-                      {isGalleryPublic && (
-                        <div className="flex items-center gap-2 bg-artistic-shadow/50 p-2 rounded-full mt-1">
-                          <input 
-                            type="text" 
-                            readOnly 
-                            value={`${window.location.origin}/?sharedProfile=${user.uid}`}
-                            className="text-[8px] max-w-[120px] font-bold bg-transparent italic outline-none truncate"
-                          />
-                          <button 
-                            onClick={() => handleShare(`${window.location.origin}/?sharedProfile=${user.uid}`)}
-                            className="text-artistic-accent hover:text-artistic-ink transition-colors"
-                            title="Share link"
-                          >
-                            <Share2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-4">
+                <div className="flex gap-4 md:gap-8 items-center flex-wrap">
+                  <div className="flex items-center gap-2 md:gap-4">
                     <button 
                       onClick={() => setShowFilters(!showFilters)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] uppercase font-bold tracking-widest transition-all ${showFilters ? 'bg-artistic-ink text-artistic-bg border-artistic-ink' : 'bg-white text-artistic-ink border-artistic-ink/10 hover:border-artistic-ink'}`}
+                      className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border text-[9px] md:text-[10px] uppercase font-bold tracking-widest transition-all ${showFilters ? 'bg-artistic-ink text-artistic-bg border-artistic-ink' : 'bg-white text-artistic-ink border-artistic-ink/10 hover:border-artistic-ink'}`}
                     >
                       <Filter className="w-3 h-3" />
-                      <span>Filters</span>
+                      <span className="hidden sm:inline">Filters</span>
                       {(mediumFilters.length > 0 || museumFilters.length > 0 || yearMin !== -20000 || yearMax !== new Date().getFullYear()) && (
                         <span className="w-2 h-2 bg-artistic-accent rounded-full" />
                       )}
@@ -1365,21 +1447,27 @@ function App() {
                     <div className="flex p-1 bg-artistic-shadow rounded-full border border-artistic-ink/5">
                       <button 
                         onClick={() => setGalleryMode('grid')}
-                        className={`p-2 rounded-full transition-all ${galleryMode === 'grid' ? 'bg-artistic-ink text-artistic-bg' : 'text-artistic-ink hover:bg-artistic-ink/5'}`}
+                        className={`p-1.5 md:p-2 rounded-full transition-all ${galleryMode === 'grid' ? 'bg-artistic-ink text-artistic-bg' : 'text-artistic-ink hover:bg-artistic-ink/5'}`}
                       >
-                        <LayoutGrid className="w-4 h-4" />
+                        <LayoutGrid className="w-3.5 h-3.5 md:w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => setGalleryMode('map')}
+                        className={`p-1.5 md:p-2 rounded-full transition-all ${galleryMode === 'map' ? 'bg-artistic-ink text-artistic-bg' : 'text-artistic-ink hover:bg-artistic-ink/5'}`}
+                      >
+                        <MapPin className="w-3.5 h-3.5 md:w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => setGalleryMode('graph')}
-                        className={`p-2 rounded-full transition-all ${galleryMode === 'graph' ? 'bg-artistic-ink text-artistic-bg' : 'text-artistic-ink hover:bg-artistic-ink/5'}`}
+                        className={`p-1.5 md:p-2 rounded-full transition-all ${galleryMode === 'graph' ? 'bg-artistic-ink text-artistic-bg' : 'text-artistic-ink hover:bg-artistic-ink/5'}`}
                       >
-                        <Network className="w-4 h-4" />
+                        <Network className="w-3.5 h-3.5 md:w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex gap-4 items-center opacity-40 text-[9px] uppercase font-bold tracking-widest border-l border-artistic-ink/10 pl-8">
-                    <span>{filteredHistory.length} Masterpieces cataloged</span>
+                  <div className="hidden sm:flex gap-4 items-center opacity-40 text-[9px] uppercase font-bold tracking-widest border-l border-artistic-ink/10 pl-8">
+                    <span>{filteredHistory.length} cataloged</span>
                   </div>
                 </div>
               </header>
@@ -1393,9 +1481,22 @@ function App() {
                   </div>
                   <p className="text-artistic-ink/40 text-sm italic">Your archive is currently empty.<br />Start by scanning an artwork.</p>
                 </div>
+              ) : galleryMode === 'map' ? (
+                <div className="w-full bg-artistic-shadow/30 md:rounded-3xl border-y md:border border-artistic-ink/5 md:p-8 flex flex-col items-center">
+                  <div className="w-full h-[450px] md:h-[700px] bg-white md:rounded-3xl shadow-sm border border-artistic-ink/5 relative overflow-hidden">
+                    <MuseumMap 
+                      items={filteredHistory} 
+                      onArtworkClick={findAndLoadFromHistoryId} 
+                    />
+                  </div>
+                  <p className="mt-4 md:mt-8 p-4 md:p-0 text-[10px] uppercase tracking-[0.2em] font-bold opacity-30 flex items-center gap-3">
+                    <MapPin className="w-3 h-3" />
+                    Global Heritage Map
+                  </p>
+                </div>
               ) : galleryMode === 'graph' ? (
-                <div className="w-full bg-artistic-shadow/30 rounded-3xl border border-artistic-ink/5 p-4 md:p-8 flex flex-col items-center">
-                  <div className="w-full h-[700px] bg-white rounded-3xl shadow-sm border border-artistic-ink/5 relative overflow-hidden">
+                <div className="w-full bg-artistic-shadow/30 md:rounded-3xl border-y md:border border-artistic-ink/5 md:p-8 flex flex-col items-center">
+                  <div className="w-full h-[500px] md:h-[700px] bg-white md:rounded-3xl shadow-sm border border-artistic-ink/5 relative overflow-hidden">
                     <KnowledgeGraph 
                       items={filteredHistory} 
                       bucketListItems={filteredBucketList}
@@ -1403,13 +1504,13 @@ function App() {
                       onEntityClick={openEntity}
                     />
                   </div>
-                  <p className="mt-8 text-[9px] uppercase tracking-[0.2em] font-bold opacity-30 flex items-center gap-3">
+                  <p className="mt-4 md:mt-8 p-4 md:p-0 text-[10px] uppercase tracking-[0.2em] font-bold opacity-30 flex items-center gap-3">
                     <HistoryIcon className="w-3 h-3" />
-                    Interactive Spatial Knowledge Graph: Click nodes to explore relationships
+                    Interactive Knowledge Graph
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
                   <AnimatePresence>
                     {filteredHistory.length === 0 && history.length > 0 && (
                       <div className="col-span-full h-[30vh] flex flex-col items-center justify-center text-center">
@@ -1482,52 +1583,47 @@ function App() {
             </div>
           </section>
         ) : !image ? (
-          <section className="w-full flex flex-col items-center justify-center p-12 text-center bg-white">
+          <section className="w-full flex flex-col items-center justify-center p-6 md:p-12 text-center bg-white overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8 }}
-              className="max-w-3xl"
+              className="max-w-3xl py-12 md:py-0"
             >
-              <div className="flex justify-center mb-12">
-                <div className="w-24 h-24 bg-white/50 backdrop-blur rounded-full flex items-center justify-center p-3 border border-artistic-ink/5 overflow-hidden shadow-xl">
+              <div className="flex justify-center mb-8 md:mb-12">
+                <div className="w-16 h-16 md:w-24 md:h-24 bg-white/50 backdrop-blur rounded-full flex items-center justify-center p-2 md:p-3 border border-artistic-ink/5 overflow-hidden shadow-xl">
                   <img 
                     src="/logo.png" 
                     alt="Aura Logo" 
                     className="w-full h-full object-contain"
                     referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const parent = target.parentElement;
-                      if (parent) {
-                        parent.style.display = 'none';
-                      }
-                    }}
                   />
                 </div>
               </div>
-              <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-8">Intelligence meets Aesthetics</span>
-              <h1 className="font-serif text-6xl md:text-8xl mb-12 leading-[1.0] tracking-tighter" style={{ fontFamily: 'Georgia, serif' }}>
+              <span className="uppercase text-[8px] md:text-[10px] tracking-[0.3em] md:tracking-[0.4em] font-bold text-artistic-accent block mb-4 md:mb-8 text-nowrap">Intelligence meets Aesthetics</span>
+              <h1 className="font-serif text-4xl md:text-8xl mb-8 md:mb-12 leading-[1.1] tracking-tighter" style={{ fontFamily: 'Georgia, serif' }}>
                 AURA - The <br /> <span className="italic">Art Binnacle</span>
               </h1>
-              <p className="text-artistic-ink/60 max-w-lg mx-auto mb-16 text-sm leading-relaxed">
+              <p className="text-artistic-ink/60 max-w-lg mx-auto mb-10 md:mb-16 text-xs md:text-sm leading-relaxed px-4 md:px-0">
                 Connect your vision to the history of human creativity. Our neural engine identifies, catalogs, and contextualizes any masterpiece in seconds.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-                <button
-                  disabled={isViewOnly || isLoading}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`w-16 h-16 bg-artistic-ink text-artistic-bg rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl ${isViewOnly || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Upload className="w-6 h-6" />}
-                </button>
+              <div className="flex gap-10 justify-center items-center">
+                <div className="flex flex-col items-center">
+                  <button
+                    disabled={isViewOnly || isLoading}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`w-14 h-14 md:w-16 md:h-16 bg-artistic-ink text-artistic-bg rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl mb-2 ${isViewOnly || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Upload className="w-6 h-6" />}
+                  </button>
+                  <span className="text-[9px] uppercase font-bold tracking-widest opacity-40">Scan Art</span>
+                </div>
                 <div onClick={() => !isLoading && setView('galleries')} className={`cursor-pointer group flex flex-col items-center ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
-                   <div className="w-16 h-16 border border-artistic-ink rounded-full flex items-center justify-center group-hover:bg-artistic-ink group-hover:text-artistic-bg transition-all mb-2">
+                   <div className="w-14 h-14 md:w-16 md:h-16 border border-artistic-ink rounded-full flex items-center justify-center group-hover:bg-artistic-ink group-hover:text-artistic-bg transition-all mb-2">
                      <HistoryIcon className="w-6 h-6" />
                    </div>
-                   <span className="text-[10px] uppercase font-bold tracking-widest opacity-40">Your Gallery</span>
+                   <span className="text-[9px] uppercase font-bold tracking-widest opacity-40">Your Gallery</span>
                 </div>
               </div>
               
@@ -1543,10 +1639,10 @@ function App() {
         ) : (
           <div className="w-full flex flex-col lg:flex-row overflow-hidden">
             {/* Image Preview Side (55%) */}
-            <div className="w-full lg:w-[55%] p-10 lg:p-20 flex flex-col justify-center items-center bg-white overflow-y-auto relative">
+            <div className="w-full lg:w-[55%] p-6 md:p-10 lg:p-20 flex flex-col justify-center items-center bg-white overflow-y-auto relative">
               <button 
                 onClick={navigateBack}
-                className="absolute top-8 left-8 flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest opacity-40 hover:opacity-100 hover:text-artistic-accent transition-all group"
+                className="absolute top-6 left-6 md:top-8 md:left-8 flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest opacity-40 hover:opacity-100 hover:text-artistic-accent transition-all group"
               >
                 <ArrowRight className="w-3 h-3 rotate-180 group-hover:-translate-x-1 transition-transform" />
                 <span>Back to previous</span>

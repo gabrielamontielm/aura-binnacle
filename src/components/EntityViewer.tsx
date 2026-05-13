@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen, MapPin, Calendar, ArrowRight, Star, Plus, Check, Search, Globe, Palette, Box, Building, Brush } from 'lucide-react';
 import { ValidatedImage } from './ValidatedImage';
 import { EntityDetails, ArtDetails } from '../services/artService';
@@ -32,6 +32,7 @@ import { ImageOverrideModal } from './ImageOverrideModal';
 
 export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, history, onArtworkClick, onEntityClick, onAddToBucketList, bucketListWorks, relatedBucketList, onBack, onUpdateFamousWorkImage }) => {
   const [editingWorkIndex, setEditingWorkIndex] = React.useState<number | null>(null);
+  const [showFullAnalysis, setShowFullAnalysis] = React.useState(false);
 
   return (
     <motion.div 
@@ -40,19 +41,19 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
       className="flex flex-col lg:flex-row h-full min-h-screen bg-artistic-bg w-full"
     >
       {/* Visual / Introduction Side */}
-      <div className="w-full lg:w-1/2 p-10 lg:p-20 flex flex-col justify-center bg-white border-r border-artistic-ink/5 relative lg:sticky lg:top-0 lg:h-screen overflow-y-auto">
+      <div className="w-full lg:w-1/2 p-6 md:p-10 lg:p-20 flex flex-col justify-center bg-white border-b lg:border-b-0 lg:border-r border-artistic-ink/5 relative lg:sticky lg:top-0 lg:h-screen overflow-y-auto">
         <button 
           onClick={onBack}
-          className="absolute top-8 left-8 flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest opacity-40 hover:opacity-100 hover:text-artistic-accent transition-all group"
+          className="absolute top-6 left-6 md:top-8 md:left-8 flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest opacity-40 hover:opacity-100 hover:text-artistic-accent transition-all group"
         >
           <ArrowRight className="w-3 h-3 rotate-180 group-hover:-translate-x-1 transition-transform" />
           <span>Back to previous</span>
         </button>
-        <div className="max-w-xl mx-auto">
+        <div className="max-w-xl mx-auto w-full pt-10 md:pt-0">
           <motion.span 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-8"
+            className="uppercase text-[9px] md:text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-6 md:mb-8"
           >
             Curatorial Report: {
               details.type === 'artist' ? 'The Master' : 
@@ -66,13 +67,13 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-6xl lg:text-8xl font-serif leading-[1.0] mb-8 tracking-tighter italic"
+            className="text-4xl md:text-6xl lg:text-8xl font-serif leading-[1.0] mb-6 md:mb-8 tracking-tighter italic"
             style={{ fontFamily: 'Georgia, serif' }}
           >
             {details.name}
           </motion.h1>
 
-          <div className="flex flex-wrap gap-8 items-center opacity-40 uppercase text-[9px] font-bold tracking-[0.2em] mb-12">
+          <div className="flex flex-wrap gap-4 md:gap-8 items-center opacity-40 uppercase text-[8px] md:text-[9px] font-bold tracking-[0.2em] mb-8 md:mb-12">
             <div className="flex items-center gap-2">
               <Calendar className="w-3 h-3" />
               <span>{details.yearsOrPeriod}</span>
@@ -84,15 +85,27 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
           </div>
 
           <div className="space-y-6">
-            <p className="text-xl font-serif text-artistic-ink/80 leading-relaxed italic">
+            <p className="text-lg md:text-xl font-serif text-artistic-ink/80 leading-relaxed italic">
               "{details.significance}"
             </p>
+            <p className="text-xs md:text-sm text-artistic-ink/60 leading-relaxed max-w-md">
+              {details.curatorialSummary}
+            </p>
+            {!showFullAnalysis && (
+              <button 
+                onClick={() => setShowFullAnalysis(true)}
+                className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-artistic-accent hover:opacity-70 transition-all group"
+              >
+                <span>Read Full Exploration</span>
+                <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+              </button>
+            )}
             <div className="h-px w-24 bg-artistic-accent" />
           </div>
         </div>
 
         {/* Decorative elements */}
-        <div className="absolute top-12 left-12 flex space-x-1 opacity-20">
+        <div className="absolute top-12 right-12 lg:left-12 flex space-x-1 opacity-20">
           <div className="w-2 h-2 bg-artistic-ink" />
           <div className="w-2 h-2 bg-artistic-ink" />
           <div className="w-2 h-2 bg-artistic-ink" />
@@ -100,24 +113,69 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
       </div>
 
       {/* Analysis Side */}
-      <div className="w-full lg:w-1/2 p-10 lg:p-20 flex flex-col bg-artistic-bg overflow-y-auto">
-        <div className="max-w-xl mx-auto space-y-16 py-10 lg:py-20">
+      <div className="w-full lg:w-1/2 p-6 md:p-10 lg:p-20 flex flex-col bg-artistic-bg overflow-y-auto">
+        <div className="max-w-xl mx-auto space-y-12 md:space-y-16 py-8 md:py-20 w-full">
           
-          <section>
-            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6 px-1">
-              Curatorial Analysis
-            </span>
-            <div className="prose prose-sm prose-slate max-w-none">
-              {details.detailedDescription.split('\n').map((paragraph, i) => (
-                <p key={i} className="text-sm leading-relaxed text-artistic-ink/80 text-justify mb-4">
-                  {paragraph}
-                </p>
-              ))}
-            </div>
-          </section>
+          <AnimatePresence mode="wait">
+            {showFullAnalysis ? (
+              <motion.div
+                key="full-analysis"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-16"
+              >
+                <section>
+                  <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6 px-1">
+                    Deep Curatorial Analysis
+                  </span>
+                  <div className="prose prose-sm prose-slate max-w-none">
+                    {details.detailedDescription.split('\n').map((paragraph, i) => (
+                      <p key={i} className="text-sm leading-relaxed text-artistic-ink/80 text-justify mb-4">
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
+                </section>
+
+                <section>
+                  <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6">Historical Impact & Legacy</span>
+                  <div className="relative">
+                    <div className="absolute -left-6 top-0 bottom-0 w-px bg-artistic-accent/20" />
+                    <p className="text-sm leading-relaxed text-artistic-ink/80 text-justify">
+                      {details.historicalImpact}
+                    </p>
+                  </div>
+                </section>
+                
+                <button 
+                  onClick={() => setShowFullAnalysis(false)}
+                  className="text-[9px] uppercase font-bold tracking-[0.2em] opacity-40 hover:opacity-100 hover:text-artistic-accent transition-all"
+                >
+                  Collapse Analysis
+                </button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="summary-placeholder"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="py-12 border border-dashed border-artistic-ink/10 rounded-3xl flex flex-col items-center justify-center text-center px-10"
+              >
+                <BookOpen className="w-8 h-8 opacity-10 mb-4" />
+                <p className="text-xs font-bold uppercase tracking-widest opacity-20 mb-4">Full Neural Analysis Available</p>
+                <button 
+                  onClick={() => setShowFullAnalysis(true)}
+                  className="px-6 py-3 bg-white border border-artistic-ink/10 rounded-xl text-[10px] uppercase font-bold tracking-widest hover:bg-artistic-ink hover:text-white transition-all shadow-sm"
+                >
+                  Unlocking Deep Insights
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <section>
-            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6">Key Characteristics</span>
+            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6">Defining Characteristics</span>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {details.keyCharacteristics.map((trait, i) => (
                 <div key={i} className="flex items-start gap-3 p-4 bg-white/50 backdrop-blur-sm rounded-xl border border-artistic-ink/5">
@@ -125,16 +183,6 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                   <span className="text-xs font-semibold leading-tight">{trait}</span>
                 </div>
               ))}
-            </div>
-          </section>
-
-          <section>
-            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6">Historical Impact & Legacy</span>
-            <div className="relative">
-              <div className="absolute -left-6 top-0 bottom-0 w-px bg-artistic-accent/20" />
-              <p className="text-sm leading-relaxed text-artistic-ink/80 text-justify">
-                {details.historicalImpact}
-              </p>
             </div>
           </section>
 
