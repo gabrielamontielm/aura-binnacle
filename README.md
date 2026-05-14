@@ -8,6 +8,8 @@ AURA is a mobile-first web application designed for art enthusiasts to scan, ide
 
 ## 🌟 Key Features
 
+- **Capture from Anywhere**: The "Capture" menu is now accessible from both the navigation header and the home hero, allowing you to scan art from any page.
+- **Google Photos Integration**: Authenticate with your Google account to import artworks directly from your Google Photos library.
 - **Artwork Scanning & Identification**: Instantly identify artworks using Google Gemini AI. Get details on artist, year, movement, medium, and historical context.
 - **Advanced Gallery Filtering**: Filter your curated collection by medium, museum, and year range with support for multiple selections.
 - **Interactive Knowledge Graph**: Visualize relationships between artists, movements, and museums with directional edges and edge labels. Features include:
@@ -98,7 +100,9 @@ graph TD
     Frontend -->|Identify| Gemini[Google Gemini AI]
     Frontend -->|Auth| FirebaseAuth[Firebase Auth]
     Frontend -->|Store/Retrieve| Firestore[Firestore]
+    Frontend -->|OAuth/Fetch| GPhotos[Google Photos API]
     Frontend -->|Convert HEIC| Server[Express Server]
+    Server -->|OAuth Flow| GPhotos
     Server -->|Response| Frontend
 ```
 

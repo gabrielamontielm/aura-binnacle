@@ -1,13 +1,18 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ImageOverrideModal } from './components/ImageOverrideModal';
-import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus, Filter, SlidersHorizontal, ChevronDown, MapPin, Menu, X } from 'lucide-react';
+import { GooglePhotosPicker } from './components/GooglePhotosPicker';
+import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus, Filter, SlidersHorizontal, ChevronDown, MapPin, Menu, X, Globe, PlusCircle, Image as ImageIcon, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as heic2anyModule from 'heic2any';
 import { identifyArtwork, identifyArtworkFromUrl, ArtDetails, EntityDetails, getEntityDetails } from './services/artService';
 import { MuseumMap } from './components/MuseumMap';
-import { HistoryItem } from './types';
+import { HistoryItem, UserProfile, MuseumStamp, QuizHistory } from './types';
 import { KnowledgeGraph } from './components/KnowledgeGraph';
+import { AchievementSystem } from './components/AchievementSystem';
+import { ArtQuiz } from './components/ArtQuiz';
+import { MuseumPassport } from './components/MuseumPassport';
 import { EntityViewer } from './components/EntityViewer';
+import { MUSEUMS } from './constants';
 import { auth, googleProvider, db, handleFirestoreError, OperationType } from './services/firebase';
 import { ValidatedImage } from './components/ValidatedImage';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
@@ -22,6 +27,8 @@ export default /**
  */
 function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [museumStamps, setMuseumStamps] = useState<MuseumStamp[]>([]);
   const [image, setImage] = useState<string | null>(null);
   const [details, setDetails] = useState<ArtDetails | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<EntityDetails | null>(null);
@@ -43,8 +50,100 @@ function App() {
     });
   };
   
+  const addXP = async (amount: number) => {
+    if (!user || !userProfile) return;
+    
+    const newXP = (userProfile.totalXP || 0) + amount;
+    const currentLevel = userProfile.level || 1;
+    const nextLevelXP = currentLevel * 100;
+    const newLevel = newXP >= nextLevelXP ? currentLevel + 1 : currentLevel;
+    
+    const updatedProfile = {
+      ...userProfile,
+      totalXP: newXP,
+      level: newLevel
+    };
+    
+    setUserProfile(updatedProfile);
+    try {
+      await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+    }
+  };
+
+  const handleMuseumCheckIn = async (stamp: MuseumStamp) => {
+    if (!user) return;
+    
+    setMuseumStamps(prev => [stamp, ...prev]);
+    const path = `users/${user.uid}/passport`;
+    try {
+      await setDoc(doc(db, path, stamp.id), {
+        ...stamp,
+        userId: user.uid
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+    
+    // Reward XP for check-in
+    addXP(200);
+  };
+
+  const updateLevelingOnScan = async (details: ArtDetails) => {
+    if (!user || !userProfile) return;
+
+    const movement = details.movement || 'Unknown';
+    const currentMovementScans = userProfile.scansByMovement?.[movement] || 0;
+    const newMovementScans = currentMovementScans + 1;
+    
+    const updatedScansByMovement = {
+      ...userProfile.scansByMovement,
+      [movement]: newMovementScans
+    };
+
+    // Check for new badges
+    const newBadges = [...(userProfile.badges || [])];
+    const movementBadges = [
+      { id: 'impressionist-trainee', movement: 'Impressionism', threshold: 1 },
+      { id: 'impressionist-expert', movement: 'Impressionism', threshold: 5 },
+      { id: 'renaissance-apprentice', movement: 'Renaissance', threshold: 1 },
+      { id: 'renaissance-master', movement: 'Renaissance', threshold: 5 },
+      { id: 'modernist-explorer', movement: 'Modernism', threshold: 1 },
+    ];
+
+    movementBadges.forEach(b => {
+      if (movement === b.movement && newMovementScans >= b.threshold && !newBadges.includes(b.id)) {
+        newBadges.push(b.id);
+      }
+    });
+
+    const totalScans = history.length + 1;
+    if (totalScans >= 1 && !newBadges.includes('connoisseur-initiate')) newBadges.push('connoisseur-initiate');
+    if (totalScans >= 10 && !newBadges.includes('art-historian')) newBadges.push('art-historian');
+
+    const updatedProfile: UserProfile = {
+      ...userProfile,
+      scansByMovement: updatedScansByMovement,
+      badges: newBadges,
+      totalXP: (userProfile.totalXP || 0) + 10 // 10 XP per scan
+    };
+
+    // Level up check
+    const currentLevel = updatedProfile.level || 1;
+    if (updatedProfile.totalXP >= currentLevel * 100) {
+      updatedProfile.level = currentLevel + 1;
+    }
+
+    setUserProfile(updatedProfile);
+    try {
+      await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+    }
+  };
   const [sharedGalleryOwnerName, setSharedGalleryOwnerName] = useState<string | null>(null);
-  const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist'>('home');
+  const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist' | 'passport' | 'achievements'>('home');
   const [overrideTarget, setOverrideTarget] = useState<{ id: string, type: 'history' | 'bucketlist' } | null>(null);
   const updateArtworkImage = async (id: string, imageUrl: string, type: 'history' | 'bucketlist') => {
     if (!user) return;
@@ -271,6 +370,13 @@ function App() {
     }
   }, [user]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [isHeaderCaptureMenuOpen, setIsHeaderCaptureMenuOpen] = useState(false);
+  const [isHeroCaptureMenuOpen, setIsHeroCaptureMenuOpen] = useState(false);
+  const [isUrlCaptureOpen, setIsUrlCaptureOpen] = useState(false);
+  const [isGooglePhotosOpen, setIsGooglePhotosOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [captureUrl, setCaptureUrl] = useState('');
 
   // Auth Listener
   useEffect(() => {
@@ -280,16 +386,25 @@ function App() {
         // Log basic profile
         const userDoc = doc(db, 'users', currentUser.uid);
         const userSnapshot = await getDoc(userDoc);
-        let userData = userSnapshot.exists() ? userSnapshot.data() : {
+        const baseDefaults = {
           uid: currentUser.uid,
           email: currentUser.email,
           displayName: currentUser.displayName,
           photoURL: currentUser.photoURL,
           lastLogin: Date.now(),
           isGalleryPublic: false,
-          isBucketListPublic: false
+          isBucketListPublic: false,
+          level: 1,
+          totalXP: 0,
+          scansByMovement: {},
+          badges: []
         };
+
+        let userData = userSnapshot.exists() 
+          ? { ...baseDefaults, ...userSnapshot.data() } 
+          : baseDefaults;
         
+        setUserProfile(userData as UserProfile);
         setIsGalleryPublic(userData.isGalleryPublic || false);
         setIsBucketListPublic(userData.isBucketListPublic || false);
         
@@ -336,8 +451,24 @@ function App() {
     if (user && !isViewOnly) {
       fetchUserHistory(user.uid);
       fetchUserBucketList(user.uid);
+      fetchUserPassport(user.uid);
     }
   }, [user, isViewOnly]);
+
+  const fetchUserPassport = async (uid: string) => {
+    const path = `users/${uid}/passport`;
+    try {
+      const q = query(collection(db, path));
+      const querySnapshot = await getDocs(q);
+      const stamps: MuseumStamp[] = [];
+      querySnapshot.forEach((doc) => {
+        stamps.push({ id: doc.id, ...doc.data() } as MuseumStamp);
+      });
+      setMuseumStamps(stamps);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, path);
+    }
+  };
 
   const fetchUserHistory = async (uid: string) => {
     const path = `users/${uid}/items`;
@@ -424,6 +555,7 @@ function App() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setView('home');
       setIsLoading(true);
       setProgress(10);
       setError(null);
@@ -523,6 +655,8 @@ function App() {
       const result = await identifyArtwork(base64, mimeType);
       setProgress(100);
       setDetails(result);
+      setView('home');
+      updateLevelingOnScan(result);
       
       // Duplicate Check: Stop if already in history
       const isDuplicate = history.some(item => 
@@ -579,6 +713,68 @@ function App() {
     } catch (err) {
       console.error(err);
       setError("I couldn't identify this artwork. Please try another image.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUrlCapture = async (url: string) => {
+    if (!url.trim()) return;
+    setView('home');
+    setIsLoading(true);
+    setProgress(20);
+    setError(null);
+    setDetails(null);
+    setImage(null);
+    setIsUrlCaptureOpen(false);
+
+    try {
+      setProgress(50);
+      const result = await identifyArtworkFromUrl(url);
+      setImage(url);
+      setProgress(100);
+      setDetails(result);
+      updateLevelingOnScan(result);
+
+      const isDuplicate = history.some(item => 
+        item.details.title === result.title && 
+        (item.details.artist === result.artist || item.details.year === result.year)
+      );
+
+      if (isDuplicate) {
+        setIsLoading(false);
+        return;
+      }
+
+      const newItem: HistoryItem = {
+        id: Date.now().toString() + Math.random().toString(36).substring(2),
+        image: url,
+        details: result,
+        timestamp: Date.now()
+      };
+
+      setHistory(prev => [newItem, ...prev].slice(0, 50));
+
+      if (user) {
+        const path = `users/${user.uid}/items`;
+        await setDoc(doc(db, path, newItem.id), {
+          ...newItem,
+          userId: user.uid
+        });
+        if (isGalleryPublic) {
+          await setDoc(doc(db, `public_items/${user.uid}/items`, newItem.id), {
+            ...newItem,
+            userId: user.uid
+          });
+        }
+      } else {
+        const saved = localStorage.getItem('art_curator_history');
+        const local = saved ? JSON.parse(saved) : [];
+        localStorage.setItem('art_curator_history', JSON.stringify([newItem, ...local].slice(0, 50)));
+      }
+    } catch (err) {
+      console.error(err);
+      setError("I couldn't identify this artwork URL. Please ensure it's a direct link to an image.");
     } finally {
       setIsLoading(false);
     }
@@ -766,30 +962,36 @@ function App() {
       }
   };
 
+  const isSharingRef = useRef(false);
+
   const handleShare = async (url: string) => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'AURA - Art Binnacle',
-          text: 'Check out my curated art collection on AURA!',
-          url: url,
-        });
-      } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
-          console.error('Error sharing:', err);
+    if (isSharingRef.current) return;
+    isSharingRef.current = true;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+      
+      // Still try to use native share if available as secondary option
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'AURA - Art Binnacle',
+            text: 'Check out my curated art collection on AURA!',
+            url: url,
+          });
+        } catch (err) {
+          if ((err as Error).name !== 'AbortError' && !(err instanceof Error && err.message.includes('share has not yet completed'))) {
+            console.error('Error sharing:', err);
+          }
         }
       }
-    } else {
-      try {
-        await navigator.clipboard.writeText(url);
-        // Simple fallback feedback
-        const btn = document.activeElement as HTMLButtonElement;
-        const originalTitle = btn.title;
-        btn.title = "Copied!";
-        setTimeout(() => { btn.title = originalTitle; }, 2000);
-      } catch (err) {
-        console.error('Failed to copy:', err);
-      }
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      setError("Failed to copy link to clipboard.");
+    } finally {
+      isSharingRef.current = false;
     }
   };
 
@@ -957,6 +1159,13 @@ function App() {
           <div className="flex items-center gap-4">
             <span className="w-2 h-2 bg-artistic-accent rounded-full animate-pulse" />
             <span>Viewing {sharedGalleryOwnerName}'s Curated Heritage Binnacle</span>
+            <button 
+              onClick={() => handleShare(window.location.href)}
+              className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 rounded-full transition-all ml-4"
+            >
+              {isCopied ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
+              <span>{isCopied ? 'Copied' : 'Share Link'}</span>
+            </button>
           </div>
           <button 
             onClick={() => {
@@ -981,7 +1190,7 @@ function App() {
         >
           <div className="w-8 h-8 md:w-12 md:h-12 bg-white/50 backdrop-blur rounded-full flex items-center justify-center p-1.5 border border-artistic-ink/5 overflow-hidden shadow-sm group-hover:scale-105 transition-transform duration-500">
             <img 
-              src="/logo.png" 
+              src="/images/logo.png" 
               alt="Aura Logo" 
               className="w-full h-full object-contain"
               referrerPolicy="no-referrer"
@@ -991,13 +1200,6 @@ function App() {
         </div>
         
         <nav className="hidden lg:flex space-x-12 uppercase text-[9px] tracking-[0.2em] font-bold">
-          <button 
-            disabled={isViewOnly}
-            onClick={() => { navigateTo('home'); reset(); }} 
-            className={`${view === 'home' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors ${isViewOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            Scanner
-          </button>
           <button 
             onClick={() => navigateTo('galleries')} 
             className={`${view === 'galleries' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
@@ -1009,6 +1211,18 @@ function App() {
             className={`${view === 'bucketlist' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
           >
             Bucket List
+          </button>
+          <button 
+            onClick={() => navigateTo('passport')} 
+            className={`${view === 'passport' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
+          >
+            Passport
+          </button>
+          <button 
+            onClick={() => navigateTo('achievements')} 
+            className={`${view === 'achievements' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
+          >
+            Achievements
           </button>
         </nav>
 
@@ -1030,20 +1244,32 @@ function App() {
               
               <div className="flex items-center gap-2 border-x border-artistic-ink/5 px-2 md:px-4 h-10">
                 <button 
-                  onClick={toggleProfilePublic}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] uppercase font-bold tracking-widest transition-all ${isGalleryPublic || isBucketListPublic ? 'bg-artistic-accent text-white shadow-lg shadow-artistic-accent/20' : 'bg-artistic-shadow text-artistic-ink/40 hover:text-artistic-ink'}`}
+                  onClick={() => {
+                    const profileUrl = new URL(window.location.href);
+                    profileUrl.search = ''; // Clear existing params
+                    profileUrl.searchParams.set('sharedProfile', user.uid);
+                    const finalUrl = profileUrl.toString();
+                    
+                    if (!isGalleryPublic && !isBucketListPublic) {
+                      toggleProfilePublic().then(() => handleShare(finalUrl));
+                    } else {
+                      handleShare(finalUrl);
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[8px] uppercase font-bold tracking-widest transition-all ${isCopied ? 'bg-green-500 text-white' : (isGalleryPublic || isBucketListPublic ? 'bg-artistic-accent text-white shadow-lg shadow-artistic-accent/20' : 'bg-artistic-shadow text-artistic-ink/40 hover:text-artistic-ink')}`}
                 >
-                  <Share2 className="w-3 h-3" />
-                  <span className="hidden md:inline">{isGalleryPublic || isBucketListPublic ? 'Public' : 'Share Profile'}</span>
+                  {isCopied ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
+                  <span className="hidden md:inline">{isCopied ? 'Copied' : (isGalleryPublic || isBucketListPublic ? 'Copy Link' : 'Share Profile')}</span>
                 </button>
                 
                 {(isGalleryPublic || isBucketListPublic) && (
                   <button 
-                    onClick={() => handleShare(`${window.location.origin}/?sharedProfile=${user.uid}`)}
-                    className="p-2 hover:bg-artistic-shadow rounded-full text-artistic-ink transition-colors"
-                    title="Copy Profile Link"
+                    onClick={toggleProfilePublic}
+                    className="p-2 hover:bg-artistic-shadow rounded-full text-artistic-ink transition-colors group relative"
+                    title="Stop Sharing"
                   >
-                    <Plus className="w-3.5 h-3.5 rotate-45" />
+                    <X className="w-3.5 h-3.5" />
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-artistic-ink text-artistic-bg text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">Stop Sharing</div>
                   </button>
                 )}
               </div>
@@ -1074,13 +1300,70 @@ function App() {
               Reset
             </button>
           )}
-          <button 
-            disabled={isViewOnly}
-            onClick={() => fileInputRef.current?.click()}
-            className={`px-3 md:px-5 py-2 border border-artistic-ink rounded-full text-[9px] md:text-[10px] uppercase font-bold tracking-tight hover:bg-artistic-ink hover:text-artistic-bg transition-all ${isViewOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Capture'}
-          </button>
+          
+          <div className="relative">
+            <button 
+              disabled={isViewOnly}
+              onClick={() => setIsHeaderCaptureMenuOpen(!isHeaderCaptureMenuOpen)}
+              className={`px-3 md:px-5 py-2 border border-artistic-ink rounded-full text-[9px] md:text-[10px] uppercase font-bold tracking-tight hover:bg-artistic-ink hover:text-artistic-bg transition-all ${isViewOnly ? 'opacity-50 cursor-not-allowed' : ''} ${isHeaderCaptureMenuOpen ? 'bg-artistic-ink text-artistic-bg' : ''}`}
+            >
+              {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Capture'}
+            </button>
+
+            <AnimatePresence>
+              {isHeaderCaptureMenuOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setIsHeaderCaptureMenuOpen(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 mt-3 w-48 bg-white rounded-2xl shadow-xl border border-artistic-ink/5 p-2 z-20"
+                  >
+                    <button 
+                      onClick={() => { cameraInputRef.current?.click(); setIsHeaderCaptureMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
+                    >
+                      <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
+                        <Camera className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] uppercase font-bold tracking-widest opacity-60 group-hover:opacity-100">Take Picture</span>
+                    </button>
+                    <button 
+                      onClick={() => { fileInputRef.current?.click(); setIsHeaderCaptureMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
+                    >
+                      <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
+                        <ImageIcon className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] uppercase font-bold tracking-widest opacity-60 group-hover:opacity-100">Filesystem</span>
+                    </button>
+                    <button 
+                      onClick={() => { setIsGooglePhotosOpen(true); setIsHeaderCaptureMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
+                    >
+                      <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
+                        <Globe className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] uppercase font-bold tracking-widest opacity-60 group-hover:opacity-100">Google Photos</span>
+                    </button>
+                    <button 
+                      onClick={() => { setIsUrlCaptureOpen(true); setIsHeaderCaptureMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group border-t border-artistic-ink/5 pt-3 mt-1"
+                    >
+                      <div className="w-8 h-8 bg-artistic-shadow rounded-full flex items-center justify-center text-artistic-ink/40 group-hover:bg-artistic-ink group-hover:text-white transition-all">
+                        <PlusCircle className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] uppercase font-bold tracking-widest opacity-40 group-hover:opacity-100">Other Link</span>
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </header>
 
@@ -1114,14 +1397,6 @@ function App() {
 
               <nav className="flex flex-col space-y-8 uppercase text-lg tracking-[0.2em] font-serif italic">
                 <button 
-                  disabled={isViewOnly}
-                  onClick={() => { navigateTo('home'); reset(); setIsMobileMenuOpen(false); }} 
-                  className={`${view === 'home' ? 'text-artistic-accent' : 'text-artistic-ink/60'} text-left flex items-center justify-between group`}
-                >
-                  <span>Scanner</span>
-                  {view === 'home' && <div className="w-1.5 h-1.5 bg-artistic-accent rounded-full" />}
-                </button>
-                <button 
                   onClick={() => { navigateTo('galleries'); setIsMobileMenuOpen(false); }} 
                   className={`${view === 'galleries' ? 'text-artistic-accent' : 'text-artistic-ink/60'} text-left flex items-center justify-between group`}
                 >
@@ -1135,6 +1410,54 @@ function App() {
                   <span>Bucket List</span>
                   {view === 'bucketlist' && <div className="w-1.5 h-1.5 bg-artistic-accent rounded-full" />}
                 </button>
+                <button 
+                  onClick={() => { navigateTo('passport'); setIsMobileMenuOpen(false); }} 
+                  className={`${view === 'passport' ? 'text-artistic-accent' : 'text-artistic-ink/60'} text-left flex items-center justify-between group`}
+                >
+                  <span>Passport</span>
+                  {view === 'passport' && <div className="w-1.5 h-1.5 bg-artistic-accent rounded-full" />}
+                </button>
+                <button 
+                  onClick={() => { navigateTo('achievements'); setIsMobileMenuOpen(false); }} 
+                  className={`${view === 'achievements' ? 'text-artistic-accent' : 'text-artistic-ink/60'} text-left flex items-center justify-between group`}
+                >
+                  <span>Achievements</span>
+                  {view === 'achievements' && <div className="w-1.5 h-1.5 bg-artistic-accent rounded-full" />}
+                </button>
+                
+                <div className="pt-4 border-t border-artistic-ink/5">
+                  <span className="text-[9px] uppercase tracking-widest font-bold opacity-30 block mb-6 px-1">Quick Capture</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      onClick={() => { cameraInputRef.current?.click(); setIsMobileMenuOpen(false); }}
+                      className="flex flex-col items-center gap-2 p-4 bg-artistic-shadow rounded-2xl transition-all active:scale-95"
+                    >
+                      <Camera className="w-5 h-5 opacity-40" />
+                      <span className="text-[8px] font-bold uppercase tracking-widest opacity-60">Camera</span>
+                    </button>
+                    <button 
+                      onClick={() => { fileInputRef.current?.click(); setIsMobileMenuOpen(false); }}
+                      className="flex flex-col items-center gap-2 p-4 bg-artistic-shadow rounded-2xl transition-all active:scale-95"
+                    >
+                      <ImageIcon className="w-5 h-5 opacity-40" />
+                      <span className="text-[8px] font-bold uppercase tracking-widest opacity-60">Files</span>
+                    </button>
+                    <button 
+                      onClick={() => { setIsGooglePhotosOpen(true); setIsMobileMenuOpen(false); }}
+                      className="flex flex-col items-center gap-2 p-4 bg-artistic-shadow rounded-2xl transition-all active:scale-95"
+                    >
+                      <Globe className="w-5 h-5 opacity-40" />
+                      <span className="text-[8px] font-bold uppercase tracking-widest opacity-60">Photos</span>
+                    </button>
+                    <button 
+                      onClick={() => { setIsUrlCaptureOpen(true); setIsMobileMenuOpen(false); }}
+                      className="flex flex-col items-center gap-2 p-4 bg-artistic-shadow rounded-2xl transition-all active:scale-95"
+                    >
+                      <PlusCircle className="w-5 h-5 opacity-40" />
+                      <span className="text-[8px] font-bold uppercase tracking-widest opacity-60">Link</span>
+                    </button>
+                  </div>
+                </div>
               </nav>
 
               <div className="mt-auto border-t border-artistic-ink/10 pt-8 space-y-6">
@@ -1146,7 +1469,19 @@ function App() {
                     </div>
                     
                     <button 
-                      onClick={() => { toggleProfilePublic(); setIsMobileMenuOpen(false); }}
+                      onClick={() => { 
+                        const url = new URL(window.location.href);
+                        url.search = '';
+                        url.searchParams.set('sharedProfile', user.uid);
+                        const profileUrl = url.toString();
+
+                        if (!isGalleryPublic && !isBucketListPublic) {
+                          toggleProfilePublic().then(() => handleShare(profileUrl));
+                        } else {
+                          handleShare(profileUrl);
+                        }
+                        setIsMobileMenuOpen(false); 
+                      }}
                       className={`flex items-center justify-between w-full p-3 rounded-xl transition-all ${isGalleryPublic || isBucketListPublic ? 'bg-artistic-accent text-white shadow-lg shadow-artistic-accent/20' : 'bg-artistic-shadow text-artistic-ink/60'}`}
                     >
                       <div className="flex items-center gap-2">
@@ -1289,7 +1624,65 @@ function App() {
             }}
             onBack={navigateBack} 
           />
-            ) : view === 'bucketlist' ? (
+        ) : view === 'achievements' ? (
+          <section className="w-full h-full overflow-y-auto bg-white p-6 md:p-20">
+            <div className="max-w-4xl mx-auto">
+              <header className="mb-16">
+                <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-4">Intellectual Growth</span>
+                <h2 className="text-3xl md:text-5xl font-serif tracking-tighter italic mb-8">Connoisseur Status</h2>
+              </header>
+              
+              {userProfile ? (
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="md:col-span-2">
+                       <AchievementSystem profile={userProfile} />
+                    </div>
+                    <div className="space-y-8">
+                       <ArtQuiz 
+                        history={history} 
+                        bucketList={bucketList}
+                        onCorrect={(xp) => addXP(xp)} 
+                       />
+                       
+                       <div className="p-8 bg-artistic-ink text-artistic-bg rounded-3xl">
+                          <Compass className="w-8 h-8 mb-4 text-artistic-accent" />
+                          <h4 className="font-bold uppercase tracking-widest text-xs mb-2">Growth Tip</h4>
+                          <p className="text-[10px] opacity-60 leading-relaxed italic">
+                            Scanning artworks from movements you haven't explored yet yields double XP. Expand your aesthetic horizons to reach the status of "Grand Historian".
+                          </p>
+                       </div>
+                    </div>
+                 </div>
+              ) : (
+                <div className="p-20 bg-artistic-shadow/10 rounded-3xl border border-dashed border-artistic-ink/10 text-center">
+                   <LogIn className="w-8 h-8 mx-auto mb-4 opacity-20" />
+                   <h4 className="font-serif italic text-xl mb-4">Achievements are for members</h4>
+                   <p className="text-sm text-artistic-ink/40 max-w-sm mx-auto mb-8">Sign in with your Google account to track your progress, earn badges, and complete daily art challenges.</p>
+                   <button onClick={handleLogin} className="px-8 py-3 bg-artistic-ink text-artistic-bg rounded-full text-[10px] uppercase font-bold tracking-widest">Sign In to Start</button>
+                </div>
+              )}
+            </div>
+          </section>
+        ) : view === 'passport' ? (
+          <section className="w-full h-full overflow-y-auto bg-white p-6 md:p-20">
+            <div className="max-w-6xl mx-auto">
+              {user ? (
+                 <MuseumPassport 
+                  stamps={museumStamps} 
+                  history={history}
+                  onCheckIn={handleMuseumCheckIn} 
+                 />
+              ) : (
+                <div className="p-20 bg-artistic-shadow/10 rounded-3xl border border-dashed border-artistic-ink/10 text-center">
+                   <MapPin className="w-8 h-8 mx-auto mb-4 opacity-20" />
+                   <h4 className="font-serif italic text-xl mb-4">Your passport awaits</h4>
+                   <p className="text-sm text-artistic-ink/40 max-w-sm mx-auto mb-8">Sign in to check into museums physical locations and collect stamps for your digital passport.</p>
+                   <button onClick={handleLogin} className="px-8 py-3 bg-artistic-ink text-artistic-bg rounded-full text-[10px] uppercase font-bold tracking-widest">Sign In to Start</button>
+                </div>
+              )}
+            </div>
+          </section>
+        ) : view === 'bucketlist' ? (
           <section className="w-full h-full overflow-y-auto bg-white p-6 md:p-20">
             <div className="max-w-6xl mx-auto">
               <header className="mb-10 md:mb-16">
@@ -1560,12 +1953,41 @@ function App() {
                               }
                             />
                             {!isViewOnly && (
-                              <button 
-                                onClick={(e) => deleteHistoryItem(item.id, e)}
-                                className="absolute top-4 right-4 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {item.details.museum && (
+                                  (() => {
+                                    const museum = MUSEUMS.find(m => m.keywords.some(k => item.details.museum?.toLowerCase().includes(k.toLowerCase())));
+                                    const isStamped = museum && museumStamps.some(s => s.museumId === museum.id);
+                                    if (museum && !isStamped) {
+                                      return (
+                                        <button 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMuseumCheckIn({
+                                              id: `scan-${museum.id}-${Date.now()}`,
+                                              museumId: museum.id,
+                                              museumName: museum.name,
+                                              timestamp: Date.now(),
+                                              location: { lat: 0, lng: 0 }
+                                            });
+                                          }}
+                                          className="w-8 h-8 bg-artistic-accent text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                                          title={`Check-in to ${museum.name}`}
+                                        >
+                                          <MapPin className="w-4 h-4" />
+                                        </button>
+                                      );
+                                    }
+                                    return null;
+                                  })()
+                                )}
+                                <button 
+                                  onClick={(e) => deleteHistoryItem(item.id, e)}
+                                  className="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-red-500 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -1582,7 +2004,7 @@ function App() {
               )}
             </div>
           </section>
-        ) : !image ? (
+        ) : (!image && !isLoading) ? (
           <section className="w-full flex flex-col items-center justify-center p-6 md:p-12 text-center bg-white overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
@@ -1593,7 +2015,7 @@ function App() {
               <div className="flex justify-center mb-8 md:mb-12">
                 <div className="w-16 h-16 md:w-24 md:h-24 bg-white/50 backdrop-blur rounded-full flex items-center justify-center p-2 md:p-3 border border-artistic-ink/5 overflow-hidden shadow-xl">
                   <img 
-                    src="/logo.png" 
+                    src="/images/logo.png" 
                     alt="Aura Logo" 
                     className="w-full h-full object-contain"
                     referrerPolicy="no-referrer"
@@ -1609,15 +2031,69 @@ function App() {
               </p>
 
               <div className="flex gap-10 justify-center items-center">
-                <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center relative">
                   <button
                     disabled={isViewOnly || isLoading}
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => setIsHeroCaptureMenuOpen(!isHeroCaptureMenuOpen)}
                     className={`w-14 h-14 md:w-16 md:h-16 bg-artistic-ink text-artistic-bg rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-xl mb-2 ${isViewOnly || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Upload className="w-6 h-6" />}
+                    {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <PlusCircle className="w-6 h-6" />}
                   </button>
-                  <span className="text-[9px] uppercase font-bold tracking-widest opacity-40">Scan Art</span>
+                  <span className="text-[9px] uppercase font-bold tracking-widest opacity-40">Capture</span>
+
+                  <AnimatePresence>
+                    {isHeroCaptureMenuOpen && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-10" 
+                          onClick={() => setIsHeroCaptureMenuOpen(false)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          className="absolute bottom-full mb-4 w-48 bg-white rounded-2xl shadow-2xl border border-artistic-ink/5 p-2 z-20 left-1/2 -translate-x-1/2"
+                        >
+                          <button 
+                            onClick={() => { cameraInputRef.current?.click(); setIsHeroCaptureMenuOpen(false); }}
+                            className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
+                          >
+                            <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
+                              <Camera className="w-4 h-4" />
+                            </div>
+                            <span className="text-[10px] uppercase font-bold tracking-widest opacity-60 group-hover:opacity-100">Take Picture</span>
+                          </button>
+                          <button 
+                            onClick={() => { fileInputRef.current?.click(); setIsHeroCaptureMenuOpen(false); }}
+                            className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
+                          >
+                            <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
+                              <ImageIcon className="w-4 h-4" />
+                            </div>
+                            <span className="text-[10px] uppercase font-bold tracking-widest opacity-60 group-hover:opacity-100">Filesystem</span>
+                          </button>
+                          <button 
+                            onClick={() => { setIsGooglePhotosOpen(true); setIsHeroCaptureMenuOpen(false); }}
+                            className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
+                          >
+                            <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
+                              <Globe className="w-4 h-4" />
+                            </div>
+                            <span className="text-[10px] uppercase font-bold tracking-widest opacity-60 group-hover:opacity-100">Google Photos</span>
+                          </button>
+                          <button 
+                            onClick={() => { setIsUrlCaptureOpen(true); setIsHeroCaptureMenuOpen(false); }}
+                            className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group border-t border-artistic-ink/5 pt-3 mt-1"
+                          >
+                            <div className="w-8 h-8 bg-artistic-shadow rounded-full flex items-center justify-center text-artistic-ink/40 group-hover:bg-artistic-ink group-hover:text-white transition-all">
+                              <PlusCircle className="w-4 h-4" />
+                            </div>
+                            <span className="text-[10px] uppercase font-bold tracking-widest opacity-40 group-hover:opacity-100">Other Link</span>
+                          </button>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
                 </div>
                 <div onClick={() => !isLoading && setView('galleries')} className={`cursor-pointer group flex flex-col items-center ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
                    <div className="w-14 h-14 md:w-16 md:h-16 border border-artistic-ink rounded-full flex items-center justify-center group-hover:bg-artistic-ink group-hover:text-artistic-bg transition-all mb-2">
@@ -1626,14 +2102,7 @@ function App() {
                    <span className="text-[9px] uppercase font-bold tracking-widest opacity-40">Your Gallery</span>
                 </div>
               </div>
-              
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleImageUpload} 
-                accept="image/*,.heic,.heif" 
-                className="hidden" 
-              />
+                            
             </motion.div>
           </section>
         ) : (
@@ -1928,6 +2397,73 @@ function App() {
         ) : 'Artwork'}
         subtitle="Spectral Alignment Required"
       />
+
+      {/* URL Capture Modal */}
+      <AnimatePresence>
+        {isUrlCaptureOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsUrlCaptureOpen(false)}
+              className="absolute inset-0 bg-artistic-ink/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[40px] p-10 max-w-md w-full relative shadow-2xl border border-artistic-ink/5"
+            >
+              <button 
+                onClick={() => setIsUrlCaptureOpen(false)}
+                className="absolute top-8 right-8 p-2 hover:bg-artistic-shadow rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="mb-10">
+                <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-4">Neural Fetch</span>
+                <h2 className="text-3xl font-serif italic tracking-tighter">Remote Capture</h2>
+                <p className="mt-4 text-artistic-ink/60 text-xs leading-relaxed">
+                  Provide a direct link from Google Photos or any web source to initiate deep analysis.
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="relative group">
+                  <input 
+                    type="url"
+                    value={captureUrl}
+                    onChange={(e) => setCaptureUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full bg-artistic-shadow/30 border border-artistic-ink/5 rounded-2xl px-6 py-4 text-xs outline-none focus:border-artistic-accent transition-colors"
+                    onKeyDown={(e) => e.key === 'Enter' && handleUrlCapture(captureUrl)}
+                  />
+                  <Globe className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 opacity-20 group-focus-within:opacity-100 group-focus-within:text-artistic-accent transition-all" />
+                </div>
+
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => handleUrlCapture(captureUrl)}
+                    className="flex-1 bg-artistic-ink text-artistic-bg py-4 rounded-full text-[10px] uppercase font-bold tracking-[0.2em] hover:bg-artistic-accent transition-all shadow-lg"
+                  >
+                    Analyze Link
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      <GooglePhotosPicker 
+        isOpen={isGooglePhotosOpen}
+        onClose={() => setIsGooglePhotosOpen(false)}
+        onSelect={(url) => {
+          setIsGooglePhotosOpen(false);
+          handleUrlCapture(url);
+        }}
+      />
       <footer className="h-12 bg-artistic-ink text-artistic-bg flex items-center justify-between px-10 text-[9px] uppercase tracking-[0.2em] font-medium shrink-0">
         <div className="flex items-center gap-6">
           <span>Art Curator Engine: Neural V4.2</span>
@@ -1938,6 +2474,21 @@ function App() {
           <a href="#" className="hover:opacity-60 transition-opacity">Privacy</a>
         </div>
       </footer>
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleImageUpload} 
+        accept="image/*,.heic,.heif" 
+        className="hidden" 
+      />
+      <input 
+        type="file" 
+        ref={cameraInputRef} 
+        onChange={handleImageUpload} 
+        accept="image/*" 
+        capture="environment"
+        className="hidden" 
+      />
     </div>
   );
 }

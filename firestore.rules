@@ -17,7 +17,7 @@ service cloud.firestore {
     }
 
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\.\\-]+$');
+      return id is string && id.size() > 0 && id.size() <= 128;
     }
 
     function incoming() {
@@ -30,14 +30,48 @@ service cloud.firestore {
 
     // Validation Blueprints
     function isValidUserProfile(data) {
-      return data.keys().hasAll(['uid', 'email', 'displayName', 'photoURL', 'lastLogin', 'isGalleryPublic', 'isBucketListPublic'])
-        && data.uid == request.auth.uid
+      return data.uid == request.auth.uid
         && data.email is string && data.email.size() <= 256
         && (data.displayName is string || data.displayName == null)
         && (data.photoURL is string || data.photoURL == null)
         && data.lastLogin is number
         && data.isGalleryPublic is bool
-        && data.isBucketListPublic is bool;
+        && (!('isBucketListPublic' in data) || data.isBucketListPublic is bool)
+        && (!('level' in data) || data.level is number)
+        && (!('totalXP' in data) || data.totalXP is number)
+        && (!('scansByMovement' in data) || data.scansByMovement is map)
+        && (!('badges' in data) || data.badges is list);
+    }
+
+    function isValidMuseumStamp(data) {
+      return data.museumId is string && data.museumId.size() <= 128
+        && data.museumName is string && data.museumName.size() <= 256
+        && data.timestamp is number
+        && data.location is map
+        && data.location.lat is number
+        && data.location.lng is number;
+    }
+
+    function isValidQuizHistory(data) {
+      return data.date is string && data.date.size() <= 64
+        && data.artworkId is string && data.artworkId.size() <= 128
+        && data.isCorrect is bool
+        && data.xpEarned is number;
+    }
+
+    function isValidDailyQuizQuestion(data) {
+      return data.artworkTitle is string && data.artworkTitle.size() <= 512
+        && data.imageUrl is string && data.imageUrl.size() <= 2048
+        && data.type is string && data.type.size() <= 64
+        && data.correctAnswer is string && data.correctAnswer.size() <= 256
+        && data.options is list && data.options.size() == 4
+        && data.hint is string && data.hint.size() <= 1024
+        && data.isAiGenerated is bool;
+    }
+
+    function isValidDailyQuizSession(data) {
+      return data.date is string && data.date.size() <= 32
+        && data.questions is list && data.questions.size() <= 30;
     }
 
     function isValidArtDetails(details) {
@@ -68,7 +102,7 @@ service cloud.firestore {
       allow get: if isOwner(userId) && isValidId(userId);
       allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
       allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL', 'isGalleryPublic', 'isBucketListPublic'])
+        incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL', 'isGalleryPublic', 'isBucketListPublic', 'level', 'totalXP', 'scansByMovement', 'badges'])
       );
 
       // Collection: Saved Items
@@ -86,6 +120,20 @@ service cloud.firestore {
         allow create: if isOwner(userId) && isValidId(favoriteId) && isValidArtItem(incoming(), favoriteId);
         allow update: if isOwner(userId) && isValidId(favoriteId) && isValidArtItem(incoming(), favoriteId);
         allow delete: if isOwner(userId) && isValidId(favoriteId);
+      }
+
+      // Collection: Passport
+      match /passport/{stampId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(stampId);
+        allow create: if isOwner(userId) && isValidId(stampId) && isValidMuseumStamp(incoming());
+      }
+
+      // Collection: Quiz History
+      match /quiz_history/{quizId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(quizId);
+        allow create: if isOwner(userId) && isValidId(quizId) && isValidQuizHistory(incoming());
       }
     }
 
@@ -128,6 +176,11 @@ service cloud.firestore {
     match /metadata_locations/{locationId} {
       allow read: if true;
       allow write: if isSignedIn();
+    }
+
+    match /daily_quizzes/{date} {
+      allow read: if true;
+      allow write: if isSignedIn() && isValidDailyQuizSession(incoming());
     }
 
     match /test/connection {

@@ -16,15 +16,24 @@ AURA is a web-based application. You can use it as a Guest or sign in with your 
 
 ---
 
-## 📸 Scanning Artworks
+## 📸 Scanning & Importing Artworks
 
-Identify any masterpiece instantly using our AI-powered scanner.
+Identify any masterpiece instantly using our AI-powered scanner or import from your library.
 
-1.  Navigate to the **Scanner** section.
-2.  Click **Capture Art** (or the upload area).
-3.  Upload an image of an artwork or take a photo if using a mobile device.
-4.  Wait for the AI to analyze the image.
-5.  View detailed insights including:
+### Capture Methods
+You can access the **Capture** menu from the top header on any page, or from the central **Hero** button on the home screen.
+
+1.  **Take Picture**: Use your device's camera to snap a photo of an artwork.
+2.  **Filesystem**: Upload an image file (supports JPEG, PNG, and HEIC).
+3.  **Google Photos**: 
+    - Click the Google Photos icon in the Capture menu.
+    - Authenticate with your Google account.
+    - Browser your library and select any image to import and analyze.
+4.  **Link (URL)**: Paste a direct URL to an image found online.
+
+### Analysis Process
+1.  Wait for the AI to analyze the image (progress bar will show status).
+2.  View detailed insights including:
     -   Artist name and bio
     -   Historical movement
     -   Museum location
@@ -81,7 +90,11 @@ When someone clicks your sharing link:
 
 ## 💡 Pro Tips
 
--   **Mobile Use**: Add AURA to your home screen on mobile for a native app-like experience.
+-   **Mobile Experience**: On mobile devices, tap the menu (hamburger) icon to access your navigation. We've added a **Quick Capture** section at the bottom of the mobile drawer for instant access to Camera, Files, Google Photos, and Links without leaving your current view.
+-   **Connoisseur Leveling**: Earn XP and level up from an Apprentice to a Grand Historian by scanning artworks. Access the **Achievements** tab to view your progress and earned badges.
+-   **Daily Art Quiz**: Test your knowledge in the Achievements section. Correct guesses earn you bonus XP!
+-   **Museum Passport**: Use your mobile device's GPS to check into world-famous museums. Visit the **Passport** section when you're physically at a museum to collect a unique digital stamp.
+-   **Add to Home Screen**: Add AURA to your home screen on mobile for a native app-like experience.
 -   **Deep Context**: The AI analysis provides "Extraction Tips" — use these to find similar works in the Knowledge Graph.
 -   **Guest Mode**: If you're just trying it out, you can save items to your local browser storage without signing in. Note that clearing your browser data will delete these items.
 

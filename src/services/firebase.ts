@@ -3,10 +3,29 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { getFirestore, doc, getDocFromServer, collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import firebaseConfigBase from '../../firebase-applet-config.json';
 
-const firebaseConfig = {
-  ...firebaseConfigBase,
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (firebaseConfigBase as any).apiKey
+// Fallback config if JSON import fails or is empty
+const defaultConfig = {
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || "default",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
 };
+
+const firebaseConfig = {
+  ...defaultConfig,
+  ...firebaseConfigBase,
+  // Ensure apiKey is prioritized from env if provided, otherwise from JSON
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (firebaseConfigBase as any).apiKey || defaultConfig.apiKey || "placeholder"
+};
+
+if (!firebaseConfig.projectId || firebaseConfig.projectId === "") {
+  console.error("Firebase Error: projectId is missing. Check firebase-applet-config.json or environment variables.");
+  console.error("Config Base:", firebaseConfigBase);
+  console.error("Merged Config:", firebaseConfig);
+}
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); 
