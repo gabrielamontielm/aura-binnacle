@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ImageOverrideModal } from './components/ImageOverrideModal';
+import { ArtGalleryViewer } from './components/ArtGalleryViewer';
 import { GooglePhotosPicker } from './components/GooglePhotosPicker';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { MuseumAutocomplete } from './components/MuseumAutocomplete';
-import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus, Filter, SlidersHorizontal, ChevronDown, MapPin, Menu, X, Globe, PlusCircle, Image as ImageIcon, Copy, RefreshCw, MoreVertical, Edit3, Save, Search, Sparkles } from 'lucide-react';
+import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus, Filter, SlidersHorizontal, ChevronDown, MapPin, Menu, X, Globe, PlusCircle, Image as ImageIcon, Copy, RefreshCw, MoreVertical, Edit3, Save, Search, Sparkles, Maximize2, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as heic2anyModule from 'heic2any';
 import { identifyArtwork, identifyArtworkFromUrl, ArtDetails, EntityDetails, getEntityDetails, sanitizeId, getRecommendations, Recommendation, identifyArtworkByText, searchArtwork } from './services/artService';
@@ -630,6 +631,8 @@ function App() {
   const [isHeaderCaptureMenuOpen, setIsHeaderCaptureMenuOpen] = useState(false);
   const [isHeroCaptureMenuOpen, setIsHeroCaptureMenuOpen] = useState(false);
   const [isUrlCaptureOpen, setIsUrlCaptureOpen] = useState(false);
+  const [isGalleryViewerOpen, setIsGalleryViewerOpen] = useState(false);
+  const [galleryTarget, setGalleryTarget] = useState<{ id: string, type: 'history' | 'bucketlist' } | null>(null);
   const [isGooglePhotosOpen, setIsGooglePhotosOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [captureUrl, setCaptureUrl] = useState('');
@@ -975,6 +978,41 @@ function App() {
       setError("I couldn't identify this artwork. Please try another image.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleUpdateGalleryImages = async (newImages: string[]) => {
+    if (!galleryTarget) return;
+    const { id, type } = galleryTarget;
+    
+    if (type === 'history') {
+      setHistory(prev => prev.map(item => item.id === id ? { ...item, additionalImages: newImages } : item));
+    } else {
+      setBucketList(prev => prev.map(item => item.id === id ? { ...item, additionalImages: newImages } : item));
+    }
+
+    if (user) {
+      const path = type === 'history' ? `users/${user.uid}/items` : `users/${user.uid}/bucketlist`;
+      const publicPath = type === 'history' ? `public_items/${user.uid}/items` : `public_bucketlist/${user.uid}/items`;
+      const isPublic = type === 'history' ? isGalleryPublic : isBucketListPublic;
+
+      try {
+        await updateDoc(doc(db, path, id), { additionalImages: newImages });
+        if (isPublic) {
+          await updateDoc(doc(db, publicPath, id), { additionalImages: newImages });
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, path);
+      }
+    } else {
+      // Local storage for guests
+      const key = type === 'history' ? 'art_curator_history' : 'art_curator_bucketlist';
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const local = JSON.parse(saved);
+        const updated = local.map((item: any) => item.id === id ? { ...item, additionalImages: newImages } : item);
+        localStorage.setItem(key, JSON.stringify(updated));
+      }
     }
   };
 
@@ -2150,6 +2188,10 @@ function App() {
               }
             }}
             onBack={navigateBack} 
+            onOpenGallery={(id, type) => {
+              setGalleryTarget({ id, type });
+              setIsGalleryViewerOpen(true);
+            }}
           />
         ) : view === 'achievements' ? (
           <section className="w-full h-full overflow-y-auto bg-white p-6 md:p-20">
@@ -2275,78 +2317,109 @@ function App() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
                   <AnimatePresence>
-                    {filteredBucketList.map((item) => (
-                      <motion.div
-                        key={item.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        whileHover={{ y: -5 }}
-                        onClick={() => loadFromHistory(item)}
-                        className="group cursor-pointer"
-                      >
-                        <div className="aspect-[4/5] bg-artistic-shadow p-4 mb-6 art-shadow transition-all group-hover:shadow-[40px_40px_0px_#E5E0D5]">
-                          <div className="w-full h-full bg-gray-100 gallery-frame overflow-hidden relative group/img">
-                            <ValidatedImage 
-                              src={item.image} 
-                              alt={item.details.title} 
-                              className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700" 
-                              fallback={
-                                <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center">
-                                  <Palette className="w-8 h-8 opacity-10 mb-2" />
-                                  <div className="flex gap-4">
-                                    {!isViewOnly && (
-                                      <button 
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setOverrideTarget({ id: item.id, type: 'bucketlist' });
-                                        }}
-                                        className="text-[10px] uppercase font-bold tracking-widest text-artistic-accent hover:underline"
+                    {filteredBucketList.map((item) => {
+                      const isInHistory = history.some(h => 
+                        h.details.title.toLowerCase() === item.details.title.toLowerCase() ||
+                        (h.details.title.toLowerCase().includes(item.details.title.toLowerCase()) && h.details.artist.toLowerCase() === item.details.artist.toLowerCase())
+                      );
+                      
+                      return (
+                        <motion.div
+                          key={item.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          whileHover={{ y: -5 }}
+                          onClick={() => loadFromHistory(item)}
+                          className="group cursor-pointer"
+                        >
+                          <div className="aspect-[4/5] bg-artistic-shadow p-4 mb-6 art-shadow transition-all group-hover:shadow-[40px_40px_0px_#E5E0D5]">
+                            <div className="w-full h-full bg-gray-100 gallery-frame overflow-hidden relative group/img">
+                              <ValidatedImage 
+                                src={item.image} 
+                                alt={item.details.title} 
+                                className={`w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700 ${isInHistory ? 'opacity-40' : ''}`} 
+                                fallback={
+                                  <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center">
+                                    <Palette className="w-8 h-8 opacity-10 mb-2" />
+                                    <div className="flex gap-4">
+                                      {!isViewOnly && (
+                                        <button 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOverrideTarget({ id: item.id, type: 'bucketlist' });
+                                          }}
+                                          className="text-[10px] uppercase font-bold tracking-widest text-artistic-accent hover:underline"
+                                        >
+                                          Assign Visual
+                                        </button>
+                                      )}
+                                      <a 
+                                        href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.details.title + ' ' + (item.details.artist || ''))}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="text-[10px] uppercase font-bold tracking-widest text-artistic-ink/40 hover:text-artistic-accent hover:underline flex items-center gap-1"
                                       >
-                                        Assign Visual
-                                      </button>
-                                    )}
-                                    <a 
-                                      href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.details.title + ' ' + (item.details.artist || ''))}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="text-[10px] uppercase font-bold tracking-widest text-artistic-ink/40 hover:text-artistic-accent hover:underline flex items-center gap-1"
-                                    >
-                                      Search Visual
-                                    </a>
+                                        Search Visual
+                                      </a>
+                                    </div>
+                                  </div>
+                                }
+                              />
+                              {isInHistory && (
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                  <div className="bg-artistic-ink text-artistic-bg backdrop-blur-sm px-4 py-2 rounded-full border border-artistic-ink/10 flex items-center gap-2 shadow-2xl">
+                                    <HistoryIcon className="w-3 h-3" />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">In Gallery</span>
                                   </div>
                                 </div>
-                              }
-                            />
-                            {!isViewOnly && (
-                              <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button 
-                                  onClick={(e) => moveBucketToGallery(item, e)}
-                                  className="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-artistic-accent hover:bg-artistic-accent/10"
-                                  title="Move to Gallery"
-                                >
-                                  <HistoryIcon className="w-4 h-4" />
-                                </button>
-                                <button 
-                                  onClick={(e) => deleteBucketListItem(item.id, e)}
-                                  className="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-red-500 hover:bg-red-50"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )}
+                              )}
+                              {!isViewOnly && (
+                                <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setGalleryTarget({ id: item.id, type: 'bucketlist' });
+                                      setIsGalleryViewerOpen(true);
+                                    }}
+                                    className="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-artistic-ink hover:bg-artistic-accent hover:text-white transition-all shadow-lg"
+                                    title="View/Update Visuals"
+                                  >
+                                    <ImageIcon className="w-4 h-4" />
+                                  </button>
+                                  {!isInHistory && (
+                                    <button 
+                                      onClick={(e) => moveBucketToGallery(item, e)}
+                                      className="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-artistic-accent hover:bg-artistic-accent/10 shadow-lg"
+                                      title="Move to Gallery"
+                                    >
+                                      <HistoryIcon className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                  <button 
+                                    onClick={(e) => deleteBucketListItem(item.id, e)}
+                                    className="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 shadow-lg"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <h3 className="font-serif text-xl italic mb-1 group-hover:text-artistic-accent transition-colors">{item.details.title}</h3>
-                        <div className="flex items-center gap-3 text-[10px] uppercase font-bold tracking-widest opacity-40">
-                          <span>{item.details.artist}</span>
-                          <span className="w-1 h-px bg-artistic-ink" />
-                          <span>{item.details.year}</span>
-                        </div>
-                      </motion.div>
-                    ))}
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-serif text-xl italic group-hover:text-artistic-accent transition-colors truncate">{item.details.title}</h3>
+                            {isInHistory && <Check className="w-4 h-4 text-artistic-accent" />}
+                          </div>
+                          <div className="flex items-center gap-3 text-[10px] uppercase font-bold tracking-widest opacity-40">
+                            <span>{item.details.artist}</span>
+                            <span className="w-1 h-px bg-artistic-ink" />
+                            <span>{item.details.year}</span>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
                   </AnimatePresence>
                 </div>
               )}
@@ -2523,6 +2596,17 @@ function App() {
                                     return null;
                                   })()
                                 )}
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setGalleryTarget({ id: item.id, type: 'history' });
+                                    setIsGalleryViewerOpen(true);
+                                  }}
+                                  className="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-artistic-ink hover:bg-artistic-accent hover:text-white transition-all shadow-lg"
+                                  title="View/Update Visuals"
+                                >
+                                  <ImageIcon className="w-4 h-4" />
+                                </button>
                                 <button 
                                   onClick={(e) => deleteHistoryItem(item.id, e)}
                                   className="w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-red-500 hover:bg-red-50"
@@ -2714,18 +2798,33 @@ function App() {
                   />
 
                   {/* Update Photo Overlay */}
-                  {!isLoading && !isViewOnly && details && (
-                    <div className="absolute inset-0 bg-artistic-ink/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center pointer-events-none group-hover/img:pointer-events-auto z-10 backdrop-blur-sm">
+                  {!isLoading && details && (
+                    <div className="absolute inset-x-0 bottom-0 py-8 bg-gradient-to-t from-artistic-ink/60 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center pointer-events-none group-hover/img:pointer-events-auto z-10 backdrop-blur-sm gap-4">
                       <button 
                         onClick={() => {
                            const currentItem = history.find(h => h.details.title === details.title) || bucketList.find(b => b.details.title === details.title);
-                           setOverrideTarget({ id: currentItem?.id || 'new', type: history.find(h => h.details.title === details.title) ? 'history' : 'bucketlist' });
+                           if (currentItem) {
+                             setGalleryTarget({ id: currentItem.id, type: history.find(h => h.id === currentItem.id) ? 'history' : 'bucketlist' });
+                             setIsGalleryViewerOpen(true);
+                           }
                         }}
                         className="px-6 py-3 bg-white text-artistic-ink rounded-full text-[10px] uppercase tracking-widest font-bold hover:bg-artistic-accent hover:text-white transition-all transform translate-y-4 group-hover/img:translate-y-0 duration-300 flex items-center gap-2 shadow-2xl"
                       >
-                        <ImageIcon className="w-3.5 h-3.5" />
-                        <span>Update Visual</span>
+                        <Maximize2 className="w-3.5 h-3.5" />
+                        <span>View Visuals</span>
                       </button>
+                      {!isViewOnly && (
+                        <button 
+                          onClick={() => {
+                             const currentItem = history.find(h => h.details.title === details.title) || bucketList.find(b => b.details.title === details.title);
+                             setOverrideTarget({ id: currentItem?.id || 'new', type: history.find(h => h.details.title === details.title) ? 'history' : 'bucketlist' });
+                          }}
+                          className="px-6 py-3 bg-white/20 text-white border border-white/40 backdrop-blur-md rounded-full text-[10px] uppercase tracking-widest font-bold hover:bg-white hover:text-artistic-ink transition-all transform translate-y-4 group-hover/img:translate-y-0 duration-300 flex items-center gap-2 shadow-2xl"
+                        >
+                          <ImageIcon className="w-3.5 h-3.5" />
+                          <span>Update</span>
+                        </button>
+                      )}
                     </div>
                   )}
                   
@@ -2897,9 +2996,34 @@ function App() {
                           </div>
                         </div>
                       </div>
-                      <h1 className="text-5xl lg:text-7xl font-serif leading-[1.1] mb-6 tracking-tighter" style={{ fontFamily: 'Georgia, serif' }}>
-                        {details.title}
-                      </h1>
+                      <div className="flex flex-wrap items-center gap-4 group/title mb-6">
+                        <h1 className="text-5xl lg:text-7xl font-serif leading-[1.1] tracking-tighter" style={{ fontFamily: 'Georgia, serif' }}>
+                          {details.title}
+                        </h1>
+                        {(() => {
+                          const isInHistory = history.some(h => 
+                            h.details.title.toLowerCase() === details.title.toLowerCase() ||
+                            (h.details.title.toLowerCase().includes(details.title.toLowerCase()) && h.details.artist.toLowerCase() === details.artist.toLowerCase())
+                          );
+                          const isInBucketList = bucketList.some(b => 
+                            b.details.title.toLowerCase() === details.title.toLowerCase() ||
+                            (b.details.title.toLowerCase().includes(details.title.toLowerCase()) && b.details.artist.toLowerCase() === details.artist.toLowerCase())
+                          );
+                          if (isInHistory) return (
+                            <div className="flex items-center gap-2 bg-artistic-ink text-artistic-bg px-4 py-1.5 rounded-full shadow-xl border border-artistic-ink">
+                              <HistoryIcon className="w-4 h-4" />
+                              <span className="text-[10px] font-bold uppercase tracking-widest leading-none">In Gallery</span>
+                            </div>
+                          );
+                          if (isInBucketList) return (
+                            <div className="flex items-center gap-2 bg-white text-artistic-accent px-4 py-1.5 rounded-full shadow-xl border border-artistic-accent/20">
+                              <Star className="w-4 h-4" />
+                              <span className="text-[10px] font-bold uppercase tracking-widest leading-none">In Bucket List</span>
+                            </div>
+                          );
+                          return null;
+                        })()}
+                      </div>
                       
                       <div className="flex items-baseline space-x-4 mb-12">
                         <button 
@@ -3046,36 +3170,64 @@ function App() {
                               </div>
                             ) : recommendations.length > 0 ? (
                               <div className="grid grid-cols-1 gap-3">
-                                {recommendations.slice(0, 3).map((rec, i) => (
-                                  <motion.button
-                                    key={i}
-                                    initial={{ opacity: 0, x: 10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: i * 0.1 }}
-                                    onClick={() => handleRecommendationClick(rec)}
-                                    className="p-4 bg-white border border-artistic-ink/5 rounded-2xl hover:shadow-lg transition-all text-left flex items-center gap-4 group"
-                                  >
-                                    <div className="w-12 h-12 bg-artistic-shadow rounded-xl flex-shrink-0 overflow-hidden">
-                                      {rec.imageUrl ? (
-                                        <img src={rec.imageUrl} className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all" alt={rec.title} />
-                                      ) : (
-                                        <div className="w-full h-full flex items-center justify-center opacity-10">
-                                          <Compass className="w-6 h-6" />
+                                {recommendations.slice(0, 3).map((rec, i) => {
+                                  const isInHistory = history.some(h => 
+                                    h.details.title.toLowerCase() === rec.title.toLowerCase() ||
+                                    (h.details.title.toLowerCase().includes(rec.title.toLowerCase()) && h.details.artist.toLowerCase() === rec.artist.toLowerCase())
+                                  );
+                                  const isInBucketList = bucketList.some(b => 
+                                    b.details.title.toLowerCase() === rec.title.toLowerCase() ||
+                                    (b.details.title.toLowerCase().includes(rec.title.toLowerCase()) && b.details.artist.toLowerCase() === rec.artist.toLowerCase())
+                                  );
+                                  const isSaved = isInHistory || isInBucketList;
+
+                                  return (
+                                    <motion.button
+                                      key={i}
+                                      initial={{ opacity: 0, x: 10 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      transition={{ delay: i * 0.1 }}
+                                      onClick={() => handleRecommendationClick(rec)}
+                                      className="p-4 bg-white border border-artistic-ink/5 rounded-2xl hover:shadow-lg transition-all text-left flex items-center gap-4 group relative"
+                                    >
+                                      <div className="w-12 h-12 bg-artistic-shadow rounded-xl flex-shrink-0 overflow-hidden relative">
+                                        {rec.imageUrl ? (
+                                          <img src={rec.imageUrl} className={`w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all ${isSaved ? 'opacity-40' : ''}`} alt={rec.title} />
+                                        ) : (
+                                          <div className="w-full h-full flex items-center justify-center opacity-10">
+                                            <Compass className="w-6 h-6" />
+                                          </div>
+                                        )}
+                                        {isSaved && (
+                                          <div className="absolute inset-0 flex items-center justify-center bg-artistic-ink/10">
+                                            {isInHistory ? <HistoryIcon className="w-5 h-5 text-artistic-bg" /> : <Star className="w-5 h-5 text-artistic-accent" />}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <h4 className="text-[10px] font-bold truncate group-hover:text-artistic-accent mb-0.5">{rec.title}</h4>
+                                          {isSaved && (
+                                            <span className={`text-[7px] px-1.5 py-0.5 rounded-full uppercase tracking-tighter font-black ${isInHistory ? 'bg-artistic-ink text-artistic-bg' : 'bg-artistic-accent text-white'}`}>
+                                              {isInHistory ? 'Saved' : 'Bucket'}
+                                            </span>
+                                          )}
                                         </div>
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <h4 className="text-[10px] font-bold truncate group-hover:text-artistic-accent mb-0.5">{rec.title}</h4>
-                                      <p className="text-[9px] opacity-40 truncate">{rec.artist}</p>
-                                    </div>
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <PlusCircle className="w-4 h-4 text-artistic-accent" />
-                                    </div>
-                                  </motion.button>
-                                ))}
+                                        <p className="text-[9px] opacity-40 truncate">{rec.artist}</p>
+                                      </div>
+                                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {isSaved ? (
+                                          <Check className="w-4 h-4 text-artistic-accent" />
+                                        ) : (
+                                          <PlusCircle className="w-4 h-4 text-artistic-accent" />
+                                        )}
+                                      </div>
+                                    </motion.button>
+                                  );
+                                })}
                               </div>
                             ) : !isRecsLoading && details && (
-                              <p className="text-[9px] italic opacity-30">No similar masterpieces found in current archives.</p>
+                              <p className="text-[9px] italic opacity-30 text-center py-4">No similar masterpieces found in current archives.</p>
                             )}
                           </div>
                         </div>
@@ -3211,6 +3363,53 @@ function App() {
           setIsGooglePhotosOpen(false);
           handleUrlCapture(url);
         }}
+      />
+      <ArtGalleryViewer 
+        isOpen={isGalleryViewerOpen}
+        onClose={() => {
+          setIsGalleryViewerOpen(false);
+          setGalleryTarget(null);
+        }}
+        images={ galleryTarget ? (
+          galleryTarget.type === 'history' 
+            ? [
+                history.find(h => h.id === galleryTarget.id)?.image || '',
+                ...(history.find(h => h.id === galleryTarget.id)?.additionalImages || [])
+              ].filter(img => img !== '')
+            : [
+                bucketList.find(b => b.id === galleryTarget.id)?.image || '',
+                ...(bucketList.find(b => b.id === galleryTarget.id)?.additionalImages || [])
+              ].filter(img => img !== '')
+        ) : [] }
+        onUpdateImages={(newImages) => {
+          if (!galleryTarget) return;
+          // The first image is the main one, others are additional
+          const mainImage = newImages[0];
+          const additional = newImages.slice(1);
+          
+          // Update main image if it changed
+          const { id, type } = galleryTarget;
+          const currentItem = type === 'history' 
+            ? history.find(h => h.id === id)
+            : bucketList.find(b => b.id === id);
+            
+          if (currentItem && currentItem.image !== mainImage) {
+            updateArtworkImage(id, mainImage, type);
+          }
+          
+          handleUpdateGalleryImages(additional);
+        }}
+        title={galleryTarget ? (
+          galleryTarget.type === 'history' 
+            ? history.find(h => h.id === galleryTarget.id)?.details.title || 'Artwork'
+            : bucketList.find(b => b.id === galleryTarget.id)?.details.title || 'Artwork'
+        ) : 'Artwork'}
+        artist={galleryTarget ? (
+          galleryTarget.type === 'history' 
+            ? history.find(h => h.id === galleryTarget.id)?.details.artist || 'Artist'
+            : bucketList.find(b => b.id === galleryTarget.id)?.details.artist || 'Artist'
+        ) : 'Artist'}
+        isViewOnly={isViewOnly}
       />
       <footer className="h-12 bg-artistic-ink text-artistic-bg flex items-center justify-between px-10 text-[9px] uppercase tracking-[0.2em] font-medium shrink-0">
         <div className="flex items-center gap-6">

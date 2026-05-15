@@ -3,6 +3,7 @@ import { ArtDetails } from './services/artService';
 export interface HistoryItem {
   id: string;
   image: string;
+  additionalImages?: string[];
   details: ArtDetails;
   timestamp: number;
 }

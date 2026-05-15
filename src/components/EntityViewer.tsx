@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { BookOpen, MapPin, Calendar, ArrowRight, Star, Plus, Check, Search, Globe, Palette, Box, Building, Brush } from 'lucide-react';
+import { BookOpen, MapPin, Calendar, ArrowRight, Star, Plus, Check, Search, Globe, Palette, Box, Building, Brush, Image as ImageIcon, Maximize2, History as HistoryIcon } from 'lucide-react';
 import { ValidatedImage } from './ValidatedImage';
 import { EntityDetails, ArtDetails } from '../services/artService';
 
@@ -26,12 +26,13 @@ interface EntityViewerProps {
   relatedBucketList: { id: string, image: string, details: ArtDetails }[];
   onBack: () => void;
   onUpdateFamousWorkImage: (workTitle: string, imageUrl: string) => void;
+  onOpenGallery: (id: string, type: 'history' | 'bucketlist') => void;
   isViewOnly?: boolean;
 }
 
 import { ImageOverrideModal } from './ImageOverrideModal';
 
-export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, history, onArtworkClick, onEntityClick, onAddToBucketList, bucketListWorks, relatedBucketList, onBack, onUpdateFamousWorkImage, isViewOnly }) => {
+export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, history, onArtworkClick, onEntityClick, onAddToBucketList, bucketListWorks, relatedBucketList, onBack, onUpdateFamousWorkImage, onOpenGallery, isViewOnly }) => {
   const [editingWorkIndex, setEditingWorkIndex] = React.useState<number | null>(null);
   const [showFullAnalysis, setShowFullAnalysis] = React.useState(false);
 
@@ -193,64 +194,88 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {details.famousWorks
-                .filter(work => !history.some(art => 
-                  art.details.title.toLowerCase().includes(work.title.toLowerCase()) || 
-                  work.title.toLowerCase().includes(art.details.title.toLowerCase())
-                ))
-                .map((work, i) => (
-                  <div key={i} className="group flex flex-col gap-3 p-3 bg-white/30 border border-dashed border-artistic-ink/10 rounded-2xl transition-all hover:border-artistic-accent/30 relative">
-                    <div className="aspect-[4/3] rounded-xl overflow-hidden bg-artistic-shadow relative">
-                      {work.imageUrl ? (
-                        <ValidatedImage 
-                          src={work.imageUrl} 
-                          alt={work.title} 
-                          className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700" 
-                        />
-                      ) : (
-                        <button 
-                          onClick={() => !isViewOnly && setEditingWorkIndex(i)}
-                          className={`w-full h-full flex flex-col items-center justify-center gap-2 hover:bg-artistic-accent/5 transition-colors ${isViewOnly ? 'cursor-default' : ''}`}
-                          title={isViewOnly ? "No visual available" : "Upload artwork image"}
-                        >
-                          <Plus className="w-6 h-6 text-artistic-ink/20" />
-                          <span className="text-[8px] uppercase tracking-[0.2em] font-bold opacity-20">No Visual Found</span>
-                        </button>
-                      )}
-                      
-                      <div className="absolute top-3 right-3 flex flex-col gap-2">
-                        <button 
-                          onClick={() => onAddToBucketList(work)}
-                          disabled={bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) || history.some(item => item.details.title === work.title)}
-                          className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-md shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-artistic-accent hover:text-white disabled:opacity-30"
-                        >
-                          {bucketListWorks.some(item => item.details.title === work.title && item.details.year === work.year) || history.some(item => item.details.title === work.title) ? (
-                            <Check className="w-3 h-3" />
-                          ) : (
-                            <Plus className="w-3 h-3" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
+                .map((work, i) => {
+                  const isInHistory = history.some(art => 
+                    art.details.title.toLowerCase() === work.title.toLowerCase() ||
+                    (art.details.title.toLowerCase().includes(work.title.toLowerCase()) && art.details.artist.toLowerCase() === details.name.toLowerCase())
+                  );
+                  const isInBucketList = bucketListWorks.some(item => 
+                    (item.details.title.toLowerCase() === work.title.toLowerCase() && item.details.year === work.year) ||
+                    (item.details.title.toLowerCase().includes(work.title.toLowerCase()) && item.details.artist.toLowerCase() === details.name.toLowerCase())
+                  );
+                  const isSaved = isInHistory || isInBucketList;
 
-                    <div>
-                      <p className="text-[10px] font-bold truncate leading-tight mb-1">{work.title}</p>
-                      <div className="flex items-center gap-1.5 opacity-40 uppercase text-[8px] tracking-widest font-bold">
-                        <span>{work.year}</span>
-                        {work.museum && (
-                          <>
-                            <span>•</span>
-                            <button 
-                              onClick={() => onEntityClick(work.museum!, 'museum')}
-                              className="hover:text-artistic-accent transition-colors truncate text-left"
-                            >
-                              {work.museum}
-                            </button>
-                          </>
+                  return (
+                    <div key={i} className="group flex flex-col gap-3 p-3 bg-white/30 border border-dashed border-artistic-ink/10 rounded-2xl transition-all hover:border-artistic-accent/30 relative">
+                      <div className="aspect-[4/3] rounded-xl overflow-hidden bg-artistic-shadow relative">
+                        {work.imageUrl ? (
+                          <ValidatedImage 
+                            src={work.imageUrl} 
+                            alt={work.title} 
+                            className={`w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700 ${isSaved ? 'opacity-40' : ''}`} 
+                          />
+                        ) : (
+                          <button 
+                            onClick={() => !isViewOnly && setEditingWorkIndex(i)}
+                            className={`w-full h-full flex flex-col items-center justify-center gap-2 hover:bg-artistic-accent/5 transition-colors ${isViewOnly ? 'cursor-default' : ''}`}
+                            title={isViewOnly ? "No visual available" : "Upload artwork image"}
+                          >
+                            <Plus className="w-6 h-6 text-artistic-ink/20" />
+                            <span className="text-[8px] uppercase tracking-[0.2em] font-bold opacity-20">No Visual Found</span>
+                          </button>
+                        )}
+                        
+                        <div className="absolute top-3 right-3 flex flex-col gap-2">
+                          <button 
+                            onClick={() => !isSaved && onAddToBucketList(work)}
+                            disabled={isSaved}
+                            className={`w-8 h-8 rounded-full backdrop-blur-md shadow-sm flex items-center justify-center transition-all ${isInHistory ? 'bg-artistic-ink text-artistic-bg' : isInBucketList ? 'bg-artistic-accent text-white' : 'bg-white/90 opacity-0 group-hover:opacity-100 hover:bg-artistic-accent hover:text-white'}`}
+                            title={isInHistory ? "In Gallery" : isInBucketList ? "In Bucket List" : "Add to Bucket List"}
+                          >
+                            {isInHistory ? (
+                              <HistoryIcon className="w-3 h-3" />
+                            ) : isInBucketList ? (
+                              <Star className="w-3 h-3" />
+                            ) : (
+                              <Plus className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
+                        {isSaved && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className={`${isInHistory ? 'bg-artistic-ink text-artistic-bg' : 'bg-white/80 text-artistic-accent'} backdrop-blur-sm px-3 py-1.5 rounded-full border border-artistic-ink/10 flex items-center gap-2 shadow-xl`}>
+                              {isInHistory ? <HistoryIcon className="w-2.5 h-2.5" /> : <Star className="w-2.5 h-2.5" />}
+                              <span className="text-[8px] font-bold uppercase tracking-widest">
+                                {isInHistory ? 'In Gallery' : 'In Bucket'}
+                              </span>
+                            </div>
+                          </div>
                         )}
                       </div>
+
+                      <div>
+                        <p className="text-[10px] font-bold truncate leading-tight mb-1 flex items-center gap-2">
+                          {work.title}
+                          {isSaved && <Check className="w-2.5 h-2.5 text-artistic-accent" />}
+                        </p>
+                        <div className="flex items-center gap-1.5 opacity-40 uppercase text-[8px] tracking-widest font-bold">
+                          <span>{work.year}</span>
+                          {work.museum && (
+                            <>
+                              <span>•</span>
+                              <button 
+                                onClick={() => onEntityClick(work.museum!, 'museum')}
+                                className="hover:text-artistic-accent transition-colors truncate text-left"
+                              >
+                                {work.museum}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
             
             <ImageOverrideModal 
@@ -266,10 +291,10 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
             />
 
             <div className="mt-6">
-              {details.famousWorks.filter(work => !history.some(art => 
+              {details.famousWorks.filter(work => history.some(art => 
                 art.details.title.toLowerCase().includes(work.title.toLowerCase()) || 
                 work.title.toLowerCase().includes(art.details.title.toLowerCase())
-              )).length === 0 && (
+              )).length === details.famousWorks.length && (
                 <p className="text-[10px] italic opacity-40 px-1">You have captured all primary recognized works by this artist in your binnacle!</p>
               )}
             </div>
@@ -287,12 +312,23 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                     onClick={() => onArtworkClick(art.id)}
                     className="group flex flex-col gap-3 p-3 bg-white/40 hover:bg-white/80 rounded-2xl cursor-pointer transition-all border border-artistic-ink/5"
                   >
-                    <div className="aspect-[4/3] rounded-xl overflow-hidden bg-artistic-shadow">
+                    <div className="aspect-[4/3] rounded-xl overflow-hidden bg-artistic-shadow relative group/img">
                       <ValidatedImage 
                         src={art.image} 
                         alt={art.details.title} 
                         className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700"
                       />
+                      <div className="absolute inset-0 bg-artistic-ink/40 opacity-0 group-hover/img:opacity-100 transition-all flex items-center justify-center backdrop-blur-[2px]">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenGallery(art.id, 'bucketlist');
+                          }}
+                          className="p-3 bg-white text-artistic-ink rounded-full shadow-xl hover:scale-110 transition-transform"
+                        >
+                          <ImageIcon className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <p className="text-[10px] font-bold truncate flex items-center gap-1">
@@ -319,12 +355,23 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                     onClick={() => onArtworkClick(art.id)}
                     className="group flex flex-col gap-3 p-3 bg-white/40 hover:bg-white/80 rounded-2xl cursor-pointer transition-all border border-artistic-ink/5"
                   >
-                    <div className="aspect-[4/3] rounded-xl overflow-hidden bg-artistic-shadow">
+                    <div className="aspect-[4/3] rounded-xl overflow-hidden bg-artistic-shadow relative group/img">
                       <ValidatedImage 
                         src={art.image} 
                         alt={art.details.title} 
                         className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700"
                       />
+                      <div className="absolute inset-0 bg-artistic-ink/40 opacity-0 group-hover/img:opacity-100 transition-all flex items-center justify-center backdrop-blur-[2px]">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenGallery(art.id, 'history');
+                          }}
+                          className="p-3 bg-white text-artistic-ink rounded-full shadow-xl hover:scale-110 transition-transform"
+                        >
+                          <ImageIcon className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <p className="text-[10px] font-bold truncate flex items-center gap-1">
