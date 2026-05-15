@@ -764,7 +764,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
                         <img 
                           src={art.image} 
                           alt={art.details.title} 
-                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                          className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-500"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -793,7 +793,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
                         <img 
                           src={art.image} 
                           alt={art.details.title} 
-                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                          className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-500"
                         />
                       </div>
                       <div className="flex-1 min-w-0">

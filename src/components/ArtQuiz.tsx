@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { HelpCircle, CheckCircle2, XCircle, Trophy, Lightbulb, Sparkles, Loader2, CheckCircle, ArrowRight, ImageOff } from 'lucide-react';
 import { HistoryItem, DailyQuizQuestion } from '../types';
-import { GoogleGenAI, Type } from "@google/genai";
-import { db } from '../services/firebase';
+import axios from 'axios';
+import { db, sanitizeForFirestore } from '../services/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ValidatedImage } from './ValidatedImage';
 
@@ -12,8 +12,6 @@ interface ArtQuizProps {
   bucketList: HistoryItem[];
   onCorrect: (xp: number) => void;
 }
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export const ArtQuiz: React.FC<ArtQuizProps> = ({ history, bucketList, onCorrect }) => {
   const [session, setSession] = useState<DailyQuizQuestion[]>([]);
@@ -35,48 +33,19 @@ export const ArtQuiz: React.FC<ArtQuizProps> = ({ history, bucketList, onCorrect
       return dailySnap.data().questions;
     }
 
-    // Generate 20 questions via Gemini
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Generate 20 distinct art history quiz questions about world-famous masterpieces. 
-      For each, provide: 
-      1. artworkTitle
-      2. imageUrl (MUST be a direct, high-quality public domain link from Wikimedia Commons using the format https://upload.wikimedia.org/wikipedia/commons/...)
-      3. type ('artist', 'movement', or 'period')
-      4. correctAnswer
-      5. 4 options (including the correct one)
-      6. a helpful hint.`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              artworkTitle: { type: Type.STRING },
-              imageUrl: { type: Type.STRING },
-              type: { type: Type.STRING, enum: ['artist', 'movement', 'period'] },
-              correctAnswer: { type: Type.STRING },
-              options: { type: Type.ARRAY, items: { type: Type.STRING } },
-              hint: { type: Type.STRING }
-            },
-            required: ['artworkTitle', 'imageUrl', 'type', 'correctAnswer', 'options', 'hint']
-          }
-        }
-      }
-    });
-
-    const aiQuestions: DailyQuizQuestion[] = JSON.parse(response.text).map((q: any, i: number) => ({
+    // Generate 20 questions via Server API
+    const response = await axios.get('/api/art/daily-quiz');
+    const aiQuestions: DailyQuizQuestion[] = response.data.map((q: any, i: number) => ({
       ...q,
       id: `ai-${today}-${i}`,
       isAiGenerated: true
     }));
 
     // Cache for all users
-    await setDoc(dailyDocRef, {
+    await setDoc(dailyDocRef, sanitizeForFirestore({
       date: today,
       questions: aiQuestions
-    });
+    }));
 
     return aiQuestions;
   };
@@ -235,7 +204,7 @@ export const ArtQuiz: React.FC<ArtQuizProps> = ({ history, bucketList, onCorrect
         <ValidatedImage 
           src={current.imageUrl} 
           alt={current.artworkTitle} 
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           fallback={
             <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-artistic-shadow/20 text-center">
               <ImageOff className="w-10 h-10 opacity-20 mb-4" />

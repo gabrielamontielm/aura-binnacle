@@ -62,10 +62,10 @@ const ArtworkMarker: React.FC<ArtworkMarkerProps> = ({
         onClick={() => setInfoWindowShown(true)}
       >
         <div className="relative group">
-          <div className="w-10 h-10 bg-white shadow-xl rounded-full border-2 border-artistic-accent flex items-center justify-center overflow-hidden hover:scale-110 transition-transform">
-            {artworks[0].image ? (
-              <img src={artworks[0].image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" alt={locationName} />
-            ) : (
+            <div className="w-10 h-10 bg-white shadow-xl rounded-full border-2 border-artistic-accent flex items-center justify-center overflow-hidden hover:scale-110 transition-transform">
+              {artworks[0].image ? (
+                <img src={artworks[0].image} className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all" alt={locationName} />
+              ) : (
               <MapPin className="w-5 h-5 text-artistic-accent" />
             )}
           </div>
@@ -92,7 +92,7 @@ const ArtworkMarker: React.FC<ArtworkMarkerProps> = ({
                   className="flex gap-3 cursor-pointer group hover:bg-gray-50 p-1 rounded-lg transition-colors"
                 >
                   <div className="w-10 h-10 rounded bg-gray-100 flex-shrink-0 overflow-hidden">
-                    <img src={art.image} className="w-full h-full object-cover" alt={art.details.title} />
+                    <img src={art.image} className="w-full h-full object-contain" alt={art.details.title} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-bold truncate group-hover:text-artistic-accent">{art.details.title}</p>

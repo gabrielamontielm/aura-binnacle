@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowRight, Plus } from 'lucide-react';
+import { ArrowRight, Plus, Search, ExternalLink } from 'lucide-react';
 
 interface ImageOverrideModalProps {
   isOpen: boolean;
@@ -8,6 +8,7 @@ interface ImageOverrideModalProps {
   onUpdate: (imageUrl: string) => void;
   title: string;
   subtitle?: string;
+  searchQuery?: string;
 }
 
 export const ImageOverrideModal: React.FC<ImageOverrideModalProps> = ({ 
@@ -15,7 +16,8 @@ export const ImageOverrideModal: React.FC<ImageOverrideModalProps> = ({
   onClose, 
   onUpdate, 
   title, 
-  subtitle 
+  subtitle,
+  searchQuery
 }) => {
   const [imageUrlInput, setImageUrlInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,8 +67,25 @@ export const ImageOverrideModal: React.FC<ImageOverrideModalProps> = ({
             </p>
 
             <div className="space-y-6">
+              {searchQuery && (
+                <div>
+                  <span className="text-[9px] uppercase font-bold tracking-[0.2em] mb-3 block">Step 1: Find Reference</span>
+                  <a 
+                    href={`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&tbm=isch`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-4 bg-artistic-shadow/20 border border-artistic-ink/5 rounded-2xl flex items-center justify-center gap-3 hover:bg-artistic-accent hover:text-white group transition-all"
+                  >
+                    <Search className="w-4 h-4 opacity-40 group-hover:opacity-100 transition-all text-artistic-ink group-hover:text-white" />
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-artistic-ink group-hover:text-white">Search Google Images</span>
+                    <ExternalLink className="w-3 h-3 opacity-20 group-hover:opacity-60 transition-all text-artistic-ink group-hover:text-white" />
+                  </a>
+                  <p className="text-[8px] opacity-40 mt-2 text-center">Open search, right-click an image, and "Copy Image Address"</p>
+                </div>
+              )}
+
               <div>
-                <span className="text-[9px] uppercase font-bold tracking-[0.2em] mb-3 block">Option 1: Social Mirroring</span>
+                <span className="text-[9px] uppercase font-bold tracking-[0.2em] mb-3 block">{searchQuery ? 'Step 2: Social Mirroring' : 'Option 1: Social Mirroring'}</span>
                 <div className="flex gap-2">
                   <input 
                     type="text" 

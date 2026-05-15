@@ -16,6 +16,11 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function isGalleryOwner() {
+      // In this app, any signed-in user is a gallery owner
+      return isSignedIn();
+    }
+
     function isValidId(id) {
       return id is string && id.size() > 0 && id.size() <= 128;
     }
@@ -30,86 +35,54 @@ service cloud.firestore {
 
     // Validation Blueprints
     function isValidUserProfile(data) {
-      return data.uid == request.auth.uid
-        && data.email is string && data.email.size() <= 256
-        && (data.displayName is string || data.displayName == null)
-        && (data.photoURL is string || data.photoURL == null)
-        && data.lastLogin is number
-        && data.isGalleryPublic is bool
+      return (!('uid' in data) || data.uid == request.auth.uid)
+        && (!('email' in data) || (data.email is string && data.email.size() <= 256))
+        && (!('displayName' in data) || data.displayName == null || data.displayName is string)
+        && (!('photoURL' in data) || data.photoURL == null || data.photoURL is string)
+        && (!('lastLogin' in data) || data.lastLogin is number)
+        && (!('isGalleryPublic' in data) || data.isGalleryPublic is bool)
         && (!('isBucketListPublic' in data) || data.isBucketListPublic is bool)
         && (!('level' in data) || data.level is number)
-        && (!('totalXP' in data) || data.totalXP is number)
-        && (!('scansByMovement' in data) || data.scansByMovement is map)
-        && (!('badges' in data) || data.badges is list);
-    }
-
-    function isValidMuseumStamp(data) {
-      return data.museumId is string && data.museumId.size() <= 128
-        && data.museumName is string && data.museumName.size() <= 256
-        && data.timestamp is number
-        && data.location is map
-        && data.location.lat is number
-        && data.location.lng is number;
-    }
-
-    function isValidQuizHistory(data) {
-      return data.date is string && data.date.size() <= 64
-        && data.artworkId is string && data.artworkId.size() <= 128
-        && data.isCorrect is bool
-        && data.xpEarned is number;
-    }
-
-    function isValidDailyQuizQuestion(data) {
-      return data.artworkTitle is string && data.artworkTitle.size() <= 512
-        && data.imageUrl is string && data.imageUrl.size() <= 2048
-        && data.type is string && data.type.size() <= 64
-        && data.correctAnswer is string && data.correctAnswer.size() <= 256
-        && data.options is list && data.options.size() == 4
-        && data.hint is string && data.hint.size() <= 1024
-        && data.isAiGenerated is bool;
-    }
-
-    function isValidDailyQuizSession(data) {
-      return data.date is string && data.date.size() <= 32
-        && data.questions is list && data.questions.size() <= 30;
+        && (!('totalXP' in data) || data.totalXP is number);
     }
 
     function isValidArtDetails(details) {
-      return details.title is string && details.title.size() <= 500
-        && details.artist is string && details.artist.size() <= 500
-        && (!('year' in details) || details.year == null || (details.year is string && details.year.size() <= 100))
-        && (!('movement' in details) || details.movement == null || (details.movement is string && details.movement.size() <= 200))
-        && (!('medium' in details) || details.medium == null || (details.medium is string && details.medium.size() <= 200))
-        && (!('type' in details) || details.type == null || (details.type is string && details.type.size() <= 200))
-        && (!('museum' in details) || details.museum == null || (details.museum is string && details.museum.size() <= 500))
-        && (!('location' in details) || details.location == null || (details.location is string && details.location.size() <= 500))
-        && (!('description' in details) || details.description == null || (details.description is string && details.description.size() <= 2000))
-        && (!('historicalContext' in details) || details.historicalContext == null || (details.historicalContext is string && details.historicalContext.size() <= 5000));
+      return (!('title' in details) || details.title is string)
+        && (!('artist' in details) || details.artist is string)
+        && (!('year' in details) || (details.year == null || details.year is string || details.year is number))
+        && (!('description' in details) || (details.description == null || details.description is string))
+        && (!('historicalContext' in details) || (details.historicalContext == null || details.historicalContext is string))
+        && (!('museum' in details) || (details.museum == null || details.museum is string))
+        && (!('location' in details) || (details.location == null || details.location is string))
+        && (!('movement' in details) || (details.movement == null || details.movement is string))
+        && (!('type' in details) || (details.type == null || details.type is string))
+        && (!('dimensions' in details) || (details.dimensions == null || details.dimensions is string))
+        && (!('medium' in details) || (details.medium == null || details.medium is string))
+        && (!('funFact' in details) || (details.funFact == null || details.funFact is string))
+        && (!('significance' in details) || (details.significance == null || details.significance is string))
+        && (!('audioGuide' in details) || (details.audioGuide == null || details.audioGuide is string))
+        && (!('entities' in details) || (details.entities == null || details.entities is list));
     }
 
     function isValidArtItem(data, itemId) {
-      return data.id is string && data.id.size() <= 128
-        && data.image is string && data.image.size() <= 2000000 // Increased limit, just in case
-        && data.details is map
-        && isValidArtDetails(data.details)
-        && data.timestamp is number
-        && data.userId is string
-        && data.id == itemId;
+      return (!('id' in data) || data.id == itemId)
+        && (!('userId' in data) || data.userId is string)
+        && (!('details' in data) || (data.details is map && isValidArtDetails(data.details)))
+        && (!('image' in data) || data.image is string);
     }
 
     // Collection: Users
     match /users/{userId} {
       allow get: if isOwner(userId) && isValidId(userId);
       allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
-      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['lastLogin', 'displayName', 'photoURL', 'isGalleryPublic', 'isBucketListPublic', 'level', 'totalXP', 'scansByMovement', 'badges'])
-      );
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
 
       // Collection: Saved Items
       match /items/{itemId} {
         allow list: if isOwner(userId);
         allow get: if isOwner(userId) && isValidId(itemId);
         allow create: if isOwner(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
+        allow update: if isOwner(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
         allow delete: if isOwner(userId) && isValidId(itemId);
       }
 
@@ -126,61 +99,61 @@ service cloud.firestore {
       match /passport/{stampId} {
         allow list: if isOwner(userId);
         allow get: if isOwner(userId) && isValidId(stampId);
-        allow create: if isOwner(userId) && isValidId(stampId) && isValidMuseumStamp(incoming());
+        allow create: if isOwner(userId) && isValidId(stampId);
       }
 
       // Collection: Quiz History
       match /quiz_history/{quizId} {
         allow list: if isOwner(userId);
         allow get: if isOwner(userId) && isValidId(quizId);
-        allow create: if isOwner(userId) && isValidId(quizId) && isValidQuizHistory(incoming());
+        allow create: if isOwner(userId) && isValidId(quizId);
       }
     }
 
     match /public_profiles/{userId} {
       allow get: if true;
-      allow write: if isOwner(userId) && isValidId(userId);
+      allow write: if isOwner(userId);
     }
 
     match /public_items/{userId}/items/{itemId} {
       allow list: if true;
       allow get: if true;
-      allow write: if isOwner(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
+      allow create, update: if isOwner(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
       allow delete: if isOwner(userId) && isValidId(itemId);
     }
 
     match /public_bucketlist/{userId}/items/{itemId} {
       allow list: if true;
       allow get: if true;
-      allow write: if isOwner(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
+      allow create, update: if isOwner(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
       allow delete: if isOwner(userId) && isValidId(itemId);
     }
 
-    // Collections: Metadata Cache
+    // Collections: Metadata Cache (Entities)
     match /metadata_artists/{artistId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isGalleryOwner();
     }
     match /metadata_movements/{movementId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isGalleryOwner();
     }
     match /metadata_museums/{museumId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isGalleryOwner();
     }
     match /metadata_types/{typeId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isGalleryOwner();
     }
     match /metadata_locations/{locationId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isGalleryOwner();
     }
 
     match /daily_quizzes/{date} {
       allow read: if true;
-      allow write: if isSignedIn() && isValidDailyQuizSession(incoming());
+      allow write: if isGalleryOwner();
     }
 
     match /test/connection {

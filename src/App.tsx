@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ImageOverrideModal } from './components/ImageOverrideModal';
 import { GooglePhotosPicker } from './components/GooglePhotosPicker';
-import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus, Filter, SlidersHorizontal, ChevronDown, MapPin, Menu, X, Globe, PlusCircle, Image as ImageIcon, Copy } from 'lucide-react';
+import { APIProvider } from '@vis.gl/react-google-maps';
+import { MuseumAutocomplete } from './components/MuseumAutocomplete';
+import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus, Filter, SlidersHorizontal, ChevronDown, MapPin, Menu, X, Globe, PlusCircle, Image as ImageIcon, Copy, RefreshCw, MoreVertical, Edit3, Save, Search, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as heic2anyModule from 'heic2any';
-import { identifyArtwork, identifyArtworkFromUrl, ArtDetails, EntityDetails, getEntityDetails } from './services/artService';
+import { identifyArtwork, identifyArtworkFromUrl, ArtDetails, EntityDetails, getEntityDetails, sanitizeId, getRecommendations, Recommendation, identifyArtworkByText, searchArtwork } from './services/artService';
 import { MuseumMap } from './components/MuseumMap';
 import { HistoryItem, UserProfile, MuseumStamp, QuizHistory } from './types';
 import { KnowledgeGraph } from './components/KnowledgeGraph';
@@ -12,14 +14,21 @@ import { AchievementSystem } from './components/AchievementSystem';
 import { ArtQuiz } from './components/ArtQuiz';
 import { MuseumPassport } from './components/MuseumPassport';
 import { EntityViewer } from './components/EntityViewer';
+import { ItineraryPlanner } from './components/ItineraryPlanner';
 import { MUSEUMS } from './constants';
-import { auth, googleProvider, db, handleFirestoreError, OperationType } from './services/firebase';
+import { auth, googleProvider, db, handleFirestoreError, OperationType, sanitizeForFirestore } from './services/firebase';
 import { ValidatedImage } from './components/ValidatedImage';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 
 // Handle potential default import differences
 const heic2any = (heic2anyModule as any).default || heic2anyModule;
+
+const API_KEY = 
+  process.env.GOOGLE_MAPS_PLATFORM_KEY || 
+  (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY || 
+  (globalThis as any).GOOGLE_MAPS_PLATFORM_KEY || 
+  '';
 
 export default /**
  * Main Application Component for AURA.
@@ -31,6 +40,15 @@ function App() {
   const [museumStamps, setMuseumStamps] = useState<MuseumStamp[]>([]);
   const [image, setImage] = useState<string | null>(null);
   const [details, setDetails] = useState<ArtDetails | null>(null);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [isRecsLoading, setIsRecsLoading] = useState(false);
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [tempLocation, setTempLocation] = useState('');
+  const [isEditingMuseum, setIsEditingMuseum] = useState(false);
+  const [tempMuseum, setTempMuseum] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<EntityDetails | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -66,7 +84,17 @@ function App() {
     
     setUserProfile(updatedProfile);
     try {
-      await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
+      await setDoc(doc(db, 'users', user.uid), sanitizeForFirestore(updatedProfile), { merge: true });
+      // Sync to public profile if any sharing is enabled
+      if (isGalleryPublic || isBucketListPublic) {
+        await setDoc(doc(db, 'public_profiles', user.uid), sanitizeForFirestore({
+          displayName: updatedProfile.displayName || user.displayName || user.email?.split('@')[0] || 'User',
+          photoURL: updatedProfile.photoURL || user.photoURL,
+          level: updatedProfile.level,
+          totalXP: updatedProfile.totalXP,
+          badges: updatedProfile.badges
+        }), { merge: true });
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
     }
@@ -78,10 +106,10 @@ function App() {
     setMuseumStamps(prev => [stamp, ...prev]);
     const path = `users/${user.uid}/passport`;
     try {
-      await setDoc(doc(db, path, stamp.id), {
+      await setDoc(doc(db, path, stamp.id), sanitizeForFirestore({
         ...stamp,
         userId: user.uid
-      });
+      }), { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }
@@ -137,13 +165,72 @@ function App() {
 
     setUserProfile(updatedProfile);
     try {
-      await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
+      await setDoc(doc(db, 'users', user.uid), sanitizeForFirestore(updatedProfile), { merge: true });
+      // Sync to public profile if any sharing is enabled
+      if (isGalleryPublic || isBucketListPublic) {
+        await setDoc(doc(db, 'public_profiles', user.uid), sanitizeForFirestore({
+          displayName: updatedProfile.displayName || user.displayName || user.email?.split('@')[0] || 'User',
+          photoURL: updatedProfile.photoURL || user.photoURL,
+          level: updatedProfile.level,
+          totalXP: updatedProfile.totalXP,
+          badges: updatedProfile.badges
+        }), { merge: true });
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
     }
   };
   const [sharedGalleryOwnerName, setSharedGalleryOwnerName] = useState<string | null>(null);
-  const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist' | 'passport' | 'achievements'>('home');
+  const userInterests = useMemo(() => {
+    const interests = new Set<string>();
+    history.forEach(item => {
+      if (item.details.movement) interests.add(item.details.movement);
+      if (item.details.artist) interests.add(item.details.artist);
+    });
+    return Array.from(interests).slice(0, 10);
+  }, [history]);
+
+  const addToBucketList = async (title: string, artist: string, museum: string, imageUrl?: string) => {
+    if (!user) {
+      setError("Please sign in to add masterpieces to your Bucket List.");
+      return;
+    }
+
+    const newItem: HistoryItem = {
+      id: `suggested-${sanitizeId(title)}-${Date.now()}`,
+      image: imageUrl || "https://images.unsplash.com/photo-1544923246-77307dd654ca?q=80&w=600&auto=format&fit=crop",
+      details: {
+        title,
+        artist,
+        year: "Unknown",
+        movement: "Unknown",
+        medium: "Unknown",
+        museum,
+        type: "Masterpiece",
+        description: `Suggested masterpiece from your Masterpiece Route curation. Located at ${museum}.`,
+        historicalContext: "Identified as a high-value piece for your curated art journey."
+      },
+      timestamp: Date.now()
+    };
+
+    setBucketList(prev => [newItem, ...prev]);
+
+    const path = `users/${user.uid}/bucketlist`;
+    try {
+      await setDoc(doc(db, path, newItem.id), sanitizeForFirestore({
+        ...newItem,
+        userId: user.uid
+      }), { merge: true });
+      if (isBucketListPublic) {
+        await setDoc(doc(db, `public_bucketlist/${user.uid}/items`, newItem.id), sanitizeForFirestore({
+          ...newItem,
+          userId: user.uid
+        }), { merge: true });
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, path);
+    }
+  };
   const [overrideTarget, setOverrideTarget] = useState<{ id: string, type: 'history' | 'bucketlist' } | null>(null);
   const updateArtworkImage = async (id: string, imageUrl: string, type: 'history' | 'bucketlist') => {
     if (!user) return;
@@ -171,22 +258,191 @@ function App() {
       if (type === 'history') {
         const path = `users/${user.uid}/items`;
         setHistory(prev => prev.map(item => item.id === id ? { ...item, image: imageUrl, details: updatedDetails || item.details } : item));
-        await updateDoc(doc(db, path, id), updateData);
+        await setDoc(doc(db, path, id), sanitizeForFirestore(updateData), { merge: true });
         
         if (isGalleryPublic) {
-          await updateDoc(doc(db, `public_items/${user.uid}/items`, id), updateData);
+          await setDoc(doc(db, `public_items/${user.uid}/items`, id), sanitizeForFirestore(updateData), { merge: true });
         }
       } else {
         const path = `users/${user.uid}/bucketlist`;
         setBucketList(prev => prev.map(item => item.id === id ? { ...item, image: imageUrl, details: updatedDetails || item.details } : item));
-        await updateDoc(doc(db, path, id), updateData);
+        await setDoc(doc(db, path, id), sanitizeForFirestore(updateData), { merge: true });
         
         if (isBucketListPublic) {
-          await updateDoc(doc(db, `public_bucketlist/${user.uid}/items`, id), updateData);
+          await setDoc(doc(db, `public_bucketlist/${user.uid}/items`, id), sanitizeForFirestore(updateData), { merge: true });
         }
       }
     } catch (err) {
-      console.error("Failed to update artwork image:", err);
+      handleFirestoreError(err, OperationType.UPDATE, type === 'history' ? `users/${user.uid}/items/${id}` : `users/${user.uid}/bucketlist/${id}`);
+    }
+  };
+
+  const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist' | 'passport' | 'achievements' | 'itinerary'>('home');
+  
+  useEffect(() => {
+    if (details && view === 'home') {
+      const fetchRecs = async () => {
+        setIsRecsLoading(true);
+        try {
+          const recs = await getRecommendations(details);
+          setRecommendations(recs);
+        } catch (err) {
+          console.error("Failed to load recommendations:", err);
+          setRecommendations([]);
+        } finally {
+          setIsRecsLoading(false);
+        }
+      };
+      fetchRecs();
+    } else {
+      setRecommendations([]);
+    }
+  }, [details, view]);
+
+  const handleRecommendationClick = async (rec: Recommendation) => {
+    setIsLoading(true);
+    setProgress(20);
+    setError(null);
+    setDetails(null);
+    setImage(null);
+    setRecommendations([]);
+
+    try {
+      // If we have an image URL, use it
+      if (rec.imageUrl) {
+        setImage(rec.imageUrl);
+        setProgress(50);
+        const result = await identifyArtworkFromUrl(rec.imageUrl, rec.title, rec.artist);
+        setDetails(result);
+        setProgress(100);
+      } else {
+        // Fallback to text identification based on title/artist
+        const result = await identifyArtworkByText(rec.title, rec.artist);
+        setDetails(result);
+        setImage((result as any).imageUrl || null);
+        setProgress(100);
+      }
+      setView('home');
+    } catch (err) {
+      console.error(err);
+      setError("I had trouble summoning details for this recommendation.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRefreshDetails = async () => {
+    if (!details) return;
+    
+    setIsLoading(true);
+    setProgress(30);
+    setError(null);
+
+    try {
+      const refreshedDetails = await identifyArtworkByText(details.title, details.artist);
+      setDetails(refreshedDetails);
+      setProgress(100);
+      
+      // Also refresh recommendations since details changed
+      setIsRecsLoading(true);
+      const recs = await getRecommendations(refreshedDetails);
+      setRecommendations(recs);
+      setIsRecsLoading(false);
+    } catch (err) {
+      console.error(err);
+      setError("I failed to refresh the masterpiece data.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+  const handleSaveLocation = async () => {
+    if (details) {
+      const updatedDetails = { ...details, location: tempLocation };
+      setDetails(updatedDetails);
+      
+      const itemToUpdate = history.find(h => h.details.title === details.title && h.details.artist === details.artist);
+      if (itemToUpdate) {
+        setHistory(prev => prev.map(h => h.id === itemToUpdate.id ? { ...h, details: updatedDetails } : h));
+        if (user) {
+          try {
+            const path = `users/${user.uid}/items`;
+            await setDoc(doc(db, path, itemToUpdate.id), sanitizeForFirestore({ details: updatedDetails }), { merge: true });
+            
+            // Sync to public gallery if sharing is ON
+            if (isGalleryPublic) {
+              await setDoc(doc(db, `public_items/${user.uid}/items`, itemToUpdate.id), sanitizeForFirestore({ details: updatedDetails }), { merge: true });
+            }
+          } catch (e) {
+            console.error("Failed to update location in database", e);
+          }
+        }
+      }
+    }
+    setIsEditingLocation(false);
+  };
+
+  const handleSaveMuseum = async () => {
+    if (details) {
+      const updatedDetails = { ...details, museum: tempMuseum };
+      setDetails(updatedDetails);
+      
+      const itemToUpdate = history.find(h => h.details.title === details.title && h.details.artist === details.artist);
+      if (itemToUpdate) {
+        setHistory(prev => prev.map(h => h.id === itemToUpdate.id ? { ...h, details: updatedDetails } : h));
+        if (user) {
+          try {
+            const path = `users/${user.uid}/items`;
+            await setDoc(doc(db, path, itemToUpdate.id), sanitizeForFirestore({ details: updatedDetails }), { merge: true });
+            
+            // Sync to public gallery if sharing is ON
+            if (isGalleryPublic) {
+              await setDoc(doc(db, `public_items/${user.uid}/items`, itemToUpdate.id), sanitizeForFirestore({ details: updatedDetails }), { merge: true });
+            }
+          } catch (e) {
+            console.error("Failed to update museum in database", e);
+          }
+        }
+      }
+    }
+    setIsEditingMuseum(false);
+  };
+
+  const handleAddToGallery = async () => {
+    if (!details || !image) return;
+    
+    const isDuplicate = history.some(item => 
+      item.details.title === details.title && 
+      (item.details.artist === details.artist)
+    );
+
+    if (isDuplicate) {
+      setError("This masterpiece is already illuminating your gallery.");
+      return;
+    }
+
+    const newItem: HistoryItem = {
+      id: Date.now().toString() + Math.random().toString(36).substring(2),
+      image: image,
+      details: details,
+      timestamp: Date.now()
+    };
+
+    setHistory(prev => [newItem, ...prev].slice(0, 50));
+    
+    if (user) {
+      const path = `users/${user.uid}/items`;
+      try {
+        await setDoc(doc(db, path, newItem.id), sanitizeForFirestore({ ...newItem, userId: user.uid }), { merge: true });
+        
+        // Sync to public gallery if sharing is ON
+        if (isGalleryPublic) {
+          await setDoc(doc(db, `public_items/${user.uid}/items`, newItem.id), sanitizeForFirestore({ ...newItem, userId: user.uid }), { merge: true });
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, path);
+      }
     }
   };
 
@@ -410,7 +666,11 @@ function App() {
         
         await setDoc(doc(db, 'public_profiles', currentUser.uid), {
           displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-          email: currentUser.email
+          photoURL: currentUser.photoURL,
+          email: currentUser.email,
+          level: userData.level || 1,
+          totalXP: userData.totalXP || 0,
+          badges: userData.badges || []
         }, { merge: true });
         
         await setDoc(userDoc, {
@@ -661,7 +921,7 @@ function App() {
       // Duplicate Check: Stop if already in history
       const isDuplicate = history.some(item => 
         item.details.title === result.title && 
-        (item.details.artist === result.artist || item.details.year === result.year)
+        item.details.artist === result.artist
       );
 
       if (isDuplicate) {
@@ -685,18 +945,18 @@ function App() {
       if (user) {
         const path = `users/${user.uid}/items`;
         try {
-          await setDoc(doc(db, path, newItem.id), {
+          await setDoc(doc(db, path, newItem.id), sanitizeForFirestore({
             ...newItem,
             userId: user.uid
-          });
+          }), { merge: true });
           
           // Also update public gallery if sharing is ON
           if (isGalleryPublic) {
             const publicPath = `public_items/${user.uid}/items`;
-            await setDoc(doc(db, publicPath, newItem.id), {
+            await setDoc(doc(db, publicPath, newItem.id), sanitizeForFirestore({
               ...newItem,
               userId: user.uid
-            });
+            }), { merge: true });
           }
         } catch (err) {
           handleFirestoreError(err, OperationType.WRITE, path);
@@ -706,7 +966,7 @@ function App() {
         const saved = localStorage.getItem('art_curator_history');
         const local = saved ? JSON.parse(saved) : [];
         // Secondary safety check for local storage
-        if (!local.some((item: HistoryItem) => item.details.title === newItem.details.title)) {
+        if (!local.some((item: HistoryItem) => item.details.title === newItem.details.title && item.details.artist === newItem.details.artist)) {
           localStorage.setItem('art_curator_history', JSON.stringify([newItem, ...local].slice(0, 50)));
         }
       }
@@ -720,6 +980,10 @@ function App() {
 
   const handleUrlCapture = async (url: string) => {
     if (!url.trim()) return;
+    if (!user) {
+      handleLogin();
+      return;
+    }
     setView('home');
     setIsLoading(true);
     setProgress(20);
@@ -738,7 +1002,7 @@ function App() {
 
       const isDuplicate = history.some(item => 
         item.details.title === result.title && 
-        (item.details.artist === result.artist || item.details.year === result.year)
+        item.details.artist === result.artist
       );
 
       if (isDuplicate) {
@@ -757,15 +1021,15 @@ function App() {
 
       if (user) {
         const path = `users/${user.uid}/items`;
-        await setDoc(doc(db, path, newItem.id), {
+        await setDoc(doc(db, path, newItem.id), sanitizeForFirestore({
           ...newItem,
           userId: user.uid
-        });
+        }), { merge: true });
         if (isGalleryPublic) {
-          await setDoc(doc(db, `public_items/${user.uid}/items`, newItem.id), {
+          await setDoc(doc(db, `public_items/${user.uid}/items`, newItem.id), sanitizeForFirestore({
             ...newItem,
             userId: user.uid
-          });
+          }), { merge: true });
         }
       } else {
         const saved = localStorage.getItem('art_curator_history');
@@ -775,6 +1039,78 @@ function App() {
     } catch (err) {
       console.error(err);
       setError("I couldn't identify this artwork URL. Please ensure it's a direct link to an image.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearchMasterpiece = async () => {
+    if (!searchQuery.trim()) return;
+    if (!user) {
+      handleLogin();
+      return;
+    }
+    setIsLoading(true);
+    setProgress(20);
+    setError(null);
+    setDetails(null);
+    setImage(null);
+
+    try {
+      setProgress(40);
+      const result = await searchArtwork(searchQuery);
+      setProgress(70);
+      
+      // Try to find an image automatically or use a descriptive placeholder
+      // For now, let's search for an image using the Search functionality we have
+      setDetails(result);
+      setImage((result as any).imageUrl || null);
+      setView('home');
+      updateLevelingOnScan(result);
+
+      // Duplicate Check
+      const isDuplicate = history.some(item => 
+        item.details.title === result.title && 
+        item.details.artist === result.artist
+      );
+
+      if (isDuplicate) {
+        setIsSearchVisible(false);
+        setSearchQuery('');
+        setIsLoading(false);
+        return;
+      }
+
+      // Use imageUrl from result if provided, otherwise empty
+      const newItem: HistoryItem = {
+        id: `search-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+        image: (result as any).imageUrl || "", 
+        details: result,
+        timestamp: Date.now()
+      };
+
+      setHistory(prev => [newItem, ...prev].slice(0, 50));
+
+      if (user) {
+        const path = `users/${user.uid}/items`;
+        try {
+          await setDoc(doc(db, path, newItem.id), sanitizeForFirestore({ ...newItem, userId: user.uid }), { merge: true });
+          
+          // Sync to public gallery if sharing is ON
+          if (isGalleryPublic) {
+            await setDoc(doc(db, `public_items/${user.uid}/items`, newItem.id), sanitizeForFirestore({ ...newItem, userId: user.uid }), { merge: true });
+          }
+        } catch (err) {
+          handleFirestoreError(err, OperationType.WRITE, path);
+        }
+      }
+      
+      setIsSearchVisible(false);
+      setSearchQuery('');
+      setProgress(100);
+    } catch (err) {
+      console.error(err);
+      setError("The neural engine couldn't find a masterpiece matching your query.");
     } finally {
       setIsLoading(false);
     }
@@ -915,14 +1251,14 @@ function App() {
         
         await Promise.all([
           deleteDoc(doc(db, bucketPath, item.id)),
-          setDoc(doc(db, historyPath, item.id), { ...newItem, userId: user.uid })
+          setDoc(doc(db, historyPath, item.id), sanitizeForFirestore({ ...newItem, userId: user.uid }))
         ]);
 
         if (isBucketListPublic) {
           await deleteDoc(doc(db, `public_bucketlist/${user.uid}/items`, item.id));
         }
         if (isGalleryPublic) {
-          await setDoc(doc(db, `public_items/${user.uid}/items`, item.id), { ...newItem, userId: user.uid });
+          await setDoc(doc(db, `public_items/${user.uid}/items`, item.id), sanitizeForFirestore({ ...newItem, userId: user.uid }));
         }
       } catch (err) {
         console.error("Failed to move item to gallery:", err);
@@ -968,10 +1304,45 @@ function App() {
     if (isSharingRef.current) return;
     isSharingRef.current = true;
 
+    const copyToClipboard = async (text: string) => {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+        throw new Error("Clipboard API unavailable");
+      } catch (err) {
+        // Fallback for non-secure contexts or when focus is an issue
+        try {
+          const textArea = document.createElement("textarea");
+          textArea.value = text;
+          // Ensure it's not visible but part of the DOM
+          textArea.style.position = "fixed";
+          textArea.style.left = "-9999px";
+          textArea.style.top = "0";
+          textArea.setAttribute('readonly', ''); // Prevent keyboard on mobile
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          textArea.setSelectionRange(0, 99999); // For mobile devices
+          const successful = document.execCommand('copy');
+          document.body.removeChild(textArea);
+          return successful;
+        } catch (fallbackErr) {
+          console.error('Fallback copy failed:', fallbackErr);
+          return false;
+        }
+      }
+    };
+
     try {
-      await navigator.clipboard.writeText(url);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      const success = await copyToClipboard(url);
+      if (success) {
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      } else {
+        throw new Error("Copy failed");
+      }
       
       // Still try to use native share if available as secondary option
       if (navigator.share) {
@@ -1004,21 +1375,25 @@ function App() {
     
     try {
         await Promise.all([
-          setDoc(doc(db, 'users', user.uid), { 
+          setDoc(doc(db, 'users', user.uid), sanitizeForFirestore({ 
             isGalleryPublic: nextPublic,
             isBucketListPublic: nextPublic 
-          }, { merge: true }),
-          setDoc(doc(db, 'public_profiles', user.uid), {
+          }), { merge: true }),
+          setDoc(doc(db, 'public_profiles', user.uid), sanitizeForFirestore({
             displayName: user.displayName || user.email?.split('@')[0] || 'User',
-            email: user.email
-          }, { merge: true })
+            photoURL: user.photoURL,
+            email: user.email,
+            level: userProfile?.level || 1,
+            totalXP: userProfile?.totalXP || 0,
+            badges: userProfile?.badges || []
+          }), { merge: true })
         ]);
         
         // Sync Gallery items
         if (nextPublic) {
           for (const item of history) {
               const docRef = doc(db, `public_items/${user.uid}/items`, item.id);
-              await setDoc(docRef, { ...item, userId: user.uid });
+              await setDoc(docRef, sanitizeForFirestore({ ...item, userId: user.uid }), { merge: true });
           }
         } else {
           const q = query(collection(db, `public_items/${user.uid}/items`));
@@ -1032,7 +1407,7 @@ function App() {
         if (nextPublic) {
           for (const item of bucketList) {
               const docRef = doc(db, `public_bucketlist/${user.uid}/items`, item.id);
-              await setDoc(docRef, { ...item, userId: user.uid });
+              await setDoc(docRef, sanitizeForFirestore({ ...item, userId: user.uid }), { merge: true });
           }
         } else {
           const q = query(collection(db, `public_bucketlist/${user.uid}/items`));
@@ -1043,6 +1418,7 @@ function App() {
         }
     } catch (err) {
         console.error("Profile sync failed", err);
+        handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/public_profiles`);
         setError("Failed to update profile sharing settings.");
         setIsGalleryPublic(!nextPublic);
         setIsBucketListPublic(!nextPublic);
@@ -1148,7 +1524,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen border-8 border-white box-border flex flex-col">
+    <APIProvider apiKey={API_KEY} version="weekly">
+      <div className="min-h-screen border-8 border-white box-border flex flex-col">
       {/* Shared Profile Banner */}
       {isViewOnly && sharedGalleryOwnerName && (
         <motion.div 
@@ -1181,6 +1558,69 @@ function App() {
           </button>
         </motion.div>
       )}
+
+      {/* Global Search Overlay */}
+      <AnimatePresence>
+        {isSearchVisible && (
+          <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 px-4 md:px-0">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSearchVisible(false)}
+              className="fixed inset-0 bg-artistic-ink/40 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              className="max-w-2xl w-full bg-white rounded-[2rem] shadow-2xl p-4 md:p-6 relative z-10 border border-artistic-ink/5"
+            >
+              <div className="flex flex-col gap-6">
+                <div className="flex justify-between items-center px-4">
+                  <div>
+                    <span className="uppercase text-[9px] tracking-[0.3em] font-bold text-artistic-accent block mb-1">Neural Search</span>
+                    <h3 className="font-serif italic text-2xl">Summon Masterpiece</h3>
+                  </div>
+                  <button 
+                    onClick={() => setIsSearchVisible(false)}
+                    className="p-2 hover:bg-artistic-shadow rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5 opacity-40" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 bg-artistic-shadow/20 border border-artistic-ink/5 rounded-2xl p-2 pl-6 focus-within:border-artistic-accent/40 focus-within:bg-white transition-all shadow-sm">
+                  <Search className="w-4 h-4 opacity-20" />
+                  <input 
+                    type="text" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Enter name, artist, or description..."
+                    className="flex-1 bg-transparent border-none outline-none text-sm font-semibold text-artistic-ink placeholder:text-artistic-ink/20 py-3"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearchMasterpiece()}
+                    autoFocus
+                  />
+                  <button 
+                    onClick={handleSearchMasterpiece}
+                    disabled={!searchQuery.trim() || isLoading}
+                    className="bg-artistic-ink text-artistic-bg px-6 py-3 rounded-xl text-[9px] uppercase font-bold tracking-widest hover:bg-artistic-accent transition-all disabled:opacity-20 flex items-center gap-2"
+                  >
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    <span>{isLoading ? 'Summoning' : 'Search'}</span>
+                  </button>
+                </div>
+                
+                <div className="px-4">
+                  <p className="text-[10px] text-artistic-ink/40 leading-relaxed italic">
+                    The curator's engine will research and identify the masterpiece. You can assign a visual once it's cataloged in your gallery.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Navigation / Header */}
       <header className="h-16 md:h-20 flex justify-between items-center px-4 md:px-10 border-b border-artistic-ink/10 bg-artistic-bg/80 backdrop-blur-md z-50">
@@ -1223,6 +1663,12 @@ function App() {
             className={`${view === 'achievements' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
           >
             Achievements
+          </button>
+          <button 
+            onClick={() => navigateTo('itinerary')} 
+            className={`${view === 'itinerary' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
+          >
+            Routes
           </button>
         </nav>
 
@@ -1301,14 +1747,35 @@ function App() {
             </button>
           )}
           
-          <div className="relative">
+          <div className="flex items-center gap-2">
             <button 
-              disabled={isViewOnly}
-              onClick={() => setIsHeaderCaptureMenuOpen(!isHeaderCaptureMenuOpen)}
-              className={`px-3 md:px-5 py-2 border border-artistic-ink rounded-full text-[9px] md:text-[10px] uppercase font-bold tracking-tight hover:bg-artistic-ink hover:text-artistic-bg transition-all ${isViewOnly ? 'opacity-50 cursor-not-allowed' : ''} ${isHeaderCaptureMenuOpen ? 'bg-artistic-ink text-artistic-bg' : ''}`}
+              onClick={() => {
+                if (!user) {
+                  handleLogin();
+                } else {
+                  setIsSearchVisible(true);
+                }
+              }}
+              className="p-2 hover:bg-artistic-shadow rounded-full text-artistic-ink transition-colors"
+              title={user ? "Search Masterpieces" : "Sign in to Search"}
             >
-              {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Capture'}
+              <Search className="w-4 h-4" />
             </button>
+
+            <div className="relative">
+              <button 
+                disabled={isViewOnly}
+                onClick={() => {
+                  if (!user) {
+                    handleLogin();
+                  } else {
+                    setIsHeaderCaptureMenuOpen(!isHeaderCaptureMenuOpen);
+                  }
+                }}
+                className={`px-3 md:px-5 py-2 border border-artistic-ink rounded-full text-[9px] md:text-[10px] uppercase font-bold tracking-tight hover:bg-artistic-ink hover:text-artistic-bg transition-all ${isViewOnly ? 'opacity-50 cursor-not-allowed' : ''} ${isHeaderCaptureMenuOpen ? 'bg-artistic-ink text-artistic-bg' : ''}`}
+              >
+                {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : (!user ? 'Sign in to Capture' : 'Capture')}
+              </button>
 
             <AnimatePresence>
               {isHeaderCaptureMenuOpen && (
@@ -1323,6 +1790,15 @@ function App() {
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     className="absolute right-0 mt-3 w-48 bg-white rounded-2xl shadow-xl border border-artistic-ink/5 p-2 z-20"
                   >
+                    <button 
+                      onClick={() => { setIsSearchVisible(!isSearchVisible); setIsHeaderCaptureMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group border-b border-artistic-ink/5 mb-1"
+                    >
+                      <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
+                        <Search className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] uppercase font-bold tracking-widest opacity-60 group-hover:opacity-100">Search Art</span>
+                    </button>
                     <button 
                       onClick={() => { cameraInputRef.current?.click(); setIsHeaderCaptureMenuOpen(false); }}
                       className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
@@ -1365,6 +1841,7 @@ function App() {
             </AnimatePresence>
           </div>
         </div>
+      </div>
       </header>
 
       {/* Mobile Navigation Drawer */}
@@ -1424,33 +1901,82 @@ function App() {
                   <span>Achievements</span>
                   {view === 'achievements' && <div className="w-1.5 h-1.5 bg-artistic-accent rounded-full" />}
                 </button>
+                <button 
+                  onClick={() => { navigateTo('itinerary'); setIsMobileMenuOpen(false); }} 
+                  className={`${view === 'itinerary' ? 'text-artistic-accent' : 'text-artistic-ink/60'} text-left flex items-center justify-between group`}
+                >
+                  <span>Routes</span>
+                  {view === 'itinerary' && <div className="w-1.5 h-1.5 bg-artistic-accent rounded-full" />}
+                </button>
                 
                 <div className="pt-4 border-t border-artistic-ink/5">
                   <span className="text-[9px] uppercase tracking-widest font-bold opacity-30 block mb-6 px-1">Quick Capture</span>
                   <div className="grid grid-cols-2 gap-4">
                     <button 
-                      onClick={() => { cameraInputRef.current?.click(); setIsMobileMenuOpen(false); }}
+                      onClick={() => { 
+                        if (!user) {
+                          handleLogin();
+                        } else {
+                          setIsSearchVisible(!isSearchVisible); 
+                          setIsMobileMenuOpen(false); 
+                        }
+                      }}
+                      className="flex flex-col items-center gap-2 p-4 bg-artistic-shadow rounded-2xl transition-all active:scale-95 border-b-4 border-artistic-accent/20"
+                    >
+                      <Search className="w-5 h-5 text-artistic-accent" />
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-artistic-accent">{user ? 'Search Art' : 'Sign In'}</span>
+                    </button>
+                    <button 
+                      onClick={() => { 
+                        if (!user) {
+                          handleLogin();
+                        } else {
+                          cameraInputRef.current?.click(); 
+                          setIsMobileMenuOpen(false); 
+                        }
+                      }}
                       className="flex flex-col items-center gap-2 p-4 bg-artistic-shadow rounded-2xl transition-all active:scale-95"
                     >
                       <Camera className="w-5 h-5 opacity-40" />
                       <span className="text-[8px] font-bold uppercase tracking-widest opacity-60">Camera</span>
                     </button>
                     <button 
-                      onClick={() => { fileInputRef.current?.click(); setIsMobileMenuOpen(false); }}
+                      onClick={() => { 
+                        if (!user) {
+                          handleLogin();
+                        } else {
+                          fileInputRef.current?.click(); 
+                          setIsMobileMenuOpen(false); 
+                        }
+                      }}
                       className="flex flex-col items-center gap-2 p-4 bg-artistic-shadow rounded-2xl transition-all active:scale-95"
                     >
                       <ImageIcon className="w-5 h-5 opacity-40" />
                       <span className="text-[8px] font-bold uppercase tracking-widest opacity-60">Files</span>
                     </button>
                     <button 
-                      onClick={() => { setIsGooglePhotosOpen(true); setIsMobileMenuOpen(false); }}
+                      onClick={() => { 
+                        if (!user) {
+                          handleLogin();
+                        } else {
+                          setIsGooglePhotosOpen(true); 
+                          setIsMobileMenuOpen(false); 
+                        }
+                      }}
                       className="flex flex-col items-center gap-2 p-4 bg-artistic-shadow rounded-2xl transition-all active:scale-95"
                     >
                       <Globe className="w-5 h-5 opacity-40" />
                       <span className="text-[8px] font-bold uppercase tracking-widest opacity-60">Photos</span>
                     </button>
                     <button 
-                      onClick={() => { setIsUrlCaptureOpen(true); setIsMobileMenuOpen(false); }}
+                      onClick={() => { 
+                        if (!user) {
+                          handleLogin();
+                        } else {
+                          setIsUrlCaptureOpen(true); 
+                          setIsMobileMenuOpen(false); 
+                        }
+                      }}
                       className="flex flex-col items-center gap-2 p-4 bg-artistic-shadow rounded-2xl transition-all active:scale-95"
                     >
                       <PlusCircle className="w-5 h-5 opacity-40" />
@@ -1542,6 +2068,7 @@ function App() {
             }
             bucketListWorks={bucketList}
             onArtworkClick={findAndLoadFromHistoryId}
+            isViewOnly={isViewOnly}
             onAddToBucketList={async (work) => {
               // Avoid duplicates
               if (bucketList.some(item => item.details.title === work.title && item.details.year === work.year)) {
@@ -1663,6 +2190,17 @@ function App() {
               )}
             </div>
           </section>
+        ) : view === 'itinerary' ? (
+          <section className="w-full h-full overflow-y-auto bg-white p-6 md:p-20">
+            <div className="max-w-6xl mx-auto">
+              <ItineraryPlanner 
+                bucketList={bucketList}
+                onArtworkClick={findAndLoadFromHistoryId}
+                userInterests={userInterests}
+                onAddToBucketList={addToBucketList}
+              />
+            </div>
+          </section>
         ) : view === 'passport' ? (
           <section className="w-full h-full overflow-y-auto bg-white p-6 md:p-20">
             <div className="max-w-6xl mx-auto">
@@ -1752,20 +2290,22 @@ function App() {
                             <ValidatedImage 
                               src={item.image} 
                               alt={item.details.title} 
-                              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" 
+                              className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700" 
                               fallback={
                                 <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center">
                                   <Palette className="w-8 h-8 opacity-10 mb-2" />
                                   <div className="flex gap-4">
-                                    <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOverrideTarget({ id: item.id, type: 'bucketlist' });
-                                      }}
-                                      className="text-[10px] uppercase font-bold tracking-widest text-artistic-accent hover:underline"
-                                    >
-                                      Assign Visual
-                                    </button>
+                                    {!isViewOnly && (
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOverrideTarget({ id: item.id, type: 'bucketlist' });
+                                        }}
+                                        className="text-[10px] uppercase font-bold tracking-widest text-artistic-accent hover:underline"
+                                      >
+                                        Assign Visual
+                                      </button>
+                                    )}
                                     <a 
                                       href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.details.title + ' ' + (item.details.artist || ''))}`}
                                       target="_blank"
@@ -1925,20 +2465,22 @@ function App() {
                             <ValidatedImage 
                               src={item.image} 
                               alt={item.details.title} 
-                              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" 
+                              className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700" 
                               fallback={
                                 <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center">
                                   <Palette className="w-8 h-8 opacity-10 mb-2" />
                                   <div className="flex gap-4">
-                                    <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOverrideTarget({ id: item.id, type: 'history' });
-                                      }}
-                                      className="text-[10px] uppercase font-bold tracking-widest text-artistic-accent hover:underline"
-                                    >
-                                      Assign Visual
-                                    </button>
+                                    {!isViewOnly && (
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOverrideTarget({ id: item.id, type: 'history' });
+                                        }}
+                                        className="text-[10px] uppercase font-bold tracking-widest text-artistic-accent hover:underline"
+                                      >
+                                        Assign Visual
+                                      </button>
+                                    )}
                                     <a 
                                       href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.details.title + ' ' + (item.details.artist || ''))}`}
                                       target="_blank"
@@ -2004,7 +2546,7 @@ function App() {
               )}
             </div>
           </section>
-        ) : (!image && !isLoading) ? (
+        ) : (!image && !details && !isLoading) ? (
           <section className="w-full flex flex-col items-center justify-center p-6 md:p-12 text-center bg-white overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
@@ -2055,6 +2597,15 @@ function App() {
                           className="absolute bottom-full mb-4 w-48 bg-white rounded-2xl shadow-2xl border border-artistic-ink/5 p-2 z-20 left-1/2 -translate-x-1/2"
                         >
                           <button 
+                            onClick={() => { setIsSearchVisible(true); setIsHeroCaptureMenuOpen(false); }}
+                            className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group border-b border-artistic-ink/5 mb-1"
+                          >
+                            <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
+                              <Search className="w-4 h-4" />
+                            </div>
+                            <span className="text-[10px] uppercase font-bold tracking-widest opacity-60 group-hover:opacity-100">Search Art</span>
+                          </button>
+                          <button 
                             onClick={() => { cameraInputRef.current?.click(); setIsHeroCaptureMenuOpen(false); }}
                             className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
                           >
@@ -2095,6 +2646,18 @@ function App() {
                     )}
                   </AnimatePresence>
                 </div>
+
+                <div className="flex flex-col items-center">
+                  <button
+                    disabled={isViewOnly || isLoading}
+                    onClick={() => setIsSearchVisible(true)}
+                    className={`w-14 h-14 md:w-16 md:h-16 border border-artistic-ink rounded-full flex items-center justify-center hover:bg-artistic-ink hover:text-artistic-bg transition-all shadow-lg mb-2 ${isViewOnly || isLoading ? 'opacity-50 cursor-not-allowed' : ''} ${isSearchVisible ? 'bg-artistic-ink text-artistic-bg' : ''}`}
+                  >
+                    <Search className="w-6 h-6" />
+                  </button>
+                  <span className="text-[9px] uppercase font-bold tracking-widest opacity-40">Search Art</span>
+                </div>
+
                 <div onClick={() => !isLoading && setView('galleries')} className={`cursor-pointer group flex flex-col items-center ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
                    <div className="w-14 h-14 md:w-16 md:h-16 border border-artistic-ink rounded-full flex items-center justify-center group-hover:bg-artistic-ink group-hover:text-artistic-bg transition-all mb-2">
                      <HistoryIcon className="w-6 h-6" />
@@ -2102,6 +2665,8 @@ function App() {
                    <span className="text-[9px] uppercase font-bold tracking-widest opacity-40">Your Gallery</span>
                 </div>
               </div>
+
+              {/* Central Search Bar - Removed as it's now global above */}
                             
             </motion.div>
           </section>
@@ -2125,7 +2690,7 @@ function App() {
                   <ValidatedImage 
                     src={image} 
                     alt="Artwork Preview" 
-                    className="w-full h-full object-cover" 
+                    className="w-full h-full object-contain" 
                     fallback={
                       <div className="w-full h-full flex flex-col items-center justify-center p-12 text-center">
                         <Palette className="w-12 h-12 opacity-10 mb-4" />
@@ -2143,18 +2708,26 @@ function App() {
                           >
                             Manual Verification
                           </button>
-                          <a 
-                            href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(details?.title + ' ' + (details?.artist || ''))}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-6 py-2 border border-artistic-ink/5 rounded-full text-[10px] uppercase font-bold text-artistic-ink/40 hover:text-artistic-accent transition-all text-center"
-                          >
-                            Search Visual
-                          </a>
                         </div>
                       </div>
                     }
                   />
+
+                  {/* Update Photo Overlay */}
+                  {!isLoading && !isViewOnly && details && (
+                    <div className="absolute inset-0 bg-artistic-ink/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center pointer-events-none group-hover/img:pointer-events-auto z-10 backdrop-blur-sm">
+                      <button 
+                        onClick={() => {
+                           const currentItem = history.find(h => h.details.title === details.title) || bucketList.find(b => b.details.title === details.title);
+                           setOverrideTarget({ id: currentItem?.id || 'new', type: history.find(h => h.details.title === details.title) ? 'history' : 'bucketlist' });
+                        }}
+                        className="px-6 py-3 bg-white text-artistic-ink rounded-full text-[10px] uppercase tracking-widest font-bold hover:bg-artistic-accent hover:text-white transition-all transform translate-y-4 group-hover/img:translate-y-0 duration-300 flex items-center gap-2 shadow-2xl"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        <span>Update Visual</span>
+                      </button>
+                    </div>
+                  )}
                   
                   {isLoading && (
                     <div className="absolute inset-0 bg-white/90 backdrop-blur-md flex flex-col items-center justify-center p-12 z-20">
@@ -2268,7 +2841,62 @@ function App() {
                     className="flex flex-col h-full justify-between"
                   >
                     <div>
-                      <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-8">Identified Masterpiece</span>
+                      <div className="flex items-center justify-between mb-8">
+                        <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block">Identified Masterpiece</span>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={handleRefreshDetails}
+                            disabled={isLoading}
+                            className="p-2 hover:bg-artistic-shadow/10 rounded-full transition-all group/refresh"
+                            title="Refresh masterpiece data"
+                          >
+                            <RefreshCw className={`w-4 h-4 text-artistic-accent ${isLoading ? 'animate-spin' : 'group-hover/refresh:rotate-180 transition-transform duration-500'}`} />
+                          </button>
+
+                          <div className="relative">
+                            <button 
+                              onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
+                              className="p-2 hover:bg-artistic-shadow/10 rounded-full transition-all"
+                              title="Curator Actions"
+                            >
+                              <MoreVertical className="w-4 h-4 text-artistic-accent" />
+                            </button>
+                            
+                            <AnimatePresence>
+                              {isActionMenuOpen && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={() => setIsActionMenuOpen(false)} />
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-2xl border border-artistic-ink/5 p-2 z-20 overflow-hidden"
+                                  >
+                                    <button 
+                                      onClick={() => { addToBucketList(details.title, details.artist, details.museum || details.location || '', image || ''); setIsActionMenuOpen(false); }}
+                                      className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
+                                    >
+                                      <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
+                                        <Clock className="w-4 h-4" />
+                                      </div>
+                                      <span className="text-[10px] uppercase font-bold tracking-widest opacity-60">Bucket List</span>
+                                    </button>
+                                    <button 
+                                      onClick={() => { handleAddToGallery(); setIsActionMenuOpen(false); }}
+                                      className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
+                                    >
+                                      <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
+                                        <LayoutGrid className="w-4 h-4" />
+                                      </div>
+                                      <span className="text-[10px] uppercase font-bold tracking-widest opacity-60">Add to Gallery</span>
+                                    </button>
+                                  </motion.div>
+                                </>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                      </div>
                       <h1 className="text-5xl lg:text-7xl font-serif leading-[1.1] mb-6 tracking-tighter" style={{ fontFamily: 'Georgia, serif' }}>
                         {details.title}
                       </h1>
@@ -2313,22 +2941,85 @@ function App() {
                             <span className="text-xs font-semibold group-hover:text-artistic-accent transition-colors">{details.type}</span>
                           </button>
                           {details.museum && (
-                            <button 
-                              onClick={() => openEntity(details.museum || '', 'museum')}
-                              className="text-left group"
-                            >
+                            <div className="text-left group/museum">
                               <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2 group-hover:text-artistic-accent group-hover:opacity-100 transition-all">Collection</span>
-                              <span className="text-xs font-semibold group-hover:text-artistic-accent transition-colors">{details.museum}</span>
-                            </button>
+                              {isEditingMuseum ? (
+                                <MuseumAutocomplete 
+                                  value={tempMuseum}
+                                  onPlaceSelect={(name) => {
+                                    setTempMuseum(name);
+                                    // Save immediately on selection for better UX
+                                    const updatedDetails = { ...details!, museum: name };
+                                    setDetails(updatedDetails);
+                                    const itemToUpdate = history.find(h => h.details.title === details!.title && h.details.artist === details!.artist);
+                                    if (itemToUpdate) {
+                                      setHistory(prev => prev.map(h => h.id === itemToUpdate.id ? { ...h, details: updatedDetails } : h));
+                                      if (user) {
+                                        setDoc(doc(db, `users/${user.uid}/items`, itemToUpdate.id), { details: updatedDetails }, { merge: true });
+                                        if (isGalleryPublic) {
+                                          setDoc(doc(db, `public_items/${user.uid}/items`, itemToUpdate.id), { details: updatedDetails }, { merge: true });
+                                        }
+                                      }
+                                    }
+                                    setIsEditingMuseum(false);
+                                  }}
+                                  onCancel={() => setIsEditingMuseum(false)}
+                                  className="mt-2"
+                                />
+                              ) : (
+                                <div className="flex items-center gap-2 group/mi">
+                                  <button 
+                                    onClick={() => openEntity(details.museum || '', 'museum')}
+                                    className="text-xs font-semibold hover:text-artistic-accent transition-colors text-left"
+                                  >
+                                    {details.museum}
+                                  </button>
+                                  {!isViewOnly && (
+                                    <button 
+                                      onClick={() => { setTempMuseum(details.museum || ''); setIsEditingMuseum(true); }}
+                                      className="opacity-0 group-hover/mi:opacity-100 p-1 text-artistic-accent hover:scale-110 transition-all"
+                                    >
+                                      <Edit3 className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           )}
                           {details.location && (
-                            <button 
-                              onClick={() => openEntity(details.location || '', 'location')}
-                              className="col-span-2 text-left group"
-                            >
+                            <div className="col-span-2 text-left group">
                               <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-2 group-hover:text-artistic-accent group-hover:opacity-100 transition-all">Location</span>
-                              <span className="text-xs font-semibold group-hover:text-artistic-accent transition-colors">{details.location}</span>
-                            </button>
+                              {isEditingLocation ? (
+                                <div className="flex items-center gap-2">
+                                  <input 
+                                    type="text"
+                                    value={tempLocation}
+                                    onChange={(e) => setTempLocation(e.target.value)}
+                                    className="text-xs font-semibold bg-white border border-artistic-ink/20 rounded px-2 py-1 flex-1 outline-none focus:border-artistic-accent"
+                                    autoFocus
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSaveLocation()}
+                                  />
+                                  <button onClick={handleSaveLocation} className="p-1 text-artistic-accent hover:scale-110 transition-transform" title="Save">
+                                    <Check className="w-4 h-4" />
+                                  </button>
+                                  <button onClick={() => setIsEditingLocation(false)} className="p-1 text-red-500 hover:scale-110 transition-transform" title="Cancel">
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 group/loc">
+                                  <span className="text-xs font-semibold group-hover:text-artistic-accent transition-colors">{details.location}</span>
+                                  {!isViewOnly && (
+                                    <button 
+                                      onClick={() => { setTempLocation(details.location || ''); setIsEditingLocation(true); }}
+                                      className="opacity-0 group-hover/loc:opacity-100 p-1 text-artistic-accent hover:scale-110 transition-all"
+                                    >
+                                      <Edit3 className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
 
@@ -2337,6 +3028,56 @@ function App() {
                           <p className="text-xs leading-[1.8] text-artistic-ink/80 text-justify">
                             {details.historicalContext}
                           </p>
+                        </div>
+
+                        {/* Similar Recommendations */}
+                        <div className="pt-12 border-t border-artistic-ink/5">
+                          <div className="flex items-center justify-between mb-6">
+                            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40">Similar Discoveries</span>
+                            {isRecsLoading && <Loader2 className="w-3 h-3 animate-spin opacity-20" />}
+                          </div>
+                          
+                          <div className="space-y-4">
+                            {isRecsLoading ? (
+                              <div className="space-y-3">
+                                {[1, 2, 3].map(i => (
+                                  <div key={i} className="h-16 w-full bg-artistic-shadow animate-pulse rounded-2xl" />
+                                ))}
+                              </div>
+                            ) : recommendations.length > 0 ? (
+                              <div className="grid grid-cols-1 gap-3">
+                                {recommendations.slice(0, 3).map((rec, i) => (
+                                  <motion.button
+                                    key={i}
+                                    initial={{ opacity: 0, x: 10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: i * 0.1 }}
+                                    onClick={() => handleRecommendationClick(rec)}
+                                    className="p-4 bg-white border border-artistic-ink/5 rounded-2xl hover:shadow-lg transition-all text-left flex items-center gap-4 group"
+                                  >
+                                    <div className="w-12 h-12 bg-artistic-shadow rounded-xl flex-shrink-0 overflow-hidden">
+                                      {rec.imageUrl ? (
+                                        <img src={rec.imageUrl} className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all" alt={rec.title} />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center opacity-10">
+                                          <Compass className="w-6 h-6" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="text-[10px] font-bold truncate group-hover:text-artistic-accent mb-0.5">{rec.title}</h4>
+                                      <p className="text-[9px] opacity-40 truncate">{rec.artist}</p>
+                                    </div>
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <PlusCircle className="w-4 h-4 text-artistic-accent" />
+                                    </div>
+                                  </motion.button>
+                                ))}
+                              </div>
+                            ) : !isRecsLoading && details && (
+                              <p className="text-[9px] italic opacity-30">No similar masterpieces found in current archives.</p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2379,23 +3120,30 @@ function App() {
         onClose={() => setOverrideTarget(null)}
         onUpdate={(url) => {
           if (overrideTarget) {
-            updateArtworkImage(overrideTarget.id, url, overrideTarget.type);
-            // Also update the active 'image' state if it matches the current artwork
-            const item = overrideTarget.type === 'history' 
-              ? history.find(h => h.id === overrideTarget.id)
-              : bucketList.find(b => b.id === overrideTarget.id);
-            
-            if (item && image === item.image) {
-              setImage(url);
+            if (overrideTarget.id !== 'new') {
+              updateArtworkImage(overrideTarget.id, url, overrideTarget.type);
             }
+            // Always update the visible image and details if we are in analysis view
+            setImage(url);
+            
+            // If it's a new identification from a recommendation and we updated the image,
+            // we should probably trigger a fresh identification if we want to be thorough,
+            // but for now updating the URL is what the user asked for.
           }
         }}
         title={overrideTarget ? (
+          overrideTarget.id === 'new' ? (details?.title || 'Artwork') :
           overrideTarget.type === 'history' 
             ? history.find(h => h.id === overrideTarget.id)?.details.title || 'Artwork'
             : bucketList.find(b => b.id === overrideTarget.id)?.details.title || 'Artwork'
         ) : 'Artwork'}
         subtitle="Spectral Alignment Required"
+        searchQuery={overrideTarget ? (
+          overrideTarget.id === 'new' ? `${details?.title} ${details?.artist}` :
+          overrideTarget.type === 'history' 
+            ? `${history.find(h => h.id === overrideTarget.id)?.details.title} ${history.find(h => h.id === overrideTarget.id)?.details.artist}`
+            : `${bucketList.find(b => b.id === overrideTarget.id)?.details.title} ${bucketList.find(b => b.id === overrideTarget.id)?.details.artist}`
+        ) : undefined}
       />
 
       {/* URL Capture Modal */}
@@ -2490,5 +3238,6 @@ function App() {
         className="hidden" 
       />
     </div>
+    </APIProvider>
   );
 }

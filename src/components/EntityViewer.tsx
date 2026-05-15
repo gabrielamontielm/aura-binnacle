@@ -26,11 +26,12 @@ interface EntityViewerProps {
   relatedBucketList: { id: string, image: string, details: ArtDetails }[];
   onBack: () => void;
   onUpdateFamousWorkImage: (workTitle: string, imageUrl: string) => void;
+  isViewOnly?: boolean;
 }
 
 import { ImageOverrideModal } from './ImageOverrideModal';
 
-export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, history, onArtworkClick, onEntityClick, onAddToBucketList, bucketListWorks, relatedBucketList, onBack, onUpdateFamousWorkImage }) => {
+export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtworks, history, onArtworkClick, onEntityClick, onAddToBucketList, bucketListWorks, relatedBucketList, onBack, onUpdateFamousWorkImage, isViewOnly }) => {
   const [editingWorkIndex, setEditingWorkIndex] = React.useState<number | null>(null);
   const [showFullAnalysis, setShowFullAnalysis] = React.useState(false);
 
@@ -203,13 +204,13 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                         <ValidatedImage 
                           src={work.imageUrl} 
                           alt={work.title} 
-                          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" 
+                          className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700" 
                         />
                       ) : (
                         <button 
-                          onClick={() => setEditingWorkIndex(i)}
-                          className="w-full h-full flex flex-col items-center justify-center gap-2 hover:bg-artistic-accent/5 transition-colors"
-                          title="Upload artwork image"
+                          onClick={() => !isViewOnly && setEditingWorkIndex(i)}
+                          className={`w-full h-full flex flex-col items-center justify-center gap-2 hover:bg-artistic-accent/5 transition-colors ${isViewOnly ? 'cursor-default' : ''}`}
+                          title={isViewOnly ? "No visual available" : "Upload artwork image"}
                         >
                           <Plus className="w-6 h-6 text-artistic-ink/20" />
                           <span className="text-[8px] uppercase tracking-[0.2em] font-bold opacity-20">No Visual Found</span>
@@ -290,7 +291,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                       <ValidatedImage 
                         src={art.image} 
                         alt={art.details.title} 
-                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                        className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700"
                       />
                     </div>
                     <div>
@@ -322,7 +323,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                       <ValidatedImage 
                         src={art.image} 
                         alt={art.details.title} 
-                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                        className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all duration-700"
                       />
                     </div>
                     <div>
