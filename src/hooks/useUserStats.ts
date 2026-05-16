@@ -58,6 +58,15 @@ export function useUserStats(user: User | null, initialProfile: UserProfile | nu
         ...stamp,
         userId: user.uid
       }), { merge: true });
+      
+      // Sync to public passport if sharing is active
+      if (userProfile?.isGalleryPublic || userProfile?.isBucketListPublic) {
+        const publicPath = `public_passports/${user.uid}/stamps`;
+        await setDoc(doc(db, publicPath, stamp.id), sanitizeForFirestore({
+          ...stamp,
+          userId: user.uid
+        }), { merge: true });
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }

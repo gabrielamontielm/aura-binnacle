@@ -121,6 +121,13 @@ service cloud.firestore {
       allow delete: if isOwner(userId) && isValidId(userId) && isValidId(itemId);
     }
 
+    match /public_passports/{userId}/stamps/{stampId} {
+      allow list: if isValidId(userId);
+      allow get: if isValidId(userId) && isValidId(stampId);
+      allow create, update: if isOwner(userId) && isValidId(userId) && isValidId(stampId);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(stampId);
+    }
+
     // Metadata Cache - AI generated or user cached
     // In this app, users can cache artist info they scan
     match /metadata_artists/{artistId} {

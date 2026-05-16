@@ -156,6 +156,10 @@
       "schema": "ArtItem",
       "description": "Shared bucket list artworks"
     },
+    "public_passports/{userId}/stamps/{stampId}": {
+      "schema": "MuseumStamp",
+      "description": "Shared museum stamps"
+    },
     "public_profiles/{userId}": {
       "schema": "UserProfile",
       "description": "Public user profile information"

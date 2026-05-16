@@ -1115,9 +1115,12 @@ function App() {
             try {
                 const userDoc = await getDoc(doc(db, 'public_profiles', sharedProfileUid));
                 if (userDoc.exists()) {
-                    const userData = userDoc.data();
+                    const userData = userDoc.data() as UserProfile;
                     const name = userData.displayName || userData.email?.split('@')[0] || 'User';
                     setSharedGalleryOwnerName(name);
+                    
+                    // Set the user stats for display (view only mode)
+                    setUserProfile(userData);
                 } else {
                     setSharedGalleryOwnerName('User');
                 }
@@ -1129,7 +1132,8 @@ function App() {
             try {
               await Promise.all([
                   fetchPublicGallery(sharedProfileUid, false), 
-                  fetchPublicBucketList(sharedProfileUid, false)
+                  fetchPublicBucketList(sharedProfileUid, false),
+                  fetchPublicPassport(sharedProfileUid, false)
               ]);
             } catch (err) {
               console.error("Error fetching shared data:", err);
@@ -1392,6 +1396,20 @@ function App() {
               await deleteDoc(docSnapshot.ref);
           }
         }
+
+        // Sync Passport stamps
+        if (nextPublic) {
+          for (const stamp of museumStamps) {
+              const docRef = doc(db, `public_passports/${user.uid}/stamps`, stamp.id);
+              await setDoc(docRef, sanitizeForFirestore({ ...stamp, userId: user.uid }), { merge: true });
+          }
+        } else {
+          const q = query(collection(db, `public_passports/${user.uid}/stamps`));
+          const snapshot = await getDocs(q);
+          for (const docSnapshot of snapshot.docs) {
+              await deleteDoc(docSnapshot.ref);
+          }
+        }
     } catch (err) {
         console.error("Profile sync failed", err);
         handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/public_profiles`);
@@ -1411,6 +1429,24 @@ function App() {
   const toggleGalleryPublic = async () => {
     // Deprecated in favor of toggleProfilePublic
     await toggleProfilePublic();
+  };
+
+  const fetchPublicPassport = async (uid: string, autoLoading = true) => {
+      if (autoLoading) setIsLoading(true);
+      const path = `public_passports/${uid}/stamps`;
+      try {
+        const q = query(collection(db, path));
+        const querySnapshot = await getDocs(q);
+        const stamps: MuseumStamp[] = [];
+        querySnapshot.forEach((doc) => {
+          stamps.push({ id: doc.id, ...doc.data() } as MuseumStamp);
+        });
+        setMuseumStamps(stamps);
+      } catch (err) {
+        console.error("Failed to load shared passport:", err);
+      } finally {
+        if (autoLoading) setIsLoading(false);
+      }
   };
 
   const fetchPublicGallery = async (uid: string, autoLoading = true) => {
@@ -2155,25 +2191,27 @@ function App() {
               </header>
               
               {userProfile ? (
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="md:col-span-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className={isViewOnly ? "md:col-span-3" : "md:col-span-2"}>
                        <AchievementSystem profile={userProfile} />
                     </div>
-                    <div className="space-y-8">
-                       <ArtQuiz 
-                        history={history} 
-                        bucketList={bucketList}
-                        onCorrect={(xp) => addXP(xp)} 
-                       />
-                       
-                       <div className="p-8 bg-artistic-ink text-artistic-bg rounded-3xl">
-                          <Compass className="w-8 h-8 mb-4 text-artistic-accent" />
-                          <h4 className="font-bold uppercase tracking-widest text-xs mb-2">Growth Tip</h4>
-                          <p className="text-[10px] opacity-60 leading-relaxed italic">
-                            Scanning artworks from movements you haven't explored yet yields double XP. Expand your aesthetic horizons to reach the status of "Grand Historian".
-                          </p>
-                       </div>
-                    </div>
+                    {!isViewOnly && (
+                      <div className="space-y-8">
+                         <ArtQuiz 
+                          history={history} 
+                          bucketList={bucketList}
+                          onCorrect={(xp) => addXP(xp)} 
+                         />
+                         
+                         <div className="p-8 bg-artistic-ink text-artistic-bg rounded-3xl">
+                            <Compass className="w-8 h-8 mb-4 text-artistic-accent" />
+                            <h4 className="font-bold uppercase tracking-widest text-xs mb-2">Growth Tip</h4>
+                            <p className="text-[10px] opacity-60 leading-relaxed italic">
+                              Scanning artworks from movements you haven't explored yet yields double XP. Expand your aesthetic horizons to reach the status of "Grand Historian".
+                            </p>
+                         </div>
+                      </div>
+                    )}
                  </div>
               ) : (
                 <div className="p-20 bg-artistic-shadow/10 rounded-3xl border border-dashed border-artistic-ink/10 text-center">
@@ -2199,11 +2237,12 @@ function App() {
         ) : view === 'passport' ? (
           <section className="w-full h-full overflow-y-auto bg-white p-6 md:p-20">
             <div className="max-w-6xl mx-auto">
-              {user ? (
+              {user || isViewOnly ? (
                  <MuseumPassport 
                   stamps={museumStamps} 
                   history={history}
                   onCheckIn={handleMuseumCheckIn} 
+                  isViewOnly={isViewOnly}
                  />
               ) : (
                 <div className="p-20 bg-artistic-shadow/10 rounded-3xl border border-dashed border-artistic-ink/10 text-center">

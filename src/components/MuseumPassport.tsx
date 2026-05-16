@@ -9,10 +9,11 @@ interface MuseumPassportProps {
   stamps: MuseumStamp[];
   history: HistoryItem[];
   onCheckIn: (stamp: MuseumStamp) => void;
+  isViewOnly?: boolean;
 }
 
 
-export const MuseumPassport: React.FC<MuseumPassportProps> = ({ stamps, history, onCheckIn }) => {
+export const MuseumPassport: React.FC<MuseumPassportProps> = ({ stamps, history, onCheckIn, isViewOnly }) => {
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -130,14 +131,16 @@ export const MuseumPassport: React.FC<MuseumPassportProps> = ({ stamps, history,
           </p>
         </div>
         
-        <button
-          onClick={handleCheckIn}
-          disabled={isCheckingIn}
-          className="flex items-center gap-3 px-8 py-4 bg-artistic-ink text-artistic-bg rounded-2xl text-[11px] uppercase font-bold tracking-[0.3em] hover:bg-artistic-accent transition-all shadow-xl shadow-artistic-ink/10 disabled:opacity-50"
-        >
-          {isCheckingIn ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
-          <span>{isCheckingIn ? 'Locating...' : 'Stamp My Passport'}</span>
-        </button>
+        {!isViewOnly && (
+          <button
+            onClick={handleCheckIn}
+            disabled={isCheckingIn}
+            className="flex items-center gap-3 px-8 py-4 bg-artistic-ink text-artistic-bg rounded-2xl text-[11px] uppercase font-bold tracking-[0.3em] hover:bg-artistic-accent transition-all shadow-xl shadow-artistic-ink/10 disabled:opacity-50"
+          >
+            {isCheckingIn ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+            <span>{isCheckingIn ? 'Locating...' : 'Stamp My Passport'}</span>
+          </button>
+        )}
       </div>
 
       {error && (
@@ -189,7 +192,7 @@ export const MuseumPassport: React.FC<MuseumPassportProps> = ({ stamps, history,
                     </span>
                 )}
 
-                {!isStamped && artworkCount > 0 && (
+                {!isStamped && artworkCount > 0 && !isViewOnly && (
                   <motion.button
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
