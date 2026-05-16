@@ -6,11 +6,81 @@ import { OAuth2Client } from "google-auth-library";
 import session from "express-session";
 import axios from "axios";
 import dotenv from "dotenv";
+import fs from "fs";
+import crypto from "crypto";
 import { GoogleGenAI, Type } from "@google/genai";
 
 dotenv.config();
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+
+// Simple persistent cache
+class AICache {
+  private cachePath: string;
+  private cache: Record<string, any> = {};
+  private isSaving = false;
+  private pendingSave = false;
+
+  constructor(name: string) {
+    this.cachePath = path.join(process.cwd(), `cache_${name}.json`);
+    this.load();
+  }
+
+  private load() {
+    try {
+      if (fs.existsSync(this.cachePath)) {
+        const data = fs.readFileSync(this.cachePath, 'utf8');
+        this.cache = JSON.parse(data);
+      }
+    } catch (e) {
+      console.error(`Failed to load cache ${this.cachePath}`, e);
+    }
+  }
+
+  private async save() {
+    if (this.isSaving) {
+      this.pendingSave = true;
+      return;
+    }
+
+    this.isSaving = true;
+    try {
+      await fs.promises.writeFile(this.cachePath, JSON.stringify(this.cache, null, 2));
+    } catch (e) {
+      console.error(`Failed to save cache ${this.cachePath}`, e);
+    } finally {
+      this.isSaving = false;
+      if (this.pendingSave) {
+        this.pendingSave = false;
+        this.save();
+      }
+    }
+  }
+
+  get(key: string) {
+    return this.cache[key];
+  }
+
+  set(key: string, value: any) {
+    this.cache[key] = value;
+    this.save();
+  }
+
+  generateKey(...parts: string[]) {
+    return parts.join('|').toLowerCase().trim();
+  }
+
+  generateImageKey(base64: string) {
+    return crypto.createHash('md5').update(base64).digest('hex');
+  }
+}
+
+const searchCache = new AICache('search');
+const recsCache = new AICache('recs');
+const entityCache = new AICache('entity');
+const quizCache = new AICache('quiz');
+const identifyCache = new AICache('identify');
+const itineraryCache = new AICache('itinerary');
 
 declare module 'express-session' {
   interface SessionData {
@@ -185,6 +255,10 @@ async function startServer() {
   app.post("/api/art/identify", async (req, res) => {
     try {
       const { base64Image, mimeType } = req.body;
+      const cacheKey = identifyCache.generateImageKey(base64Image);
+      const cached = identifyCache.get(cacheKey);
+      if (cached) return res.json(cached);
+
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [
@@ -223,7 +297,9 @@ async function startServer() {
         },
       });
 
-      res.json(JSON.parse(response.text || "{}"));
+      const result = JSON.parse(response.text || "{}");
+      identifyCache.set(cacheKey, result);
+      res.json(result);
     } catch (error) {
       console.error("Art Identification API Error:", error);
       res.status(500).json({ error: "Failed to identify artwork" });
@@ -234,6 +310,10 @@ async function startServer() {
   app.post("/api/art/search", async (req, res) => {
     try {
       const { query: searchQuery } = req.body;
+      const cacheKey = searchCache.generateKey(searchQuery);
+      const cached = searchCache.get(cacheKey);
+      if (cached) return res.json(cached);
+
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [
@@ -270,7 +350,9 @@ async function startServer() {
         },
       });
 
-      res.json(JSON.parse(response.text || "{}"));
+      const result = JSON.parse(response.text || "{}");
+      searchCache.set(cacheKey, result);
+      res.json(result);
     } catch (error) {
       console.error("Art Search API Error:", error);
       res.status(500).json({ error: "Failed to search artwork" });
@@ -281,14 +363,25 @@ async function startServer() {
   app.post("/api/art/recommendations", async (req, res) => {
     try {
       const { details } = req.body;
+      const cacheKey = recsCache.generateKey(details.title, details.artist);
+      const cached = recsCache.get(cacheKey);
+      if (cached) return res.json(cached);
+
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [
           {
             parts: [
               {
-                text: `Based on this artwork: "${details.title}" by ${details.artist} (${details.movement}), recommend 5 similar world-famous masterpieces. 
-                Explain why each is similar (e.g., same movement, thematic connection, or stylistic parallel).
+                text: `Based on this artwork: "${details.title}" by ${details.artist} (${details.movement}), build an "Artist Graph" of 5 deeply connected masterpieces. 
+                Instead of just simple visual similarity, look for semantic and historical connections:
+                1. Influenced by: An earlier work that directly shaped this one.
+                2. Later influence: A later masterpiece that was directly inspired by this work/artist.
+                3. Peer discovery: A work by a contemporary artist with a strong stylistic or thematic link.
+                4. Thematic sibling: A work from a different era or culture that shares the same deep human concern.
+                5. Technical parallel: A work with similar experimental application of medium or perspective.
+                
+                For each connection, provide a 'relationshipType' (e.g., 'Legacy', 'Inspiration', 'Peer', 'Thematic', 'Technique') and a 'relationshipDetail' (very short descriptive label like 'Direct Inspiration' or 'Stylistic Peer').
                 Format the response as JSON.`,
               },
             ],
@@ -308,9 +401,11 @@ async function startServer() {
                     artist: { type: Type.STRING },
                     museum: { type: Type.STRING },
                     reason: { type: Type.STRING },
-                    imageUrl: { type: Type.STRING }
+                    imageUrl: { type: Type.STRING },
+                    relationshipType: { type: Type.STRING },
+                    relationshipDetail: { type: Type.STRING }
                   },
-                  required: ["title", "artist", "reason"]
+                  required: ["title", "artist", "reason", "relationshipType", "relationshipDetail"]
                 }
               }
             },
@@ -319,7 +414,9 @@ async function startServer() {
         },
       });
 
-      res.json(JSON.parse(response.text || "{}"));
+      const result = JSON.parse(response.text || "{}");
+      recsCache.set(cacheKey, result);
+      res.json(result);
     } catch (error) {
       console.error("Recommendations API Error:", error);
       res.status(500).json({ error: "Failed to get recommendations" });
@@ -330,6 +427,10 @@ async function startServer() {
   app.post("/api/art/entity-details", async (req, res) => {
     try {
       const { name, type, contextPrompt } = req.body;
+      const cacheKey = entityCache.generateKey(name, type);
+      const cached = entityCache.get(cacheKey);
+      if (cached) return res.json(cached);
+
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [
@@ -369,6 +470,19 @@ async function startServer() {
                   },
                   required: ["title", "year"]
                 }
+              },
+              relatedEntities: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING },
+                    type: { type: Type.STRING }, // artist or movement
+                    relationship: { type: Type.STRING }, // influenced_by, influenced, collaborated_with, rival_of
+                    description: { type: Type.STRING }
+                  },
+                  required: ["name", "type", "relationship", "description"]
+                }
               }
             },
             required: ["name", "type", "yearsOrPeriod", "originOrRegion", "significance", "detailedDescription", "keyCharacteristics", "historicalImpact", "curatorialSummary", "famousWorks"],
@@ -376,7 +490,9 @@ async function startServer() {
         },
       });
 
-      res.json(JSON.parse(response.text || "{}"));
+      const result = JSON.parse(response.text || "{}");
+      entityCache.set(cacheKey, result);
+      res.json(result);
     } catch (error) {
       console.error("Entity Details API Error:", error);
       res.status(500).json({ error: "Failed to get entity details" });
@@ -387,6 +503,10 @@ async function startServer() {
   app.post("/api/art/itinerary", async (req, res) => {
     try {
       const { city, artworksText, interestsText } = req.body;
+      const cacheKey = itineraryCache.generateKey(city, artworksText, interestsText);
+      const cached = itineraryCache.get(cacheKey);
+      if (cached) return res.json(cached);
+
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [
@@ -442,7 +562,9 @@ async function startServer() {
         },
       });
 
-      res.json(JSON.parse(response.text || "{}"));
+      const result = JSON.parse(response.text || "{}");
+      itineraryCache.set(cacheKey, result);
+      res.json(result);
     } catch (error) {
       console.error("Itinerary API Error:", error);
       res.status(500).json({ error: "Failed to generate itinerary" });
@@ -452,6 +574,11 @@ async function startServer() {
   // Daily Quiz Endpoint
   app.get("/api/art/daily-quiz", async (req, res) => {
     try {
+      const today = new Date().toISOString().split('T')[0];
+      const cacheKey = quizCache.generateKey(today);
+      const cached = quizCache.get(cacheKey);
+      if (cached) return res.json(cached);
+
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [{
@@ -487,7 +614,9 @@ async function startServer() {
         }
       });
 
-      res.json(JSON.parse(response.text || "[]"));
+      const result = JSON.parse(response.text || "[]");
+      quizCache.set(cacheKey, result);
+      res.json(result);
     } catch (error) {
       console.error("Daily Quiz API Error:", error);
       res.status(500).json({ error: "Failed to generate quiz" });

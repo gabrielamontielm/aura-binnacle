@@ -150,7 +150,15 @@
     },
     "public_items/{userId}/items/{itemId}": {
       "schema": "ArtItem",
-      "description": "Shared artworks"
+      "description": "Shared gallery artworks"
+    },
+    "public_bucketlist/{userId}/items/{itemId}": {
+      "schema": "ArtItem",
+      "description": "Shared bucket list artworks"
+    },
+    "public_profiles/{userId}": {
+      "schema": "UserProfile",
+      "description": "Public user profile information"
     },
     "metadata_artists/{artistId}": {
       "schema": "EntityMetadata",

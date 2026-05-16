@@ -196,12 +196,12 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
               {details.famousWorks
                 .map((work, i) => {
                   const isInHistory = history.some(art => 
-                    art.details.title.toLowerCase() === work.title.toLowerCase() ||
-                    (art.details.title.toLowerCase().includes(work.title.toLowerCase()) && art.details.artist.toLowerCase() === details.name.toLowerCase())
+                    (art.details.title.toLowerCase() === work.title.toLowerCase() || art.details.title.toLowerCase().includes(work.title.toLowerCase())) && 
+                    (art.details.artist.toLowerCase() === details.name.toLowerCase() || art.details.artist.toLowerCase().includes(details.name.toLowerCase()))
                   );
                   const isInBucketList = bucketListWorks.some(item => 
-                    (item.details.title.toLowerCase() === work.title.toLowerCase() && item.details.year === work.year) ||
-                    (item.details.title.toLowerCase().includes(work.title.toLowerCase()) && item.details.artist.toLowerCase() === details.name.toLowerCase())
+                    (item.details.title.toLowerCase() === work.title.toLowerCase() && item.details.artist.toLowerCase() === details.name.toLowerCase()) ||
+                    (item.details.title.toLowerCase().includes(work.title.toLowerCase()) && item.details.artist.toLowerCase().includes(details.name.toLowerCase()))
                   );
                   const isSaved = isInHistory || isInBucketList;
 

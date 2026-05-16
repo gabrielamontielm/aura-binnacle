@@ -124,6 +124,12 @@ export interface EntityDetails {
   historicalImpact: string;
   curatorialSummary: string;
   famousWorks: { title: string; year: string; museum?: string; location?: string; imageUrl?: string }[];
+  relatedEntities?: {
+    name: string;
+    type: 'artist' | 'movement';
+    relationship: 'influenced_by' | 'influenced' | 'collaborated_with' | 'rival_of';
+    description: string;
+  }[];
 }
 
 /**
@@ -205,6 +211,8 @@ export interface Recommendation {
   museum?: string;
   reason: string;
   imageUrl?: string;
+  relationshipType: string;
+  relationshipDetail: string;
 }
 
 /**

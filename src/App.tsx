@@ -4,7 +4,7 @@ import { ArtGalleryViewer } from './components/ArtGalleryViewer';
 import { GooglePhotosPicker } from './components/GooglePhotosPicker';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { MuseumAutocomplete } from './components/MuseumAutocomplete';
-import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus, Filter, SlidersHorizontal, ChevronDown, MapPin, Menu, X, Globe, PlusCircle, Image as ImageIcon, Copy, RefreshCw, MoreVertical, Edit3, Save, Search, Sparkles, Maximize2, Star } from 'lucide-react';
+import { Camera, Upload, Loader2, Info, Palette, History as HistoryIcon, ArrowRight, Trash2, LayoutGrid, Clock, Share2, Network, LogIn, LogOut, User as UserIcon, Check, Compass, Plus, Filter, SlidersHorizontal, ChevronDown, ChevronRight, MapPin, Menu, X, Globe, PlusCircle, Image as ImageIcon, Copy, RefreshCw, MoreVertical, Edit3, Save, Search, Sparkles, Maximize2, Star, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as heic2anyModule from 'heic2any';
 import { identifyArtwork, identifyArtworkFromUrl, ArtDetails, EntityDetails, getEntityDetails, sanitizeId, getRecommendations, Recommendation, identifyArtworkByText, searchArtwork } from './services/artService';
@@ -16,8 +16,9 @@ import { ArtQuiz } from './components/ArtQuiz';
 import { MuseumPassport } from './components/MuseumPassport';
 import { EntityViewer } from './components/EntityViewer';
 import { ItineraryPlanner } from './components/ItineraryPlanner';
+import { CuratorInsights } from './components/CuratorInsights';
 import { MUSEUMS } from './constants';
-import { auth, googleProvider, db, handleFirestoreError, OperationType, sanitizeForFirestore } from './services/firebase';
+import { auth, googleProvider, db, handleFirestoreError, OperationType, sanitizeForFirestore, hasValidConfig } from './services/firebase';
 import { ValidatedImage } from './components/ValidatedImage';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
@@ -31,14 +32,16 @@ const API_KEY =
   (globalThis as any).GOOGLE_MAPS_PLATFORM_KEY || 
   '';
 
+import { useUserStats } from './hooks/useUserStats';
+
 export default /**
  * Main Application Component for AURA.
  * Handles authentication, image processing, gallery management, and routing.
  */
 function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [museumStamps, setMuseumStamps] = useState<MuseumStamp[]>([]);
+  const [initialProfile, setInitialProfile] = useState<UserProfile | null>(null);
+  const { userProfile, setUserProfile, museumStamps, setMuseumStamps, handleMuseumCheckIn, fetchUserPassport, addXP, updateLevelingOnScan } = useUserStats(user, initialProfile);
   const [image, setImage] = useState<string | null>(null);
   const [details, setDetails] = useState<ArtDetails | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -69,118 +72,6 @@ function App() {
     });
   };
   
-  const addXP = async (amount: number) => {
-    if (!user || !userProfile) return;
-    
-    const newXP = (userProfile.totalXP || 0) + amount;
-    const currentLevel = userProfile.level || 1;
-    const nextLevelXP = currentLevel * 100;
-    const newLevel = newXP >= nextLevelXP ? currentLevel + 1 : currentLevel;
-    
-    const updatedProfile = {
-      ...userProfile,
-      totalXP: newXP,
-      level: newLevel
-    };
-    
-    setUserProfile(updatedProfile);
-    try {
-      await setDoc(doc(db, 'users', user.uid), sanitizeForFirestore(updatedProfile), { merge: true });
-      // Sync to public profile if any sharing is enabled
-      if (isGalleryPublic || isBucketListPublic) {
-        await setDoc(doc(db, 'public_profiles', user.uid), sanitizeForFirestore({
-          displayName: updatedProfile.displayName || user.displayName || user.email?.split('@')[0] || 'User',
-          photoURL: updatedProfile.photoURL || user.photoURL,
-          level: updatedProfile.level,
-          totalXP: updatedProfile.totalXP,
-          badges: updatedProfile.badges
-        }), { merge: true });
-      }
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
-    }
-  };
-
-  const handleMuseumCheckIn = async (stamp: MuseumStamp) => {
-    if (!user) return;
-    
-    setMuseumStamps(prev => [stamp, ...prev]);
-    const path = `users/${user.uid}/passport`;
-    try {
-      await setDoc(doc(db, path, stamp.id), sanitizeForFirestore({
-        ...stamp,
-        userId: user.uid
-      }), { merge: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, path);
-    }
-    
-    // Reward XP for check-in
-    addXP(200);
-  };
-
-  const updateLevelingOnScan = async (details: ArtDetails) => {
-    if (!user || !userProfile) return;
-
-    const movement = details.movement || 'Unknown';
-    const currentMovementScans = userProfile.scansByMovement?.[movement] || 0;
-    const newMovementScans = currentMovementScans + 1;
-    
-    const updatedScansByMovement = {
-      ...userProfile.scansByMovement,
-      [movement]: newMovementScans
-    };
-
-    // Check for new badges
-    const newBadges = [...(userProfile.badges || [])];
-    const movementBadges = [
-      { id: 'impressionist-trainee', movement: 'Impressionism', threshold: 1 },
-      { id: 'impressionist-expert', movement: 'Impressionism', threshold: 5 },
-      { id: 'renaissance-apprentice', movement: 'Renaissance', threshold: 1 },
-      { id: 'renaissance-master', movement: 'Renaissance', threshold: 5 },
-      { id: 'modernist-explorer', movement: 'Modernism', threshold: 1 },
-    ];
-
-    movementBadges.forEach(b => {
-      if (movement === b.movement && newMovementScans >= b.threshold && !newBadges.includes(b.id)) {
-        newBadges.push(b.id);
-      }
-    });
-
-    const totalScans = history.length + 1;
-    if (totalScans >= 1 && !newBadges.includes('connoisseur-initiate')) newBadges.push('connoisseur-initiate');
-    if (totalScans >= 10 && !newBadges.includes('art-historian')) newBadges.push('art-historian');
-
-    const updatedProfile: UserProfile = {
-      ...userProfile,
-      scansByMovement: updatedScansByMovement,
-      badges: newBadges,
-      totalXP: (userProfile.totalXP || 0) + 10 // 10 XP per scan
-    };
-
-    // Level up check
-    const currentLevel = updatedProfile.level || 1;
-    if (updatedProfile.totalXP >= currentLevel * 100) {
-      updatedProfile.level = currentLevel + 1;
-    }
-
-    setUserProfile(updatedProfile);
-    try {
-      await setDoc(doc(db, 'users', user.uid), sanitizeForFirestore(updatedProfile), { merge: true });
-      // Sync to public profile if any sharing is enabled
-      if (isGalleryPublic || isBucketListPublic) {
-        await setDoc(doc(db, 'public_profiles', user.uid), sanitizeForFirestore({
-          displayName: updatedProfile.displayName || user.displayName || user.email?.split('@')[0] || 'User',
-          photoURL: updatedProfile.photoURL || user.photoURL,
-          level: updatedProfile.level,
-          totalXP: updatedProfile.totalXP,
-          badges: updatedProfile.badges
-        }), { merge: true });
-      }
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
-    }
-  };
   const [sharedGalleryOwnerName, setSharedGalleryOwnerName] = useState<string | null>(null);
   const userInterests = useMemo(() => {
     const interests = new Set<string>();
@@ -278,7 +169,7 @@ function App() {
     }
   };
 
-  const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist' | 'passport' | 'achievements' | 'itinerary'>('home');
+  const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist' | 'passport' | 'achievements' | 'itinerary' | 'insights'>('home');
   
   useEffect(() => {
     if (details && view === 'home') {
@@ -309,6 +200,24 @@ function App() {
     setRecommendations([]);
 
     try {
+      // Check if it's already in our "database" (history or bucketList)
+      const existingItem = history.find(h => 
+        h.details.title.toLowerCase() === rec.title.toLowerCase() && 
+        h.details.artist.toLowerCase() === rec.artist.toLowerCase()
+      ) || bucketList.find(b => 
+        b.details.title.toLowerCase() === rec.title.toLowerCase() && 
+        b.details.artist.toLowerCase() === rec.artist.toLowerCase()
+      );
+
+      if (existingItem) {
+        setDetails(existingItem.details);
+        setImage(existingItem.image);
+        setProgress(100);
+        setView('home');
+        setIsLoading(false);
+        return;
+      }
+
       // If we have an image URL, use it
       if (rec.imageUrl) {
         setImage(rec.imageUrl);
@@ -664,16 +573,20 @@ function App() {
           : baseDefaults;
         
         setUserProfile(userData as UserProfile);
+        setInitialProfile(userData as UserProfile);
         setIsGalleryPublic(userData.isGalleryPublic || false);
         setIsBucketListPublic(userData.isBucketListPublic || false);
         
         await setDoc(doc(db, 'public_profiles', currentUser.uid), {
+          uid: currentUser.uid,
           displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
           photoURL: currentUser.photoURL,
           email: currentUser.email,
           level: userData.level || 1,
           totalXP: userData.totalXP || 0,
-          badges: userData.badges || []
+          badges: userData.badges || [],
+          isGalleryPublic: userData.isGalleryPublic || false,
+          isBucketListPublic: userData.isBucketListPublic || false
         }, { merge: true });
         
         await setDoc(userDoc, {
@@ -718,21 +631,6 @@ function App() {
     }
   }, [user, isViewOnly]);
 
-  const fetchUserPassport = async (uid: string) => {
-    const path = `users/${uid}/passport`;
-    try {
-      const q = query(collection(db, path));
-      const querySnapshot = await getDocs(q);
-      const stamps: MuseumStamp[] = [];
-      querySnapshot.forEach((doc) => {
-        stamps.push({ id: doc.id, ...doc.data() } as MuseumStamp);
-      });
-      setMuseumStamps(stamps);
-    } catch (err) {
-      handleFirestoreError(err, OperationType.GET, path);
-    }
-  };
-
   const fetchUserHistory = async (uid: string) => {
     const path = `users/${uid}/items`;
     try {
@@ -768,6 +666,10 @@ function App() {
   };
 
   const handleLogin = async () => {
+    if (!hasValidConfig) {
+      setError("Firebase is not fully configured. Please use the platform tools to set up Firebase (Database + Auth).");
+      return;
+    }
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (err: any) {
@@ -775,7 +677,11 @@ function App() {
         return; // User closed the popup, not a real error
       }
       console.error("Login failed", err);
-      setError("Login failed. Please try again.");
+      if (err?.code === 'auth/auth-domain-config-required') {
+        setError("Firebase Auth configuration is missing 'authDomain'. Check your configuration.");
+      } else {
+        setError(`Login failed: ${err.message || 'Please try again.'}`);
+      }
     }
   };
 
@@ -919,7 +825,7 @@ function App() {
       setProgress(100);
       setDetails(result);
       setView('home');
-      updateLevelingOnScan(result);
+      updateLevelingOnScan(result, history.length);
       
       // Duplicate Check: Stop if already in history
       const isDuplicate = history.some(item => 
@@ -1036,8 +942,8 @@ function App() {
       setImage(url);
       setProgress(100);
       setDetails(result);
-      updateLevelingOnScan(result);
-
+      updateLevelingOnScan(result, history.length);
+      
       const isDuplicate = history.some(item => 
         item.details.title === result.title && 
         item.details.artist === result.artist
@@ -1095,6 +1001,26 @@ function App() {
     setImage(null);
 
     try {
+      // Check if it's already in our "database" (history or bucketList)
+      const existingItem = history.find(h => 
+        h.details.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        searchQuery.toLowerCase().includes(h.details.title.toLowerCase())
+      ) || bucketList.find(b => 
+        b.details.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        searchQuery.toLowerCase().includes(b.details.title.toLowerCase())
+      );
+
+      if (existingItem) {
+        setDetails(existingItem.details);
+        setImage(existingItem.image);
+        setProgress(100);
+        setView('home');
+        setIsSearchVisible(false);
+        setSearchQuery('');
+        setIsLoading(false);
+        return;
+      }
+
       setProgress(40);
       const result = await searchArtwork(searchQuery);
       setProgress(70);
@@ -1104,8 +1030,8 @@ function App() {
       setDetails(result);
       setImage((result as any).imageUrl || null);
       setView('home');
-      updateLevelingOnScan(result);
-
+      updateLevelingOnScan(result, history.length);
+      
       // Duplicate Check
       const isDuplicate = history.some(item => 
         item.details.title === result.title && 
@@ -1418,12 +1344,15 @@ function App() {
             isBucketListPublic: nextPublic 
           }), { merge: true }),
           setDoc(doc(db, 'public_profiles', user.uid), sanitizeForFirestore({
+            uid: user.uid,
             displayName: user.displayName || user.email?.split('@')[0] || 'User',
             photoURL: user.photoURL,
             email: user.email,
             level: userProfile?.level || 1,
             totalXP: userProfile?.totalXP || 0,
-            badges: userProfile?.badges || []
+            badges: userProfile?.badges || [],
+            isGalleryPublic: nextPublic,
+            isBucketListPublic: nextPublic
           }), { merge: true })
         ]);
         
@@ -1665,6 +1594,7 @@ function App() {
         <div 
           className="flex items-center space-x-2 md:space-x-4 cursor-pointer group"
           onClick={() => { setView('home'); reset(); setIsMobileMenuOpen(false); }}
+          title="Return to home screen and clear current scan"
         >
           <div className="w-8 h-8 md:w-12 md:h-12 bg-white/50 backdrop-blur rounded-full flex items-center justify-center p-1.5 border border-artistic-ink/5 overflow-hidden shadow-sm group-hover:scale-105 transition-transform duration-500">
             <img 
@@ -1683,6 +1613,12 @@ function App() {
             className={`${view === 'galleries' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
           >
             Gallery
+          </button>
+          <button 
+            onClick={() => navigateTo('insights')} 
+            className={`${view === 'insights' ? 'text-artistic-accent' : 'hover:text-artistic-accent'} transition-colors`}
+          >
+            Insights
           </button>
           <button 
             onClick={() => navigateTo('bucketlist')} 
@@ -1780,6 +1716,7 @@ function App() {
             <button 
               onClick={reset}
               className="hidden md:block text-[9px] font-bold uppercase tracking-[0.2em] text-artistic-ink/40 hover:text-artistic-ink transition-colors"
+              title="Clear current scan results and upload a new masterpiece"
             >
               Reset
             </button>
@@ -1917,6 +1854,13 @@ function App() {
                 >
                   <span>Gallery</span>
                   {view === 'galleries' && <div className="w-1.5 h-1.5 bg-artistic-accent rounded-full" />}
+                </button>
+                <button 
+                  onClick={() => { navigateTo('insights'); setIsMobileMenuOpen(false); }} 
+                  className={`${view === 'insights' ? 'text-artistic-accent' : 'text-artistic-ink/60'} text-left flex items-center justify-between group`}
+                >
+                  <span>Insights</span>
+                  {view === 'insights' && <div className="w-1.5 h-1.5 bg-artistic-accent rounded-full" />}
                 </button>
                 <button 
                   onClick={() => { navigateTo('bucketlist'); setIsMobileMenuOpen(false); }} 
@@ -2319,8 +2263,8 @@ function App() {
                   <AnimatePresence>
                     {filteredBucketList.map((item) => {
                       const isInHistory = history.some(h => 
-                        h.details.title.toLowerCase() === item.details.title.toLowerCase() ||
-                        (h.details.title.toLowerCase().includes(item.details.title.toLowerCase()) && h.details.artist.toLowerCase() === item.details.artist.toLowerCase())
+                        (h.details.title.toLowerCase() === item.details.title.toLowerCase() || h.details.title.toLowerCase().includes(item.details.title.toLowerCase())) && 
+                        (h.details.artist.toLowerCase() === item.details.artist.toLowerCase() || h.details.artist.toLowerCase().includes(item.details.artist.toLowerCase()))
                       );
                       
                       return (
@@ -2425,6 +2369,16 @@ function App() {
               )}
             </div>
           </section>
+        ) : view === 'insights' ? (
+          <section className="w-full h-full overflow-y-auto bg-white p-6 md:p-20">
+            <div className="max-w-6xl mx-auto">
+              <header className="mb-16">
+                <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-4">Gallery Intelligence</span>
+                <h2 className="text-3xl md:text-5xl font-serif tracking-tighter italic">Curator Analytics</h2>
+              </header>
+              <CuratorInsights history={history} />
+            </div>
+          </section>
         ) : view === 'galleries' ? (
           <section className="w-full h-full overflow-y-auto bg-white p-6 md:p-20">
             <div className="max-w-6xl mx-auto">
@@ -2439,6 +2393,14 @@ function App() {
                 </div>
                 <div className="flex gap-4 md:gap-8 items-center flex-wrap">
                   <div className="flex items-center gap-2 md:gap-4">
+                    <button 
+                      onClick={() => navigateTo('insights')}
+                      className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border border-artistic-ink/10 text-[9px] md:text-[10px] uppercase font-bold tracking-widest hover:border-artistic-accent hover:text-artistic-accent transition-all bg-white"
+                    >
+                      <TrendingUp className="w-3 h-3 text-artistic-accent" />
+                      <span className="hidden sm:inline">Insights</span>
+                    </button>
+                    
                     <button 
                       onClick={() => setShowFilters(!showFilters)}
                       className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-full border text-[9px] md:text-[10px] uppercase font-bold tracking-widest transition-all ${showFilters ? 'bg-artistic-ink text-artistic-bg border-artistic-ink' : 'bg-white text-artistic-ink border-artistic-ink/10 hover:border-artistic-ink'}`}
@@ -2952,48 +2914,50 @@ function App() {
                             <RefreshCw className={`w-4 h-4 text-artistic-accent ${isLoading ? 'animate-spin' : 'group-hover/refresh:rotate-180 transition-transform duration-500'}`} />
                           </button>
 
-                          <div className="relative">
-                            <button 
-                              onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
-                              className="p-2 hover:bg-artistic-shadow/10 rounded-full transition-all"
-                              title="Curator Actions"
-                            >
-                              <MoreVertical className="w-4 h-4 text-artistic-accent" />
-                            </button>
-                            
-                            <AnimatePresence>
-                              {isActionMenuOpen && (
-                                <>
-                                  <div className="fixed inset-0 z-10" onClick={() => setIsActionMenuOpen(false)} />
-                                  <motion.div
-                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-2xl border border-artistic-ink/5 p-2 z-20 overflow-hidden"
-                                  >
-                                    <button 
-                                      onClick={() => { addToBucketList(details.title, details.artist, details.museum || details.location || '', image || ''); setIsActionMenuOpen(false); }}
-                                      className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
+                          {!isViewOnly && (
+                            <div className="relative">
+                              <button 
+                                onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
+                                className="p-2 hover:bg-artistic-shadow/10 rounded-full transition-all"
+                                title="Curator Actions"
+                              >
+                                <MoreVertical className="w-4 h-4 text-artistic-accent" />
+                              </button>
+                              
+                              <AnimatePresence>
+                                {isActionMenuOpen && (
+                                  <>
+                                    <div className="fixed inset-0 z-10" onClick={() => setIsActionMenuOpen(false)} />
+                                    <motion.div
+                                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                      className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-2xl border border-artistic-ink/5 p-2 z-20 overflow-hidden"
                                     >
-                                      <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
-                                        <Clock className="w-4 h-4" />
-                                      </div>
-                                      <span className="text-[10px] uppercase font-bold tracking-widest opacity-60">Bucket List</span>
-                                    </button>
-                                    <button 
-                                      onClick={() => { handleAddToGallery(); setIsActionMenuOpen(false); }}
-                                      className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
-                                    >
-                                      <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
-                                        <LayoutGrid className="w-4 h-4" />
-                                      </div>
-                                      <span className="text-[10px] uppercase font-bold tracking-widest opacity-60">Add to Gallery</span>
-                                    </button>
-                                  </motion.div>
-                                </>
-                              )}
-                            </AnimatePresence>
-                          </div>
+                                      <button 
+                                        onClick={() => { addToBucketList(details.title, details.artist, details.museum || details.location || '', image || ''); setIsActionMenuOpen(false); }}
+                                        className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
+                                      >
+                                        <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
+                                          <Clock className="w-4 h-4" />
+                                        </div>
+                                        <span className="text-[10px] uppercase font-bold tracking-widest opacity-60">Bucket List</span>
+                                      </button>
+                                      <button 
+                                        onClick={() => { handleAddToGallery(); setIsActionMenuOpen(false); }}
+                                        className="w-full flex items-center gap-3 p-3 hover:bg-artistic-shadow rounded-xl transition-colors text-left group"
+                                      >
+                                        <div className="w-8 h-8 bg-artistic-accent/10 rounded-full flex items-center justify-center text-artistic-accent group-hover:bg-artistic-accent group-hover:text-white transition-all">
+                                          <LayoutGrid className="w-4 h-4" />
+                                        </div>
+                                        <span className="text-[10px] uppercase font-bold tracking-widest opacity-60">Add to Gallery</span>
+                                      </button>
+                                    </motion.div>
+                                  </>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-4 group/title mb-6">
@@ -3002,12 +2966,12 @@ function App() {
                         </h1>
                         {(() => {
                           const isInHistory = history.some(h => 
-                            h.details.title.toLowerCase() === details.title.toLowerCase() ||
-                            (h.details.title.toLowerCase().includes(details.title.toLowerCase()) && h.details.artist.toLowerCase() === details.artist.toLowerCase())
+                            (h.details.title.toLowerCase() === details.title.toLowerCase() || h.details.title.toLowerCase().includes(details.title.toLowerCase())) && 
+                            (h.details.artist.toLowerCase() === details.artist.toLowerCase() || h.details.artist.toLowerCase().includes(details.artist.toLowerCase()))
                           );
                           const isInBucketList = bucketList.some(b => 
-                            b.details.title.toLowerCase() === details.title.toLowerCase() ||
-                            (b.details.title.toLowerCase().includes(details.title.toLowerCase()) && b.details.artist.toLowerCase() === details.artist.toLowerCase())
+                            (b.details.title.toLowerCase() === details.title.toLowerCase() || b.details.title.toLowerCase().includes(details.title.toLowerCase())) && 
+                            (b.details.artist.toLowerCase() === details.artist.toLowerCase() || b.details.artist.toLowerCase().includes(details.artist.toLowerCase()))
                           );
                           if (isInHistory) return (
                             <div className="flex items-center gap-2 bg-artistic-ink text-artistic-bg px-4 py-1.5 rounded-full shadow-xl border border-artistic-ink">
@@ -3154,10 +3118,13 @@ function App() {
                           </p>
                         </div>
 
-                        {/* Similar Recommendations */}
+                        {/* Artist Graph Connections */}
                         <div className="pt-12 border-t border-artistic-ink/5">
                           <div className="flex items-center justify-between mb-6">
-                            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40">Similar Discoveries</span>
+                            <div className="flex flex-col">
+                              <span className="text-[9px] uppercase tracking-widest font-bold opacity-40">Artist Graph Connections</span>
+                              <span className="text-[8px] opacity-20 uppercase tracking-[0.2em]">Tracing the web of influence</span>
+                            </div>
                             {isRecsLoading && <Loader2 className="w-3 h-3 animate-spin opacity-20" />}
                           </div>
                           
@@ -3170,14 +3137,14 @@ function App() {
                               </div>
                             ) : recommendations.length > 0 ? (
                               <div className="grid grid-cols-1 gap-3">
-                                {recommendations.slice(0, 3).map((rec, i) => {
+                                {recommendations.slice(0, 5).map((rec, i) => {
                                   const isInHistory = history.some(h => 
-                                    h.details.title.toLowerCase() === rec.title.toLowerCase() ||
-                                    (h.details.title.toLowerCase().includes(rec.title.toLowerCase()) && h.details.artist.toLowerCase() === rec.artist.toLowerCase())
+                                    (h.details.title.toLowerCase() === rec.title.toLowerCase() || h.details.title.toLowerCase().includes(rec.title.toLowerCase())) && 
+                                    (h.details.artist.toLowerCase() === rec.artist.toLowerCase() || h.details.artist.toLowerCase().includes(rec.artist.toLowerCase()))
                                   );
                                   const isInBucketList = bucketList.some(b => 
-                                    b.details.title.toLowerCase() === rec.title.toLowerCase() ||
-                                    (b.details.title.toLowerCase().includes(rec.title.toLowerCase()) && b.details.artist.toLowerCase() === rec.artist.toLowerCase())
+                                    (b.details.title.toLowerCase() === rec.title.toLowerCase() || b.details.title.toLowerCase().includes(rec.title.toLowerCase())) && 
+                                    (b.details.artist.toLowerCase() === rec.artist.toLowerCase() || b.details.artist.toLowerCase().includes(rec.artist.toLowerCase()))
                                   );
                                   const isSaved = isInHistory || isInBucketList;
 
@@ -3188,8 +3155,11 @@ function App() {
                                       animate={{ opacity: 1, x: 0 }}
                                       transition={{ delay: i * 0.1 }}
                                       onClick={() => handleRecommendationClick(rec)}
-                                      className="p-4 bg-white border border-artistic-ink/5 rounded-2xl hover:shadow-lg transition-all text-left flex items-center gap-4 group relative"
+                                      className="p-4 bg-white border border-artistic-ink/5 rounded-2xl hover:shadow-lg transition-all text-left flex items-center gap-4 group relative overflow-hidden"
                                     >
+                                      {/* Connection Line Visual */}
+                                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-artistic-accent/20 group-hover:w-1.5 transition-all" />
+                                      
                                       <div className="w-12 h-12 bg-artistic-shadow rounded-xl flex-shrink-0 overflow-hidden relative">
                                         {rec.imageUrl ? (
                                           <img src={rec.imageUrl} className={`w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all ${isSaved ? 'opacity-40' : ''}`} alt={rec.title} />
@@ -3205,6 +3175,18 @@ function App() {
                                         )}
                                       </div>
                                       <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          {rec.relationshipType && (
+                                            <span className="text-[6px] bg-artistic-accent text-white px-1.5 py-0.5 rounded uppercase font-black tracking-widest">
+                                              {rec.relationshipType}
+                                            </span>
+                                          )}
+                                          {rec.relationshipDetail && (
+                                            <span className="text-[7px] text-artistic-ink/60 uppercase font-bold tracking-widest truncate">
+                                              {rec.relationshipDetail}
+                                            </span>
+                                          )}
+                                        </div>
                                         <div className="flex items-center gap-2">
                                           <h4 className="text-[10px] font-bold truncate group-hover:text-artistic-accent mb-0.5">{rec.title}</h4>
                                           {isSaved && (
@@ -3218,6 +3200,8 @@ function App() {
                                       <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                                         {isSaved ? (
                                           <Check className="w-4 h-4 text-artistic-accent" />
+                                        ) : isViewOnly ? (
+                                          <ChevronRight className="w-4 h-4 text-artistic-accent" />
                                         ) : (
                                           <PlusCircle className="w-4 h-4 text-artistic-accent" />
                                         )}
@@ -3227,7 +3211,7 @@ function App() {
                                 })}
                               </div>
                             ) : !isRecsLoading && details && (
-                              <p className="text-[9px] italic opacity-30 text-center py-4">No similar masterpieces found in current archives.</p>
+                              <p className="text-[9px] italic opacity-30 text-center py-4">No connections found in current archives.</p>
                             )}
                           </div>
                         </div>
@@ -3366,6 +3350,7 @@ function App() {
       />
       <ArtGalleryViewer 
         isOpen={isGalleryViewerOpen}
+        isViewOnly={isViewOnly}
         onClose={() => {
           setIsGalleryViewerOpen(false);
           setGalleryTarget(null);
@@ -3409,7 +3394,6 @@ function App() {
             ? history.find(h => h.id === galleryTarget.id)?.details.artist || 'Artist'
             : bucketList.find(b => b.id === galleryTarget.id)?.details.artist || 'Artist'
         ) : 'Artist'}
-        isViewOnly={isViewOnly}
       />
       <footer className="h-12 bg-artistic-ink text-artistic-bg flex items-center justify-between px-10 text-[9px] uppercase tracking-[0.2em] font-medium shrink-0">
         <div className="flex items-center gap-6">

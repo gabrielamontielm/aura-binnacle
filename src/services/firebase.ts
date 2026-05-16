@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { getFirestore, doc, getDocFromServer, collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import firebaseConfigBase from '../../firebase-applet-config.json';
 
-// Fallback config if JSON import fails or is empty
+// Fallback config if JSON is missing or empty
 const defaultConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
@@ -14,21 +14,33 @@ const defaultConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
 };
 
+const filteredConfigBase = Object.fromEntries(
+  Object.entries(firebaseConfigBase).filter(([_, v]) => v !== "")
+);
+
 const firebaseConfig = {
   ...defaultConfig,
-  ...firebaseConfigBase,
-  // Ensure apiKey is prioritized from env if provided, otherwise from JSON
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (firebaseConfigBase as any).apiKey || defaultConfig.apiKey || "placeholder"
+  ...filteredConfigBase,
 };
 
-if (!firebaseConfig.projectId || firebaseConfig.projectId === "") {
-  console.error("Firebase Error: projectId is missing. Check firebase-applet-config.json or environment variables.");
-  console.error("Config Base:", firebaseConfigBase);
-  console.error("Merged Config:", firebaseConfig);
+// Check for required values
+export const hasValidConfig = !!(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.authDomain);
+
+if (!hasValidConfig) {
+  const missing = [];
+  if (!firebaseConfig.apiKey) missing.push("apiKey");
+  if (!firebaseConfig.projectId) missing.push("projectId");
+  if (!firebaseConfig.authDomain) missing.push("authDomain");
+  console.warn(`Firebase Error: missing ${missing.join(", ")}. App will run in limited mode.`);
 }
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); 
+// Initialize only if we have a config that doesn't look like empty strings
+const app = initializeApp(
+  hasValidConfig 
+    ? firebaseConfig 
+    : { ...firebaseConfig, apiKey: "MISSING", projectId: "MISSING", authDomain: "MISSING.firebaseapp.com" } 
+);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || "default"); 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
@@ -44,7 +56,9 @@ export async function testConnection() {
   }
 }
 
-testConnection();
+if (hasValidConfig) {
+  testConnection();
+}
 
 export enum OperationType {
   CREATE = 'create',

@@ -16,13 +16,8 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isGalleryOwner() {
-      // In this app, any signed-in user is a gallery owner
-      return isSignedIn();
-    }
-
     function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128;
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
     function incoming() {
@@ -37,8 +32,8 @@ service cloud.firestore {
     function isValidUserProfile(data) {
       return (!('uid' in data) || data.uid == request.auth.uid)
         && (!('email' in data) || (data.email is string && data.email.size() <= 256))
-        && (!('displayName' in data) || data.displayName == null || data.displayName is string)
-        && (!('photoURL' in data) || data.photoURL == null || data.photoURL is string)
+        && (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 128))
+        && (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 1024))
         && (!('lastLogin' in data) || data.lastLogin is number)
         && (!('isGalleryPublic' in data) || data.isGalleryPublic is bool)
         && (!('isBucketListPublic' in data) || data.isBucketListPublic is bool)
@@ -47,28 +42,21 @@ service cloud.firestore {
     }
 
     function isValidArtDetails(details) {
-      return (!('title' in details) || details.title is string)
-        && (!('artist' in details) || details.artist is string)
-        && (!('year' in details) || (details.year == null || details.year is string || details.year is number))
-        && (!('description' in details) || (details.description == null || details.description is string))
-        && (!('historicalContext' in details) || (details.historicalContext == null || details.historicalContext is string))
-        && (!('museum' in details) || (details.museum == null || details.museum is string))
-        && (!('location' in details) || (details.location == null || details.location is string))
-        && (!('movement' in details) || (details.movement == null || details.movement is string))
-        && (!('type' in details) || (details.type == null || details.type is string))
-        && (!('dimensions' in details) || (details.dimensions == null || details.dimensions is string))
-        && (!('medium' in details) || (details.medium == null || details.medium is string))
-        && (!('funFact' in details) || (details.funFact == null || details.funFact is string))
-        && (!('significance' in details) || (details.significance == null || details.significance is string))
-        && (!('audioGuide' in details) || (details.audioGuide == null || details.audioGuide is string))
-        && (!('entities' in details) || (details.entities == null || details.entities is list));
+      return (!('title' in details) || (details.title is string && details.title.size() <= 256))
+        && (!('artist' in details) || (details.artist is string && details.artist.size() <= 256))
+        && (!('year' in details) || details.year == null || details.year is string || details.year is number)
+        && (!('description' in details) || details.description == null || (details.description is string && details.description.size() <= 10000))
+        && (!('movement' in details) || details.movement == null || (details.movement is string && details.movement.size() <= 128))
+        && (!('type' in details) || details.type == null || (details.type is string && details.type.size() <= 128))
+        && (!('image' in details) || details.image == null || (details.image is string && details.image.size() <= 2048));
     }
 
     function isValidArtItem(data, itemId) {
       return (!('id' in data) || data.id == itemId)
-        && (!('userId' in data) || data.userId is string)
+        && (!('userId' in data) || (data.userId is string && data.userId.size() <= 128))
         && (!('details' in data) || (data.details is map && isValidArtDetails(data.details)))
-        && (!('image' in data) || data.image is string);
+        && (!('image' in data) || (data.image is string && data.image.size() <= 2048))
+        && (!('timestamp' in data) || data.timestamp is number);
     }
 
     // Collection: Users
@@ -110,50 +98,47 @@ service cloud.firestore {
       }
     }
 
+    // Public Profiles - Anyone can read, only owner can write
     match /public_profiles/{userId} {
-      allow get: if true;
-      allow write: if isOwner(userId);
+      allow get: if isValidId(userId);
+      allow list: if false; // Prevention of user scraping
+      allow create, update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      allow delete: if isOwner(userId) && isValidId(userId);
     }
 
+    // Public items - Anyone can read their own or public ones
     match /public_items/{userId}/items/{itemId} {
-      allow list: if true;
-      allow get: if true;
-      allow create, update: if isOwner(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
-      allow delete: if isOwner(userId) && isValidId(itemId);
+      allow list: if isValidId(userId);
+      allow get: if isValidId(userId) && isValidId(itemId);
+      allow create, update: if isOwner(userId) && isValidId(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(itemId);
     }
 
     match /public_bucketlist/{userId}/items/{itemId} {
-      allow list: if true;
-      allow get: if true;
-      allow create, update: if isOwner(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
-      allow delete: if isOwner(userId) && isValidId(itemId);
+      allow list: if isValidId(userId);
+      allow get: if isValidId(userId) && isValidId(itemId);
+      allow create, update: if isOwner(userId) && isValidId(userId) && isValidId(itemId) && isValidArtItem(incoming(), itemId);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(itemId);
     }
 
-    // Collections: Metadata Cache (Entities)
+    // Metadata Cache - AI generated or user cached
+    // In this app, users can cache artist info they scan
     match /metadata_artists/{artistId} {
-      allow read: if true;
-      allow write: if isGalleryOwner();
+      allow read: if isValidId(artistId);
+      allow write: if isSignedIn() && isValidId(artistId);
     }
     match /metadata_movements/{movementId} {
-      allow read: if true;
-      allow write: if isGalleryOwner();
+      allow read: if isValidId(movementId);
+      allow write: if isSignedIn() && isValidId(movementId);
     }
     match /metadata_museums/{museumId} {
-      allow read: if true;
-      allow write: if isGalleryOwner();
-    }
-    match /metadata_types/{typeId} {
-      allow read: if true;
-      allow write: if isGalleryOwner();
-    }
-    match /metadata_locations/{locationId} {
-      allow read: if true;
-      allow write: if isGalleryOwner();
+      allow read: if isValidId(museumId);
+      allow write: if isSignedIn() && isValidId(museumId);
     }
 
     match /daily_quizzes/{date} {
       allow read: if true;
-      allow write: if isGalleryOwner();
+      allow write: if isSignedIn();
     }
 
     match /test/connection {

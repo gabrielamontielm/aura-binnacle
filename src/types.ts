@@ -1,4 +1,5 @@
 import { ArtDetails } from './services/artService';
+export type { ArtDetails };
 
 export interface HistoryItem {
   id: string;

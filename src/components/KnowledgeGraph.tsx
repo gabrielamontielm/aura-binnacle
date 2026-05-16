@@ -224,9 +224,51 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ items, bucketLis
       if (tid) links.push({ source: `typ_${tid}`, target: `work_${item.id}`, label: 'Categorized As' });
       if (musId) links.push({ source: `mus_${musId}`, target: `work_${item.id}`, label: 'Exhibited At' });
     });
+
+    // 7. Add Semantic Influence Links from entityDetails cache
+    Object.entries(entityDetails).forEach(([nodeId, details]) => {
+      const entity = details as EntityDetails;
+      if (entity.relatedEntities) {
+        entity.relatedEntities.forEach(rel => {
+          const relId = rel.type === 'artist' ? `art_${sanitizeId(rel.name)}` : `mov_${sanitizeId(rel.name)}`;
+          
+          // Only add the related node if it doesn't exist yet
+          const exists = nodes.find(n => n.id === relId);
+          if (!exists) {
+            nodes.push({
+              id: relId,
+              name: rel.name,
+              type: rel.type as any,
+              val: 7, // Smaller since it's a discovered/secondary node
+              color: rel.type === 'artist' ? typeColors.artist : typeColors.movement,
+              icon: rel.type === 'artist' ? '👤' : '📔',
+              info: rel.description
+            });
+          }
+
+          // Add the semantic link
+          const relationshipLabel = rel.relationship.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          
+          // Avoid duplicate links
+          const linkExists = links.find(l => 
+            (l.source === nodeId && l.target === relId) || 
+            (l.source === relId && l.target === nodeId)
+          );
+          
+          if (!linkExists) {
+            // Directional logic for influence
+            if (rel.relationship === 'influenced_by') {
+              links.push({ source: relId, target: nodeId, label: relationshipLabel });
+            } else {
+              links.push({ source: nodeId, target: relId, label: relationshipLabel });
+            }
+          }
+        });
+      }
+    });
     
     return { nodes, links };
-  }, [items, bucketListItems]);
+  }, [items, bucketListItems, entityDetails]);
 
   const toggleType = (type: string) => {
     setVisibleTypes(prev => {
