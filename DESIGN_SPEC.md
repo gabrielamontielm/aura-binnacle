@@ -45,10 +45,19 @@ The graph visualizes the "Art Genome"—how movements, artists, and artworks are
     - Single-click on a node dims the rest of the graph (opacity 15%) and highlights direct neighbors and connecting edges in Coral (#FF4B4B).
 - **Adaptive Rendering**: Labels use a `linkCanvasObject` to render text that aligns with edges and adjusts size based on zoom level.
 
-### 2.4 User Profiles & Sharing
-- **Guest Mode**: Supports full functionality using local state, persisting to Firestore only if the user chooses to "Sync" or Login.
-- **Public Profiles**: Users can toggle a `public` flag in Firestore.
-- **Deep Linking**: Profile links (`?sharedProfile=UID`) render the app in a **View-Only mode**, disabling scan/delete actions but allowing full graph exploration.
+### 2.4 Curator Analytics & Timeline
+- **Analytics Visualization**: Utilizes `recharts` to provide responsive, high-performance data visualizations.
+    - **Movement Dominance**: A bar chart mapping collection count to art movements.
+    - **Medium Composition**: A pie chart visualizing the breadth of artistic mediums (Oil, Sculpture, etc.).
+    - **Curatorial Diversity**: Interactive "Diversity Score" cards based on asset type classification.
+- **Chronological Timeline**: 
+    - **Algorithm**: Extracts years from artwork metadata using a regex-based parser that normalizes BCE and AD dates into a signed integer timeline.
+    - **UI**: A motion-enhanced, horizontal-scrollable timeline that allows users to traverse their collection through human history.
+
+### 2.5 User Profiles & Privacy
+- **Granular Privacy**: Users can independently toggle public visibility for "Gallery" and "Bucket List" sections via `isGalleryPublic` and `isBucketListPublic` flags in Firestore.
+- **Auto-Sync to Public Docs**: Toggling privacy triggers a background process that clones/deletes items between the private user space and the high-performance `public_profiles`, `public_items`, and `public_bucketlist` collections.
+- **Deep Linking**: Shared profile links automatically set the app to **View-Only mode**, hiding administrative curator controls and replacing "Add" actions with non-interactive status indicators.
 
 ### 2.5 Canonical Entity Normalization
 - **Normalization Engine**: All extracted names (Artists, Movements, Museums) are processed through `normalizeName` to ensure consistent casing and spacing.

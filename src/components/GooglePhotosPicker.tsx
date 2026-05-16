@@ -15,6 +15,15 @@ interface GooglePhotosPickerProps {
   onSelect: (url: string) => void;
 }
 
+/**
+ * GooglePhotosPicker Component
+ * 
+ * Integrates with Google Photos API via server-side OAuth.
+ * Allows users to:
+ * - Connect their Google account via a secure popup flow.
+ * - Paginate through their photo library.
+ * - Select and import images directly into AURA for analysis.
+ */
 export const GooglePhotosPicker: React.FC<GooglePhotosPickerProps> = ({ isOpen, onClose, onSelect }) => {
   const [photos, setPhotos] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(false);

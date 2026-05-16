@@ -1,23 +1,39 @@
-import React, { useMemo } from 'react';
-import { motion } from 'motion/react';
+import React, { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { HistoryItem } from '../types';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
 } from 'recharts';
-import { TrendingUp, Clock, Palette, Shapes, History as HistoryIcon, Layout } from 'lucide-react';
+import { TrendingUp, Clock, Palette, Shapes, History as HistoryIcon, Layout, X, Sparkles } from 'lucide-react';
 
 interface CuratorInsightsProps {
   history: HistoryItem[];
 }
 
+/**
+ * CuratorInsights Component
+ * 
+ * Provides an interactive visualization of the user's art collection.
+ * Features:
+ * - Chronological Journey: A scrollable timeline of artworks based on their historical year.
+ * - Movement Dominance: Bar chart showing distribution across art movements.
+ * - Medium Composition: Pie chart showing the mix of artistic mediums.
+ * - Curatorial Diversity: Summary stats of collection types.
+ */
 export const CuratorInsights: React.FC<CuratorInsightsProps> = ({ history }) => {
-  // 1. Data Parsing & Aggregation
+  const [selectedMovement, setSelectedMovement] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+
+  /**
+   * Aggregates and transforms history data for visualization.
+   * Extracts years (supporting BCE), movements, mediums, and types.
+   */
   const stats = useMemo(() => {
     const movements: Record<string, number> = {};
     const mediums: Record<string, number> = {};
     const types: Record<string, number> = {};
-    const timelineData: { year: number; title: string; image: string; artist: string }[] = [];
+    const timelineData: { year: number; displayYear: string; title: string; image: string; artist: string }[] = [];
 
     history.forEach(item => {
       const details = item.details;
@@ -111,7 +127,7 @@ export const CuratorInsights: React.FC<CuratorInsightsProps> = ({ history }) => 
               >
                 {/* Year Marker */}
                 <div className="absolute -top-10 flex flex-col items-center">
-                  <span className="text-sm font-serif italic text-artistic-accent whitespace-nowrap">{(item as any).displayYear}</span>
+                  <span className="text-sm font-serif italic text-artistic-accent whitespace-nowrap">{item.displayYear}</span>
                   <div className="w-px h-6 bg-artistic-accent/30 mt-1" />
                 </div>
 
@@ -173,6 +189,8 @@ export const CuratorInsights: React.FC<CuratorInsightsProps> = ({ history }) => 
                   fill="#D4AF37" 
                   radius={[0, 4, 4, 0]} 
                   animationDuration={1500}
+                  className="cursor-pointer"
+                  onClick={(data) => setSelectedMovement(data.name)}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -201,9 +219,13 @@ export const CuratorInsights: React.FC<CuratorInsightsProps> = ({ history }) => 
                   outerRadius={100}
                   paddingAngle={5}
                   dataKey="value"
+                  className="cursor-pointer"
                 >
                   {stats.mediumChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={COLORS[index % COLORS.length]} 
+                    />
                   ))}
                 </Pie>
                 <Tooltip 
@@ -222,6 +244,117 @@ export const CuratorInsights: React.FC<CuratorInsightsProps> = ({ history }) => 
           </div>
         </motion.div>
 
+        {/* Selected Movement Masterpieces */}
+        <AnimatePresence>
+          {selectedMovement && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:col-span-2 overflow-hidden"
+            >
+              <div className="bg-artistic-accent/5 rounded-3xl p-8 border border-artistic-accent/10">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-5 h-5 text-artistic-accent" />
+                    <h3 className="font-serif italic text-2xl text-artistic-ink">
+                      {selectedMovement} <span className="font-sans text-xs not-italic uppercase tracking-widest text-artistic-ink/40 ml-2">Movements</span>
+                    </h3>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedMovement(null)}
+                    className="p-2 hover:bg-artistic-accent/10 rounded-full transition-colors text-artistic-ink/40 hover:text-artistic-ink"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+                  {history
+                    .filter(item => item.details.movement === selectedMovement)
+                    .map((item, index) => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="group relative"
+                      >
+                        <div className="aspect-[3/4] rounded-lg overflow-hidden bg-artistic-shadow border border-artistic-ink/5 shadow-sm group-hover:shadow-xl transition-all duration-500 group-hover:-translate-y-1">
+                          <img 
+                            src={item.image} 
+                            alt={item.details.title} 
+                            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute inset-0 bg-artistic-ink/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                            <p className="text-[9px] text-white font-bold truncate">{item.details.title}</p>
+                            <p className="text-[7px] text-white/70 uppercase tracking-widest truncate">{item.details.artist}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Selected Type Masterpieces */}
+        <AnimatePresence>
+          {selectedType && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:col-span-2 overflow-hidden"
+            >
+              <div className="bg-artistic-bg rounded-3xl p-8 border border-artistic-ink/10 shadow-inner">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <Layout className="w-5 h-5 text-artistic-ink" />
+                    <h3 className="font-serif italic text-2xl text-artistic-ink">
+                      {selectedType} <span className="font-sans text-xs not-italic uppercase tracking-widest text-artistic-ink/40 ml-2">Diversity Collection</span>
+                    </h3>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedType(null)}
+                    className="p-2 hover:bg-artistic-ink/5 rounded-full transition-colors text-artistic-ink/40 hover:text-artistic-ink"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+                  {history
+                    .filter(item => item.details.type === selectedType)
+                    .map((item, index) => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="group relative"
+                      >
+                        <div className="aspect-square rounded-full overflow-hidden bg-artistic-shadow border border-artistic-ink/5 shadow-sm hover:scale-110 transition-transform duration-500">
+                          <img 
+                            src={item.image} 
+                            alt={item.details.title} 
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute inset-0 bg-artistic-ink/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4 text-center">
+                            <p className="text-[8px] text-white font-bold uppercase tracking-widest leading-tight">{item.details.title}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Collection Density Overlay - using Type data */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -239,16 +372,19 @@ export const CuratorInsights: React.FC<CuratorInsightsProps> = ({ history }) => 
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
               {stats.typeChartData.map((type, index) => (
-                <motion.div 
+                <motion.button 
                   key={type.name}
+                  onClick={() => setSelectedType(type.name === selectedType ? null : type.name)}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   transition={{ delay: 0.3 + (index * 0.1) }}
-                  className="bg-white/10 rounded-2xl p-4 border border-white/5"
+                  className={`text-left rounded-2xl p-4 border transition-all ${selectedType === type.name ? 'bg-artistic-accent border-artistic-accent text-artistic-ink' : 'bg-white/10 border-white/5 hover:border-white/20'}`}
                 >
-                  <p className="text-3xl font-serif text-artistic-accent mb-1">{type.count}</p>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-60 line-clamp-1">{type.name}</p>
-                </motion.div>
+                  <p className={`text-3xl font-serif mb-1 ${selectedType === type.name ? 'text-artistic-ink' : 'text-artistic-accent'}`}>{type.count}</p>
+                  <p className={`text-[10px] font-bold uppercase tracking-[0.2em] line-clamp-1 ${selectedType === type.name ? 'text-artistic-ink' : 'opacity-60'}`}>{type.name}</p>
+                </motion.button>
               ))}
             </div>
           </div>

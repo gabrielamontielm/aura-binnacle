@@ -39,13 +39,22 @@ export default /**
  * Handles authentication, image processing, gallery management, and routing.
  */
 function App() {
+  // User & Profile State
   const [user, setUser] = useState<User | null>(null);
   const [initialProfile, setInitialProfile] = useState<UserProfile | null>(null);
   const { userProfile, setUserProfile, museumStamps, setMuseumStamps, handleMuseumCheckIn, fetchUserPassport, addXP, updateLevelingOnScan } = useUserStats(user, initialProfile);
+  
+  // Artwork Discovery State
   const [image, setImage] = useState<string | null>(null);
   const [details, setDetails] = useState<ArtDetails | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [isRecsLoading, setIsRecsLoading] = useState(false);
+  
+  // UI & Navigation State
+  const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist' | 'passport' | 'achievements' | 'itinerary' | 'insights'>('home');
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [tempLocation, setTempLocation] = useState('');
   const [isEditingMuseum, setIsEditingMuseum] = useState(false);
@@ -54,13 +63,16 @@ function App() {
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<EntityDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  
+  // Collection State
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [bucketList, setBucketList] = useState<HistoryItem[]>([]);
   const [isGalleryPublic, setIsGalleryPublic] = useState(false);
   const [isBucketListPublic, setIsBucketListPublic] = useState(false);
 
+  /**
+   * Deduplicates gallery items to prevent identical artworks from cluttering the UI.
+   */
   const deduplicateItems = (items: HistoryItem[]) => {
     const seen = new Set<string>();
     return items.filter(item => {
@@ -169,8 +181,6 @@ function App() {
     }
   };
 
-  const [view, setView] = useState<'home' | 'galleries' | 'entity-viewer' | 'bucketlist' | 'passport' | 'achievements' | 'itinerary' | 'insights'>('home');
-  
   useEffect(() => {
     if (details && view === 'home') {
       const fetchRecs = async () => {
@@ -381,7 +391,6 @@ function App() {
     setDetails(previous.details || null);
   };
   const [galleryMode, setGalleryMode] = useState<'grid' | 'graph' | 'map'>('grid');
-  const [bucketList, setBucketList] = useState<HistoryItem[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Filtering State for the Gallery and Bucket List

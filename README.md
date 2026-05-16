@@ -12,12 +12,15 @@ AURA is a mobile-first web application designed for art enthusiasts to scan, ide
 - **Google Photos Integration**: Authenticate with your Google account to import artworks directly from your Google Photos library.
 - **Artwork Scanning & Identification**: Instantly identify artworks using Google Gemini AI. Get details on artist, year, movement, medium, and historical context.
 - **Advanced Gallery Filtering**: Filter your curated collection by medium, museum, and year range with support for multiple selections.
+- **Curator Analytics & Insights**: Explore your collection's distribution across movements, mediums, and curatorial diversity using interactive charts.
+- **Chronological Timeline**: An interactive, visual timeline of your gallery, showing how your collection spans across human history (with support for BCE/BC dates).
 - **Interactive Knowledge Graph**: Visualize relationships between artists, movements, and museums with directional edges and edge labels. Features include:
     - **Recursive Collapsing**: Collapse nodes to simplify complex views.
     - **Contextual Highlighting**: Select a node to highlight its neighborhood and dim the rest of the graph.
     - **Adaptive Detail**: Labels and icons scale based on zoom level.
 - **Bucket List**: Keep track of masterpieces you wish to see in person. Support for Guest mode allows use without an account.
-- **Social Sharing**: Share your curated gallery or bucket list with unique public profile links. Support for view-only modes.
+- **Social Sharing & Privacy**: Share your curated gallery or bucket list with unique public profile links. Toggle your gallery visibility on/off for complete control over your public presence.
+- **View-Only Security**: Shared links automatically disable "Add to" actions for visiting curators.
 
 ## 🛠️ System Requirements & Prerequisites
 

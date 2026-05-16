@@ -70,21 +70,36 @@ Plan your future museum visits by keeping a list of "must-see" works.
 
 ---
 
-## 🔗 Sharing Your Collection
+## 📊 Analytics & Insights
 
-Showcase your curated selections to the world.
+Gain deeper understanding of your collection through the **Insights** tab.
+
+-   **Chronological Journey**: A stunning visual timeline mapping your collection from ancient history to modern day. 
+    -   Supports BCE and AD dates automatically.
+    -   Horizontal scroll through the eras you've explored.
+-   **Curator Analytics**: 
+    -   **Movement Dominance**: See which art movements define your taste.
+    -   **Medium Composition**: Understand your preference for different artistic mediums.
+    -   **Diversity Score**: Track how many unique eras and types of art you've curated.
+
+---
+
+## 🔗 Sharing & Privacy
+
+Showcase your curated selections while maintaining control over your privacy.
+
+### Privacy Controls
+In your **Profile** or **Gallery** settings, you can independently control what the world sees:
+-   **Gallery Privacy**: Toggle whether your main collection is visible to public visitors.
+-   **Bucket List Privacy**: Toggle whether your wishlist is public or remains private.
 
 ### Sharing Your Profile
-1.  Open the **Gallery** or **Bucket List** view.
-2.  Toggle **Share Profile** to **ON**.
-3.  Once public, a specialized share link becomes available.
-4.  Copy and send the URL to your friends.
+1.  Navigate to **Gallery** or **Bucket List**.
+2.  Toggle the **Public Sharing** button to **ON**.
+3.  Copy your unique curator link to share your perspective with others.
 
-### View-Only Mode
-When someone clicks your sharing link:
--   They can browse your Gallery and Bucket List.
--   They can see all the details and the Knowledge Graph.
--   **Security**: They cannot delete items, edit your profile, or perform any modifications.
+### View-Only Security
+Shared links provide an immersive view of your collection while protecting your account. Visitors can explore your gallery, insights, and graph, but **administrative actions** (like adding/deleting) are automatically disabled for them.
 
 ---
 

@@ -33,10 +33,14 @@ AURA is a mobile-first web application designed for art enthusiasts to scan, ide
 - **Hierarchical Mapping:** Locations link to Museums, and Museums link to Artworks.
 - **Interactivity:** Clicking a node filters the gallery to show related works.
 
-### 4. Social Sharing
+### 4. Data Visualization & Insights
+- **Curator Analytics:** Visual charts (using Recharts) showing collection distribution across art movements, mediums, and diversity metrics.
+- **Chronological Timeline:** An interactive timeline view of the gallery, mapping artworks across history (supporting BCE/AD).
+
+### 5. Social Sharing & Privacy
 - **Public Profiles:** Users can generate a unique sharing link.
-- **Toggle Privacy:** Users can choose to make their Gallery or Bucket List public/private.
-- **View-Only Mode:** Visitors using a shared link can browse the collection but cannot modify it.
+- **Granular Privacy:** Users can toggle Gallery or Bucket List visibility for their public profiles independently.
+- **View-Only Security:** Interaction menus are disabled for visiting curators on shared profiles.
 
 ## Technical Requirements
 

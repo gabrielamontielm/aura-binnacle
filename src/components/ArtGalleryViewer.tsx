@@ -24,6 +24,16 @@ interface ArtGalleryViewerProps {
   isViewOnly?: boolean;
 }
 
+/**
+ * ArtGalleryViewer Component
+ * 
+ * An advanced media viewer for inspecting artwork collections.
+ * Supports:
+ * - High-resolution zoom and pan using motion gestures.
+ * - Automatic slideshow with configurable playback.
+ * - Interactive filmstrip for quick navigation.
+ * - Dynamic image addition/removal (disabled in view-only mode).
+ */
 export const ArtGalleryViewer: React.FC<ArtGalleryViewerProps> = ({
   isOpen,
   onClose,
