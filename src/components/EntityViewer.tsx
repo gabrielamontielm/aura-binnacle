@@ -46,7 +46,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
       <div className="w-full lg:w-1/2 p-6 md:p-10 lg:p-20 flex flex-col justify-center bg-white border-b lg:border-b-0 lg:border-r border-artistic-ink/5 relative lg:sticky lg:top-0 lg:h-screen overflow-y-auto">
         <button 
           onClick={onBack}
-          className="absolute top-6 left-6 md:top-8 md:left-8 flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest opacity-40 hover:opacity-100 hover:text-artistic-accent transition-all group"
+          className="absolute top-6 left-6 md:top-8 md:left-8 flex items-center gap-2 text-xs uppercase font-bold tracking-widest opacity-40 hover:opacity-100 hover:text-artistic-accent transition-all group"
         >
           <ArrowRight className="w-3 h-3 rotate-180 group-hover:-translate-x-1 transition-transform" />
           <span>Back to previous</span>
@@ -55,7 +55,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
           <motion.span 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="uppercase text-[9px] md:text-[10px] tracking-[0.4em] font-bold text-artistic-accent block mb-6 md:mb-8"
+            className="uppercase text-[11px] md:text-xs tracking-[0.4em] font-bold text-artistic-accent block mb-6 md:mb-8"
           >
             Curatorial Report: {
               details.type === 'artist' ? 'The Master' : 
@@ -75,7 +75,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
             {details.name}
           </motion.h1>
 
-          <div className="flex flex-wrap gap-4 md:gap-8 items-center opacity-40 uppercase text-[8px] md:text-[9px] font-bold tracking-[0.2em] mb-8 md:mb-12">
+          <div className="flex flex-wrap gap-4 md:gap-8 items-center opacity-40 uppercase text-[11px] md:text-[11px] font-bold tracking-[0.2em] mb-8 md:mb-12">
             <div className="flex items-center gap-2">
               <Calendar className="w-3 h-3" />
               <span>{details.yearsOrPeriod}</span>
@@ -96,7 +96,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
             {!showFullAnalysis && (
               <button 
                 onClick={() => setShowFullAnalysis(true)}
-                className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-[0.2em] text-artistic-accent hover:opacity-70 transition-all group"
+                className="flex items-center gap-2 text-xs uppercase font-bold tracking-[0.2em] text-artistic-accent hover:opacity-70 transition-all group"
               >
                 <span>Read Full Exploration</span>
                 <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
@@ -128,7 +128,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                 className="space-y-16"
               >
                 <section>
-                  <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6 px-1">
+                  <span className="text-[11px] uppercase tracking-widest font-bold opacity-40 block mb-6 px-1">
                     Deep Curatorial Analysis
                   </span>
                   <div className="prose prose-sm prose-slate max-w-none">
@@ -141,7 +141,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                 </section>
 
                 <section>
-                  <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6">Historical Impact & Legacy</span>
+                  <span className="text-[11px] uppercase tracking-widest font-bold opacity-40 block mb-6">Historical Impact & Legacy</span>
                   <div className="relative">
                     <div className="absolute -left-6 top-0 bottom-0 w-px bg-artistic-accent/20" />
                     <p className="text-sm leading-relaxed text-artistic-ink/80 text-justify">
@@ -152,7 +152,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                 
                 <button 
                   onClick={() => setShowFullAnalysis(false)}
-                  className="text-[9px] uppercase font-bold tracking-[0.2em] opacity-40 hover:opacity-100 hover:text-artistic-accent transition-all"
+                  className="text-[11px] uppercase font-bold tracking-[0.2em] opacity-40 hover:opacity-100 hover:text-artistic-accent transition-all"
                 >
                   Collapse Analysis
                 </button>
@@ -168,7 +168,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                 <p className="text-xs font-bold uppercase tracking-widest opacity-20 mb-4">Full Neural Analysis Available</p>
                 <button 
                   onClick={() => setShowFullAnalysis(true)}
-                  className="px-6 py-3 bg-white border border-artistic-ink/10 rounded-xl text-[10px] uppercase font-bold tracking-widest hover:bg-artistic-ink hover:text-white transition-all shadow-sm"
+                  className="px-6 py-3 bg-white border border-artistic-ink/10 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-artistic-ink hover:text-white transition-all shadow-sm"
                 >
                   Unlocking Deep Insights
                 </button>
@@ -177,7 +177,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
           </AnimatePresence>
 
           <section>
-            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6">Defining Characteristics</span>
+            <span className="text-[11px] uppercase tracking-widest font-bold opacity-40 block mb-6">Defining Characteristics</span>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {details.keyCharacteristics.map((trait, i) => (
                 <div key={i} className="flex items-start gap-3 p-4 bg-white/50 backdrop-blur-sm rounded-xl border border-artistic-ink/5">
@@ -189,7 +189,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
           </section>
 
           <section>
-            <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6 px-1">
+            <span className="text-[11px] uppercase tracking-widest font-bold opacity-40 block mb-6 px-1">
               Missing Masterpieces
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -221,7 +221,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                             title={isViewOnly ? "No visual available" : "Upload artwork image"}
                           >
                             <Plus className="w-6 h-6 text-artistic-ink/20" />
-                            <span className="text-[8px] uppercase tracking-[0.2em] font-bold opacity-20">No Visual Found</span>
+                            <span className="text-[11px] uppercase tracking-[0.2em] font-bold opacity-20">No Visual Found</span>
                           </button>
                         )}
                         
@@ -245,7 +245,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className={`${isInHistory ? 'bg-artistic-ink text-artistic-bg' : 'bg-white/80 text-artistic-accent'} backdrop-blur-sm px-3 py-1.5 rounded-full border border-artistic-ink/10 flex items-center gap-2 shadow-xl`}>
                               {isInHistory ? <HistoryIcon className="w-2.5 h-2.5" /> : <Star className="w-2.5 h-2.5" />}
-                              <span className="text-[8px] font-bold uppercase tracking-widest">
+                              <span className="text-[11px] font-bold uppercase tracking-widest">
                                 {isInHistory ? 'In Gallery' : 'In Bucket'}
                               </span>
                             </div>
@@ -254,11 +254,11 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                       </div>
 
                       <div>
-                        <p className="text-[10px] font-bold truncate leading-tight mb-1 flex items-center gap-2">
+                        <p className="text-xs font-bold truncate leading-tight mb-1 flex items-center gap-2">
                           {work.title}
                           {isSaved && <Check className="w-2.5 h-2.5 text-artistic-accent" />}
                         </p>
-                        <div className="flex items-center gap-1.5 opacity-40 uppercase text-[8px] tracking-widest font-bold">
+                        <div className="flex items-center gap-1.5 opacity-40 uppercase text-[11px] tracking-widest font-bold">
                           <span>{work.year}</span>
                           {work.museum && (
                             <>
@@ -295,14 +295,14 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                 art.details.title.toLowerCase().includes(work.title.toLowerCase()) || 
                 work.title.toLowerCase().includes(art.details.title.toLowerCase())
               )).length === details.famousWorks.length && (
-                <p className="text-[10px] italic opacity-40 px-1">You have captured all primary recognized works by this artist in your binnacle!</p>
+                <p className="text-xs italic opacity-40 px-1">You have captured all primary recognized works by this artist in your binnacle!</p>
               )}
             </div>
           </section>
 
           {relatedBucketList.length > 0 && (
             <section>
-              <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6 px-1">
+              <span className="text-[11px] uppercase tracking-widest font-bold opacity-40 block mb-6 px-1">
                 In Your Bucket List ({relatedBucketList.length})
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -331,11 +331,11 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                       </div>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold truncate flex items-center gap-1">
+                      <p className="text-xs font-bold truncate flex items-center gap-1">
                         {React.createElement(getTypeIcon(art.details.type), { className: 'w-3 h-3 text-artistic-accent' })}
                         {art.details.title}
                       </p>
-                      <p className="text-[9px] opacity-40 uppercase tracking-widest mt-1">{art.details.year} • {art.details.type}</p>
+                      <p className="text-[11px] opacity-40 uppercase tracking-widest mt-1">{art.details.year} • {art.details.type}</p>
                     </div>
                   </div>
                 ))}
@@ -345,7 +345,7 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
 
           {relatedArtworks.length > 0 && (
             <section>
-              <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 block mb-6 px-1">
+              <span className="text-[11px] uppercase tracking-widest font-bold opacity-40 block mb-6 px-1">
                 Represented in Your Collection ({relatedArtworks.length})
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -374,11 +374,11 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
                       </div>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold truncate flex items-center gap-1">
+                      <p className="text-xs font-bold truncate flex items-center gap-1">
                         {React.createElement(getTypeIcon(art.details.type), { className: 'w-3 h-3 text-artistic-accent' })}
                         {art.details.title}
                       </p>
-                      <p className="text-[9px] opacity-40 uppercase tracking-widest mt-1">{art.details.year} • {art.details.type}</p>
+                      <p className="text-[11px] opacity-40 uppercase tracking-widest mt-1">{art.details.year} • {art.details.type}</p>
                     </div>
                   </div>
                 ))}
@@ -388,8 +388,8 @@ export const EntityViewer: React.FC<EntityViewerProps> = ({ details, relatedArtw
 
           <footer className="pt-8 flex justify-between items-end border-t border-artistic-ink/10">
             <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-widest font-bold opacity-40 mb-2">Digital Archivist</span>
-              <span className="text-[10px] font-bold tracking-widest">AURA_REPORT_KB_2026</span>
+              <span className="text-[11px] uppercase tracking-widest font-bold opacity-40 mb-2">Digital Archivist</span>
+              <span className="text-xs font-bold tracking-widest">AURA_REPORT_KB_2026</span>
             </div>
             <button 
               onClick={onBack}

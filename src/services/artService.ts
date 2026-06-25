@@ -47,6 +47,27 @@ export async function searchArtwork(query: string): Promise<ArtDetails> {
   }
 }
 
+export interface MuseumMasterpiece {
+  title: string;
+  artist: string;
+  year: string;
+  movement: string;
+  medium: string;
+  description: string;
+  imageUrl?: string;
+}
+
+export interface MuseumMasterpiecesResult {
+  museum: string;
+  city?: string;
+  masterpieces: MuseumMasterpiece[];
+}
+
+export async function getMuseumMasterpieces(museum: string, force = false): Promise<MuseumMasterpiecesResult> {
+  const response = await axios.post('/api/museum/masterpieces', { museum, force });
+  return response.data;
+}
+
 /**
  * Returns a canonical document ID for an entity.
  */

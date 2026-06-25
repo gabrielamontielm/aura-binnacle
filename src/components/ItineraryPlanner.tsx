@@ -79,7 +79,7 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
       <div className="p-10 max-w-4xl mx-auto">
         <div className="mb-12">
             <h2 className="text-3xl font-serif italic text-artistic-ink mb-2">Masterpiece Routes</h2>
-            <p className="text-[10px] uppercase tracking-[0.3em] font-black opacity-30">Strategic Discovery Planner</p>
+            <p className="text-xs uppercase tracking-[0.3em] font-black opacity-30">Strategic Discovery Planner</p>
         </div>
 
         {cityGroups.length === 0 ? (
@@ -120,7 +120,7 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
     <div className="p-10 max-w-5xl mx-auto">
       <button 
         onClick={() => { setSelectedCity(null); setItinerary(null); }}
-        className="flex items-center gap-2 text-[9px] uppercase font-bold tracking-widest opacity-40 hover:opacity-100 mb-8 transition-opacity"
+        className="flex items-center gap-2 text-[11px] uppercase font-bold tracking-widest opacity-40 hover:opacity-100 mb-8 transition-opacity"
       >
         <ArrowLeft className="w-3 h-3" />
         Back to Regions
@@ -130,14 +130,14 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
         <div className="p-20 flex flex-col items-center justify-center">
           <Loader2 className="w-10 h-10 animate-spin text-artistic-accent mb-6" />
           <p className="font-serif italic text-xl text-artistic-ink">Curating your path through {selectedCity}...</p>
-          <p className="text-[9px] uppercase tracking-widest opacity-30 mt-2 text-center">Optimizing route, grouping collections, and synthesizing insights.</p>
+          <p className="text-[11px] uppercase tracking-widest opacity-30 mt-2 text-center">Optimizing route, grouping collections, and synthesizing insights.</p>
         </div>
       ) : error ? (
         <div className="p-20 text-center">
             <p className="text-red-500 text-sm mb-6">{error}</p>
             <button 
                 onClick={() => handlePlanRoute(selectedCity)}
-                className="px-6 py-2 bg-artistic-ink text-artistic-bg rounded-full text-[10px] uppercase font-black"
+                className="px-6 py-2 bg-artistic-ink text-artistic-bg rounded-full text-xs uppercase font-black"
             >
                 Retry Curation
             </button>
@@ -151,8 +151,8 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
           <div className="relative p-10 bg-artistic-ink text-artistic-bg rounded-[2.5rem] overflow-hidden">
             <div className="relative z-10">
                 <div className="flex items-center gap-4 mb-4">
-                    <span className="px-3 py-1 bg-artistic-accent text-[8px] font-black uppercase tracking-[0.2em] rounded-full">Active Itinerary</span>
-                    <span className="text-[10px] font-mono opacity-40">Ref: {selectedCity.substring(0, 3).toUpperCase()}-{Date.now().toString().slice(-6)}</span>
+                    <span className="px-3 py-1 bg-artistic-accent text-[11px] font-black uppercase tracking-[0.2em] rounded-full">Active Itinerary</span>
+                    <span className="text-xs font-mono opacity-40">Ref: {selectedCity.substring(0, 3).toUpperCase()}-{Date.now().toString().slice(-6)}</span>
                 </div>
                 <h2 className="text-4xl font-serif italic mb-4">The {selectedCity} Expedition</h2>
                 <p className="text-lg opacity-80 font-serif leading-relaxed max-w-2xl">{itinerary.summary}</p>
@@ -166,7 +166,7 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
             <div className="lg:col-span-2 space-y-10">
               <div className="flex items-center gap-4 mb-8">
                 <div className="h-[1px] flex-1 bg-artistic-ink/10" />
-                <span className="text-[9px] uppercase tracking-[0.4em] font-black opacity-30">Sequence of Discovery</span>
+                <span className="text-[11px] uppercase tracking-[0.4em] font-black opacity-30">Sequence of Discovery</span>
                 <div className="h-[1px] flex-1 bg-artistic-ink/10" />
               </div>
 
@@ -190,7 +190,7 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
                   <div className="flex-1 pb-10">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-xl font-serif italic text-artistic-ink">{step.museum}</h3>
-                      <div className="px-3 py-1 bg-artistic-shadow rounded-full text-[8px] font-black uppercase tracking-widest opacity-40">
+                      <div className="px-3 py-1 bg-artistic-shadow rounded-full text-[11px] font-black uppercase tracking-widest opacity-40">
                          {step.works.length} {step.works.length === 1 ? 'Work' : 'Works'}
                       </div>
                     </div>
@@ -203,7 +203,7 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
                             <button
                               key={wIdx}
                               onClick={() => workData && onArtworkClick(workData.id)}
-                              className="px-4 py-2 bg-artistic-shadow/40 rounded-xl text-[10px] font-bold tracking-tight hover:bg-artistic-accent hover:text-white transition-all flex items-center gap-2 group/work"
+                              className="px-4 py-2 bg-artistic-shadow/40 rounded-xl text-xs font-bold tracking-tight hover:bg-artistic-accent hover:text-white transition-all flex items-center gap-2 group/work"
                             >
                               <Sparkles className="w-3 h-3 opacity-30 group-hover/work:opacity-100" />
                               {work}
@@ -222,7 +222,7 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
                       </div>
                     </div>
                     
-                    <button className="flex items-center gap-2 text-[8px] uppercase font-black tracking-widest text-artistic-accent hover:underline">
+                    <button className="flex items-center gap-2 text-[11px] uppercase font-black tracking-widest text-artistic-accent hover:underline">
                       <Ticket className="w-3 h-3" />
                       Check Opening Hours
                     </button>
@@ -235,7 +235,7 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
               <div className="p-8 bg-artistic-shadow/20 rounded-[2rem] border border-artistic-ink/5">
                 <div className="flex items-center gap-2 mb-6">
                   <Navigation className="w-4 h-4 text-artistic-accent" />
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Travel Strategy</h4>
+                  <h4 className="text-xs font-black uppercase tracking-[0.2em]">Travel Strategy</h4>
                 </div>
                 <div className="space-y-6">
                     <p className="text-xs leading-relaxed text-artistic-ink font-serif italic">
@@ -244,9 +244,9 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
                     <div className="pt-6 border-t border-artistic-ink/10">
                         <div className="flex items-center gap-4 mb-4">
                             <Clock className="w-4 h-4 opacity-20" />
-                            <span className="text-[9px] font-black uppercase tracking-widest opacity-40">Estimated Duration: 1 Day</span>
+                            <span className="text-[11px] font-black uppercase tracking-widest opacity-40">Estimated Duration: 1 Day</span>
                         </div>
-                        <button className="w-full py-4 bg-artistic-ink text-artistic-bg rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] hover:bg-artistic-accent transition-colors flex items-center justify-center gap-3 shadow-xl shadow-artistic-ink/10">
+                        <button className="w-full py-4 bg-artistic-ink text-artistic-bg rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-artistic-accent transition-colors flex items-center justify-center gap-3 shadow-xl shadow-artistic-ink/10">
                             <MapIcon className="w-4 h-4" />
                             Open in Google Maps
                         </button>
@@ -255,11 +255,11 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
               </div>
 
               <div className="p-8 bg-artistic-accent/5 rounded-[2rem] border border-artistic-accent/10">
-                <h4 className="text-[9px] font-black uppercase tracking-[0.2em] mb-4 opacity-40">Discovery Progress</h4>
+                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] mb-4 opacity-40">Discovery Progress</h4>
                 <div className="space-y-4">
                   <div className="flex justify-between items-end">
                     <span className="text-2xl font-serif italic">{(itinerary.route.length / MUSEUMS.length * 100).toFixed(0)}%</span>
-                    <span className="text-[8px] font-bold uppercase opacity-30">City Coverage</span>
+                    <span className="text-[11px] font-bold uppercase opacity-30">City Coverage</span>
                   </div>
                   <div className="h-1.5 w-full bg-white rounded-full overflow-hidden">
                     <motion.div 
@@ -277,7 +277,7 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
             <div className="pt-20">
               <div className="flex items-center gap-4 mb-10">
                 <div className="h-[1px] flex-1 bg-artistic-ink/10" />
-                <span className="text-[9px] uppercase tracking-[0.4em] font-black opacity-30">Expert Recommendations</span>
+                <span className="text-[11px] uppercase tracking-[0.4em] font-black opacity-30">Expert Recommendations</span>
                 <div className="h-[1px] flex-1 bg-artistic-ink/10" />
               </div>
               
@@ -294,17 +294,17 @@ export const ItineraryPlanner: React.FC<ItineraryPlannerProps> = ({ bucketList, 
                       className="p-6 bg-artistic-shadow/10 rounded-[2rem] border border-artistic-ink/5 flex flex-col group relative overflow-hidden"
                     >
                       <div className="mb-4">
-                          <span className="text-[7px] font-black uppercase tracking-widest px-2 py-1 bg-artistic-accent/10 text-artistic-accent rounded-full mb-3 inline-block">Curator's Choice</span>
+                          <span className="text-[11px] font-black uppercase tracking-widest px-2 py-1 bg-artistic-accent/10 text-artistic-accent rounded-full mb-3 inline-block">Curator's Choice</span>
                           <h5 className="font-serif italic text-lg leading-tight mb-1">{suggestion.title}</h5>
-                          <p className="text-[9px] font-bold uppercase opacity-40">{suggestion.artist} • {suggestion.museum}</p>
+                          <p className="text-[11px] font-bold uppercase opacity-40">{suggestion.artist} • {suggestion.museum}</p>
                       </div>
-                      <p className="text-[10px] leading-relaxed text-artistic-ink/60 mb-6 flex-1 italic">
+                      <p className="text-xs leading-relaxed text-artistic-ink/60 mb-6 flex-1 italic">
                           "{suggestion.reason}"
                       </p>
                       <button 
                         disabled={isInBucketList}
                         onClick={() => !isInBucketList && onAddToBucketList(suggestion.title, suggestion.artist, suggestion.museum, suggestion.imageUrl)}
-                        className={`w-full py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 group/btn ${isInBucketList ? 'bg-green-50 text-green-600 border border-green-100 cursor-default' : 'bg-white border border-artistic-ink/5 hover:bg-artistic-ink hover:text-white'}`}
+                        className={`w-full py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 group/btn ${isInBucketList ? 'bg-green-50 text-green-600 border border-green-100 cursor-default' : 'bg-white border border-artistic-ink/5 hover:bg-artistic-ink hover:text-white'}`}
                       >
                         {isInBucketList ? (
                           <>

@@ -21,6 +21,8 @@ export interface UserProfile {
   totalXP: number;
   scansByMovement: Record<string, number>;
   badges: string[];
+  streak?: number;
+  lastScanDate?: string | null;
 }
 
 export interface MuseumStamp {

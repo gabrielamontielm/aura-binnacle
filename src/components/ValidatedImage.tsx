@@ -25,7 +25,7 @@ export const ValidatedImage: React.FC<ValidatedImageProps> = ({ src, alt, classN
     if (fallback) return <>{fallback}</>;
     return (
       <div className={`${className} bg-gray-200 flex items-center justify-center p-2 text-center`}>
-        <span className="text-[10px] text-gray-400">Artwork not available</span>
+        <span className="text-xs text-gray-400">Artwork not available</span>
       </div>
     );
   }

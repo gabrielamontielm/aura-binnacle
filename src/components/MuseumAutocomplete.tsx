@@ -81,7 +81,7 @@ export const MuseumAutocomplete: React.FC<MuseumAutocompleteProps> = ({
       <div className="flex justify-end gap-2 mt-2">
         <button 
           onClick={onCancel}
-          className="text-[10px] uppercase font-bold text-red-500 hover:opacity-70 transition-opacity"
+          className="text-xs uppercase font-bold text-red-500 hover:opacity-70 transition-opacity"
         >
           Cancel
         </button>

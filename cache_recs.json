@@ -1,0 +1,291 @@
+{
+  "girl with a pearl earring|johannes vermeer": {
+    "recommendations": [
+      {
+        "title": "The Goldfinch",
+        "artist": "Carel Fabritius",
+        "reason": "Fabritius was a leading figure in the Delft School whose innovative use of light and minimalist, light-colored backgrounds paved the way for Vermeer's focused character studies.",
+        "relationshipType": "Inspiration",
+        "relationshipDetail": "Delft School Precursor",
+        "imageUrl": "https://www.mauritshuis.nl/en/our-collection/artworks/605-the-goldfinch/",
+        "museum": "Mauritshuis"
+      },
+      {
+        "title": "Untitled #224",
+        "artist": "Cindy Sherman",
+        "reason": "Part of her 'History Portraits' series, this work directly references Vermeer's composition and lighting to critique the male gaze and the construction of feminine identity in art history.",
+        "relationshipType": "Legacy",
+        "relationshipDetail": "Post-modern Reinterpretation",
+        "imageUrl": "https://www.moma.org/collection/works/46505",
+        "museum": "Museum of Modern Art"
+      },
+      {
+        "title": "A Woman Peeling Apples",
+        "artist": "Pieter de Hooch",
+        "reason": "De Hooch was Vermeer's contemporary in Delft; both artists explored the 'quiet' aesthetic of Dutch interiors and the dramatic potential of natural light through windows.",
+        "relationshipType": "Peer",
+        "relationshipDetail": "Delft School Contemporary",
+        "imageUrl": "https://www.wallacecollection.org/collection/woman-peeling-apples/",
+        "museum": "Wallace Collection"
+      },
+      {
+        "title": "Mona Lisa",
+        "artist": "Leonardo da Vinci",
+        "reason": "Often called the 'Mona Lisa of the North,' Vermeer's work shares the same deep human concern with the enigmatic gaze and the use of sfumato to create a sense of psychological depth.",
+        "relationshipType": "Thematic",
+        "relationshipDetail": "Enigmatic Portraiture",
+        "imageUrl": "https://collections.louvre.fr/en/ark:/53355/cl010062370",
+        "museum": "Musée du Louvre"
+      },
+      {
+        "title": "Portrait of a Man (Self Portrait?)",
+        "artist": "Jan van Eyck",
+        "reason": "Both Vermeer and Van Eyck achieved extraordinary luminosity and realism through the experimental application of multiple thin layers of oil glazes, particularly on textures like cloth and skin.",
+        "relationshipType": "Technique",
+        "relationshipDetail": "Oil Glazing Mastery",
+        "imageUrl": "https://www.nationalgallery.org.uk/paintings/jan-van-eyck-portrait-of-a-man-self-portrait",
+        "museum": "National Gallery, London"
+      }
+    ]
+  },
+  "at the opera|mary cassatt": {
+    "recommendations": [
+      {
+        "title": "Woman with Binoculars",
+        "artist": "Edgar Degas",
+        "reason": "Degas's studies of theater-goers and his experimentation with the 'active gaze' directly informed Cassatt's decision to depict a woman as an observer rather than a passive object.",
+        "relationshipType": "Inspiration",
+        "relationshipDetail": "Direct Influence on Composition",
+        "imageUrl": "https://www.metmuseum.org/art/collection/search/436142",
+        "museum": "Metropolitan Museum of Art"
+      },
+      {
+        "title": "New York Movie",
+        "artist": "Edward Hopper",
+        "reason": "Hopper carries the theme of the solitary female figure in a public performance space into the 20th century, focusing on the psychological isolation inherent in modern urban life.",
+        "relationshipType": "Legacy",
+        "relationshipDetail": "Evolution of the Cinematic Gaze",
+        "imageUrl": "https://www.moma.org/collection/works/79659",
+        "museum": "Museum of Modern Art"
+      },
+      {
+        "title": "La Loge",
+        "artist": "Pierre-Auguste Renoir",
+        "reason": "A contemporary Impressionist masterpiece that treats the same subject—an opera box—but highlights the contrast between the female as an object of display and Cassatt's active female spectator.",
+        "relationshipType": "Peer",
+        "relationshipDetail": "Contemporary Thematic Counterpoint",
+        "imageUrl": "https://courtauld.ac.uk/gallery/collection/impressionism-post-impressionism/renoir-la-loge/",
+        "museum": "Courtauld Gallery"
+      },
+      {
+        "title": "Interior of a Kabuki Theater",
+        "artist": "Utagawa Toyokuni",
+        "reason": "Cassatt was deeply influenced by Japanese Ukiyo-e prints, which often depicted the social ecosystem of the theater through flattened space and radical cropping similar to this work.",
+        "relationshipType": "Thematic",
+        "relationshipDetail": "Cross-Cultural Performance Study",
+        "imageUrl": "https://www.britishmuseum.org/collection/object/A_1906-1220-0-534",
+        "museum": "British Museum"
+      },
+      {
+        "title": "A Bar at the Folies-Bergère",
+        "artist": "Édouard Manet",
+        "reason": "Like Cassatt, Manet utilizes a complex, flattened perspective and the placement of the viewer to explore the social dynamics of looking and the ambiguity of the modern spectator.",
+        "relationshipType": "Technique",
+        "relationshipDetail": "Spatial Compression and Viewpoint",
+        "imageUrl": "https://courtauld.ac.uk/gallery/collection/impressionism-post-impressionism/manet-a-bar-at-the-folies-bergere/",
+        "museum": "Courtauld Gallery"
+      }
+    ]
+  },
+  "the rape of europa|titian": {
+    "recommendations": [
+      {
+        "title": "The Sleeping Venus",
+        "artist": "Giorgione",
+        "reason": "Giorgione was Titian's mentor and pioneered the Venetian emphasis on landscape and atmospheric mood that Titian utilized to create the evocative, light-drenched background of Europa's journey.",
+        "relationshipType": "Inspiration",
+        "relationshipDetail": "Formative Mentorship",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4d/Giorgione_-_Sleeping_Venus_-_Google_Art_Project.jpg",
+        "museum": "Gemäldegalerie Alte Meister"
+      },
+      {
+        "title": "The Rape of Europa (after Titian)",
+        "artist": "Peter Paul Rubens",
+        "reason": "Rubens meticulously copied this specific work while visiting Madrid, adopting Titian's dynamic composition and fleshy textures as a foundational element of the Northern Baroque style.",
+        "relationshipType": "Legacy",
+        "relationshipDetail": "Direct Masterpiece Homage",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/15/Peter_Paul_Rubens_-_The_Rape_of_Europa_-_Prado.jpg",
+        "museum": "Museo del Prado"
+      },
+      {
+        "title": "The Wedding Feast at Cana",
+        "artist": "Paolo Veronese",
+        "reason": "A contemporary in the Venetian school, Veronese shared Titian's 'colorito' philosophy, using vibrant pigment and monumental theatricality to define the High Renaissance aesthetic in Venice.",
+        "relationshipType": "Peer",
+        "relationshipDetail": "Venetian School Contemporary",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e3/Paolo_Veronese_-_Les_Noces_de_Cana.jpg",
+        "museum": "Louvre Museum"
+      },
+      {
+        "title": "The Minotauromachy",
+        "artist": "Pablo Picasso",
+        "reason": "Centuries later, Picasso revisited the same Greek mythos of the beast-god and the maiden, exploring the primal, subconscious tension between violence and divinity found in Titian's original.",
+        "relationshipType": "Thematic",
+        "relationshipDetail": "Mythological Transformation",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/en/b/b1/Picasso_Minotauromachy.jpg",
+        "museum": "Musée Picasso"
+      },
+      {
+        "title": "The Slave Ship",
+        "artist": "J.M.W. Turner",
+        "reason": "Both Titian in his late 'pittura di macchia' phase and Turner used radical, expressive brushwork to dissolve solid forms into a visceral, turbulent experience of sea and light.",
+        "relationshipType": "Technique",
+        "relationshipDetail": "Experimental Brushwork",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/35/Ian_W_Turner_-_The_Slave_Ship.jpg",
+        "museum": "Museum of Fine Arts, Boston"
+      }
+    ]
+  },
+  "isabella stewart gardner in venice|anders zorn": {
+    "recommendations": [
+      {
+        "title": "Las Meninas",
+        "artist": "Diego Velázquez",
+        "reason": "Zorn was deeply influenced by Velázquez's mastery of atmospheric perspective and his ability to define complex interior spaces through the economy of light.",
+        "relationshipType": "Inspiration",
+        "relationshipDetail": "Direct Influence on Spatial Composition",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/31/Las_Meninas%2C_by_Diego_Vel%C3%A1zquez%2C_from_Prado_in_Google_Earth.jpg",
+        "museum": "Museo del Prado"
+      },
+      {
+        "title": "Mr and Mrs Clark and Percy",
+        "artist": "David Hockney",
+        "reason": "Like Zorn’s portrait of Gardner, this work revolutionized the 'at home' portrait by using a wide, snapshot-like perspective that emphasizes the subject's relationship to their architectural environment.",
+        "relationshipType": "Legacy",
+        "relationshipDetail": "Evolution of the Environmental Portrait",
+        "imageUrl": "https://www.tate.org.uk/art/images/work/T/T01/T01269_10.jpg",
+        "museum": "Tate Britain"
+      },
+      {
+        "title": "The Daughters of Edward Darley Boit",
+        "artist": "John Singer Sargent",
+        "reason": "Sargent and Zorn were contemporary rivals and friends; both utilized a bravura Impressionist technique to capture the high-society elite in candid, often unconventional domestic settings.",
+        "relationshipType": "Peer",
+        "relationshipDetail": "Stylistic and Social Contemporary",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/3e/John_Singer_Sargent_-_The_Daughters_of_Edward_Darley_Boit_-_Google_Art_Project.jpg",
+        "museum": "Museum of Fine Arts, Boston"
+      },
+      {
+        "title": "Young Woman with a Water Pitcher",
+        "artist": "Johannes Vermeer",
+        "reason": "Shares the same deep human concern with the luminosity of a private interior and the singular 'captured moment' of a woman framed by a window's light.",
+        "relationshipType": "Thematic",
+        "relationshipDetail": "The Luminous Interior Life",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b3/Johannes_Vermeer_-_Young_Woman_with_a_Water_Pitcher_-_Google_Art_Project.jpg",
+        "museum": "Metropolitan Museum of Art"
+      },
+      {
+        "title": "The Merry Drinker",
+        "artist": "Frans Hals",
+        "reason": "Zorn’s famous 'alla prima' speed and restricted palette are technical descendants of Hals’s energetic, visible brushwork and spontaneous execution.",
+        "relationshipType": "Technique",
+        "relationshipDetail": "Bravura Brushwork Parallel",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c8/Frans_Hals_-_The_Merry_Drinker_-_WGA11119.jpg",
+        "museum": "Rijksmuseum"
+      }
+    ]
+  },
+  "woman with binoculars (femme à la lorgnette)|edgar degas": {
+    "recommendations": [
+      {
+        "title": "Portrait of Madame Moitessier",
+        "artist": "Jean-Auguste-Dominique Ingres",
+        "reason": "Degas was a devoted student of Ingres's draftsmanship; the psychological weight and formal seated posture in this work directly informed Degas's early portraiture techniques.",
+        "relationshipType": "Inspiration",
+        "relationshipDetail": "Neoclassical Linearism",
+        "museum": "National Gallery, London"
+      },
+      {
+        "title": "Automat",
+        "artist": "Edward Hopper",
+        "reason": "Hopper's work is a 20th-century descendant of Degas's vision, capturing the same sense of urban loneliness and the 'observed' solitary female figure in a modern space.",
+        "relationshipType": "Legacy",
+        "relationshipDetail": "Urban Alienation",
+        "museum": "Des Moines Art Center"
+      },
+      {
+        "title": "In the Loge",
+        "artist": "Mary Cassatt",
+        "reason": "As a close contemporary, Cassatt utilized the identical motif of binoculars to explore the female gaze, transforming the woman from an object of beauty into an active observer.",
+        "relationshipType": "Peer",
+        "relationshipDetail": "The Female Gaze",
+        "museum": "Museum of Fine Arts, Boston"
+      },
+      {
+        "title": "Las Meninas",
+        "artist": "Diego Velázquez",
+        "reason": "Both works function as complex meditations on the act of viewing, creating a multi-layered relationship between the subject, the artist, and the external spectator.",
+        "relationshipType": "Thematic",
+        "relationshipDetail": "Subjectivity of Vision",
+        "museum": "Museo del Prado"
+      },
+      {
+        "title": "At the Moulin Rouge",
+        "artist": "Henri de Toulouse-Lautrec",
+        "reason": "Like Degas, Lautrec employed radical, off-center cropping and steep perspectives derived from photography and Japanese prints to create a sense of candid immediacy.",
+        "relationshipType": "Technique",
+        "relationshipDetail": "Photographic Cropping",
+        "museum": "Art Institute of Chicago"
+      }
+    ]
+  },
+  "the rape of europa|unknown": {
+    "recommendations": [
+      {
+        "title": "Europa and the Bull",
+        "artist": "The Berlin Painter",
+        "reason": "This Greek red-figure vase establishes the early iconographic prototype of Europa riding the bull, directly shaping the visual language Roman artists would later refine in mosaics and frescoes.",
+        "relationshipType": "Inspiration",
+        "relationshipDetail": "Iconographic Prototype",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4e/Europa_bull_Berlin_Painter_Tarquinia_RC6843.jpg",
+        "museum": "Museo Archeologico Nazionale di Tarquinia"
+      },
+      {
+        "title": "The Rape of Europa",
+        "artist": "Titian",
+        "reason": "Titian's Renaissance masterpiece serves as a direct descendant of the Roman classical tradition, reimagining the Ovidian myth with the same dynamic tension and narrative focus found in Roman wall paintings.",
+        "relationshipType": "Legacy",
+        "relationshipDetail": "Renaissance Rebirth",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/23/Tiziano_-_Il_ratto_di_Europa.jpg",
+        "museum": "Isabella Stewart Gardner Museum"
+      },
+      {
+        "title": "The Alexander Mosaic",
+        "artist": "Unknown (Roman copy after Philoxenos of Eretria)",
+        "reason": "A contemporary pinnacle of Roman mosaic art from Pompeii that shares the same sophisticated use of perspective and movement within the 'opus vermiculatum' technique used to depict the Europa myth.",
+        "relationshipType": "Peer",
+        "relationshipDetail": "Stylistic Contemporary",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e0/Alexander_the_Great_mosaic_from_Pompeii.jpg",
+        "museum": "National Archaeological Museum, Naples"
+      },
+      {
+        "title": "Leda and the Swan",
+        "artist": "Leonardo da Vinci",
+        "reason": "While from a different era, this work is a thematic sibling exploring Ovid's 'Metamorphoses,' focusing on the interaction between a mortal woman and a god in animal form.",
+        "relationshipType": "Thematic",
+        "relationshipDetail": "Mythological Metamorphosis",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Leonardo_da_vinci%2C_Leda_and_the_Swan.jpg",
+        "museum": "Uffizi Gallery"
+      },
+      {
+        "title": "Doves on a Fountain Basin",
+        "artist": "Unknown (Roman mosaic after Sosos of Pergamon)",
+        "reason": "This work employs a similar experimental use of tiny tesserae to achieve painterly effects, shadows, and reflections, paralleling the technical complexity of the Europa mosaics.",
+        "relationshipType": "Technique",
+        "relationshipDetail": "Opus Vermiculatum Precision",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/dc/Doves_Pliny_Capitoline_Museums.jpg",
+        "museum": "Capitoline Museums"
+      }
+    ]
+  }
+}
