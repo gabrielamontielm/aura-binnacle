@@ -1,0 +1,574 @@
+{
+  "pearl earring": {
+    "title": "Girl with a Pearl Earring",
+    "artist": "Johannes Vermeer",
+    "year": "c. 1665",
+    "movement": "Dutch Golden Age",
+    "medium": "Oil on canvas",
+    "type": "Tronie",
+    "description": "The painting depicts a young woman wearing an exotic dress, an oriental turban, and a very large, teardrop-shaped pearl earring. She is captured in a fleeting moment, turning her head toward the viewer with her mouth slightly parted, set against a dark, atmospheric background that enhances the luminosity of her skin and the pearl.",
+    "historicalContext": "During the 17th century in the Netherlands, 'tronies' were a popular genre of painting that focused on the study of facial expressions, character, or exotic costumes rather than being formal portraits of specific individuals. This work showcases Vermeer's mastery of light and his use of expensive pigments like lapis lazuli for the turban.",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0f/1665_Girl_with_a_Pearl_Earring.jpg",
+    "location": "The Hague, Netherlands",
+    "museum": "Mauritshuis"
+  },
+  "museum-masterpieces|the louvre": {
+    "museum": "The Louvre",
+    "masterpieces": [
+      {
+        "artist": "Leonardo da Vinci",
+        "description": "A world-renowned portrait of a woman known for her enigmatic expression and atmospheric background.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ec/Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg",
+        "medium": "Oil on poplar panel",
+        "movement": "High Renaissance",
+        "title": "Mona Lisa",
+        "year": "c. 1503–1506"
+      },
+      {
+        "artist": "Alexandros of Antioch",
+        "description": "An ancient Greek statue representing Aphrodite, celebrated for its graceful composition and missing arms.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e4/V%C3%A9nus_de_Milo_-_Mus%C3%A9e_du_Louvre_-_Ma_399.jpg",
+        "medium": "Parian marble",
+        "movement": "Hellenistic Greek",
+        "title": "Venus de Milo",
+        "year": "c. 150–125 BC"
+      },
+      {
+        "artist": "Unknown",
+        "description": "A majestic sculpture of the Greek goddess Nike depicted as if descending onto the prow of a ship.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/53/Victory_of_Samothrace_Louvre_Ma2369_n4.jpg",
+        "medium": "Parian marble",
+        "movement": "Hellenistic Greek",
+        "title": "Winged Victory of Samothrace",
+        "year": "c. 190 BC"
+      },
+      {
+        "artist": "Jacques-Louis David",
+        "description": "A monumental painting documenting the lavish 1804 coronation of Napoleon I and Josephine at Notre-Dame.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1e/Jacques-Louis_David_-_The_Coronation_of_Napoleon_-_WGA5914.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Neoclassicism",
+        "title": "The Coronation of Napoleon",
+        "year": "1807"
+      },
+      {
+        "artist": "Eugène Delacroix",
+        "description": "An allegorical representation of the July Revolution of 1830, featuring a personified Liberty leading a diverse group over a barricade.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5d/Eug%C3%A8ne_Delacroix_-_Le_28_juillet._La_Libert%C3%A9_guidant_le_peuple.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Romanticism",
+        "title": "Liberty Leading the People",
+        "year": "1830"
+      },
+      {
+        "artist": "Théodore Géricault",
+        "description": "A large-scale masterpiece depicting the harrowing aftermath of a contemporary shipwreck and its starving survivors.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/15/JEAN_LOUIS_TH%C3%89ODORE_G%C3%89RICAULT_-_La_Balsa_de_la_Medusa_%28Museo_del_Louvre%2C_1818-19%29.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Romanticism",
+        "title": "The Raft of the Medusa",
+        "year": "1818–1819"
+      },
+      {
+        "artist": "Paolo Veronese",
+        "description": "The largest painting in the Louvre, it depicts the biblical miracle of water turning into wine within a lavish Venetian banquet.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f7/Paolo_Veronese_-_Les_Noces_de_Cana_-_Mus%C3%A9e_du_Louvre.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Mannerism",
+        "title": "The Wedding Feast at Cana",
+        "year": "1563"
+      },
+      {
+        "artist": "Antonio Canova",
+        "description": "An exquisite marble sculpture capturing the mythological moment when Cupid awakens the lifeless Psyche with a kiss.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/13/Amore_e_Psiche_-_Canova_-_Louvre.jpg",
+        "medium": "Marble",
+        "movement": "Neoclassicism",
+        "title": "Psyche Revived by Cupid's Kiss",
+        "year": "1793"
+      }
+    ],
+    "city": "Paris"
+  },
+  "museum-masterpieces|museum of fine arts boston": {
+    "museum": "Museum of Fine Arts, Boston",
+    "masterpieces": [
+      {
+        "artist": "John Singleton Copley",
+        "description": "This dramatic painting depicts a real-life shark attack on a young cabin boy in Havana Harbor.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ea/John_Singleton_Copley_-_Watson_and_the_Shark_-_Google_Art_Project.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Romanticism",
+        "title": "Watson and the Shark",
+        "year": "1778"
+      },
+      {
+        "artist": "John Singer Sargent",
+        "description": "This large-scale group portrait uses unconventional composition and lighting to capture the interior of a wealthy Parisian apartment.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e6/John_Singer_Sargent_-_The_Daughters_of_Edward_Darley_Boit_-_Google_Art_Project.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Realism",
+        "title": "The Daughters of Edward Darley Boit",
+        "year": "1882"
+      },
+      {
+        "artist": "Mary Cassatt",
+        "description": "A woman focuses intensely on the stage through opera glasses while being watched by a man in the background, exploring the gaze in modern life.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a2/Mary_Cassatt_-_In_the_Loge_-_Google_Art_Project.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Impressionism",
+        "title": "At the Opera",
+        "year": "1878"
+      },
+      {
+        "artist": "Paul Gauguin",
+        "description": "This monumental Tahitian-set piece serves as the artist's philosophical manifesto on the cycle of human life.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a2/Paul_Gauguin_-_D%27ou_venons-nous.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Post-Impressionism",
+        "title": "Where Do We Come From? What Are We? Where Are We Going?",
+        "year": "1897-1898"
+      },
+      {
+        "artist": "Vincent van Gogh",
+        "description": "One of a series of portraits of the artist's close friend in Arles, it features vibrant colors and a lush floral background.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Vincent_Willem_van_Gogh_-_Portrait_of_Joseph_Roulin_-_Google_Art_Project.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Post-Impressionism",
+        "title": "Postman Joseph Roulin",
+        "year": "1888"
+      },
+      {
+        "artist": "J.M.W. Turner",
+        "description": "A powerful landscape that condemns the slave trade by depicting victims cast into a turbulent sea during a storm.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e0/Turner_Slave_Ship_Boston_MFA.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Romanticism",
+        "title": "Slave Ship (Slavers Throwing Overboard the Dead and Dying, Typhoon Coming On)",
+        "year": "1840"
+      },
+      {
+        "artist": "Pierre-Auguste Renoir",
+        "description": "One of the artist's most popular works, it depicts two of his friends dancing in a lively outdoor cafe setting.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/49/Pierre-Auguste_Renoir_-_Dance_at_Bougival_-_Google_Art_Project.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Impressionism",
+        "title": "Dance at Bougival",
+        "year": "1883"
+      },
+      {
+        "artist": "Childe Hassam",
+        "description": "This painting captures the atmospheric transition of light in a snow-covered Boston park during the late 19th century.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/da/Childe_Hassam_-_Boston_Common_at_Twilight_-_Google_Art_Project.jpg",
+        "medium": "Oil on canvas",
+        "movement": "American Impressionism",
+        "title": "Boston Common at Twilight",
+        "year": "1885-1886"
+      }
+    ],
+    "city": "Boston"
+  },
+  "museum-masterpieces|isabella museum boston": {
+    "museum": "Isabella Stewart Gardner Museum",
+    "masterpieces": [
+      {
+        "artist": "Titian",
+        "description": "This dynamic mythological scene depicts the Phoenician princess Europa being carried across the sea by Jupiter in the form of a white bull.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e0/Tiziano_-_Ratto_di_Europa.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Venetian Renaissance",
+        "title": "The Rape of Europa",
+        "year": "1562"
+      },
+      {
+        "artist": "John Singer Sargent",
+        "description": "A large-scale painting capturing the dramatic motion and energy of a Spanish flamenco dancer accompanied by musicians.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/2f/John_Singer_Sargent_-_El_Jaleo.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Realism",
+        "title": "El Jaleo",
+        "year": "1882"
+      },
+      {
+        "artist": "John Singer Sargent",
+        "description": "This iconic full-length portrait depicts the museum's founder in a simple black dress against a backdrop of a Venetian textile.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c5/John_Singer_Sargent_-_Isabella_Stewart_Gardner.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Realism",
+        "title": "Isabella Stewart Gardner",
+        "year": "1888"
+      },
+      {
+        "artist": "Rembrandt van Rijn",
+        "description": "A youthful and confident self-portrait by the Dutch master, showcasing his early mastery of light and costume.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c0/Rembrandt_van_Rijn_-_Self-Portrait_-_1629.jpg",
+        "medium": "Oil on wood",
+        "movement": "Dutch Golden Age",
+        "title": "Self-Portrait, Age 23",
+        "year": "1629"
+      },
+      {
+        "artist": "Sandro Botticelli",
+        "description": "A narrative panel depicting the historical story of Lucretia, whose suicide sparked the revolution that led to the Roman Republic.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/07/Sandro_Botticelli_-_The_Tragedy_of_Lucretia_-_Isabella_Stewart_Gardner_Museum.jpg",
+        "medium": "Tempera and oil on wood",
+        "movement": "Italian Renaissance",
+        "title": "The Tragedy of Lucretia",
+        "year": "1501"
+      },
+      {
+        "artist": "Fra Angelico",
+        "description": "One of four reliquaries painted by the artist, this work combines deep spiritual devotion with the delicate use of gold leaf and vibrant color.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/eb/Fra_Angelico_-_The_Death_and_Assumption_of_the_Virgin_-_Google_Art_Project.jpg",
+        "medium": "Tempera and gold on wood",
+        "movement": "Early Renaissance",
+        "title": "Death and the Assumption of the Virgin",
+        "year": "1434"
+      },
+      {
+        "artist": "Giotto di Bondone",
+        "description": "This panel painting shows the infant Christ being presented to the priest Simeon, reflecting Giotto's focus on human emotion and spatial depth.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/6/64/Giotto_-_Presentation_of_Christ_in_the_Temple_-_Isabella_Stewart_Gardner_Museum.jpg",
+        "medium": "Tempera and gold on wood",
+        "movement": "Late Gothic",
+        "title": "Presentation in the Temple",
+        "year": "1320"
+      },
+      {
+        "artist": "Sandro Botticelli",
+        "description": "Also known as the Madonna of the Eucharist, this tender work depicts the infant Christ reaching for ears of wheat and grapes held by an angel.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/8/87/Sandro_Botticelli_-_The_Virgin_and_Child_with_an_Angel_-_Isabella_Stewart_Gardner_Museum.jpg",
+        "medium": "Tempera on wood",
+        "movement": "Italian Renaissance",
+        "title": "The Virgin and Child with an Angel",
+        "year": "1470"
+      }
+    ],
+    "city": "Boston"
+  },
+  "museum-masterpieces|rijksmuseum": {
+    "museum": "Rijksmuseum",
+    "masterpieces": [
+      {
+        "artist": "Rembrandt van Rijn",
+        "description": "This massive group portrait depicts a city guard moving out, notable for its dramatic use of light and shadow.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5a/The_Night_Watch_-_Rembrandt_van_Rijn.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Dutch Golden Age",
+        "title": "The Night Watch",
+        "year": "1642"
+      },
+      {
+        "artist": "Johannes Vermeer",
+        "description": "A domestic kitchen maid is depicted carefully pouring milk, showcasing Vermeer's mastery of light and domestic tranquility.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/20/Johannes_Vermeer_-_The_Milkmaid_-_Google_Art_Project.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Dutch Golden Age",
+        "title": "The Milkmaid",
+        "year": "c. 1660"
+      },
+      {
+        "artist": "Vincent van Gogh",
+        "description": "This expressive self-portrait uses rhythmic brushstrokes and vibrant colors typical of Van Gogh's Paris period.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b2/Vincent_van_Gogh_-_Self-Portrait_-_Google_Art_Project.jpg",
+        "medium": "Oil on pasteboard",
+        "movement": "Post-Impressionism",
+        "title": "Self-Portrait",
+        "year": "1887"
+      },
+      {
+        "artist": "Jan Asselijn",
+        "description": "A swan fiercely defends its nest against a dog, later interpreted as a symbol of Dutch national resistance.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a2/Jan_Asselijn_-_The_Threatened_Swan.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Dutch Golden Age",
+        "title": "The Threatened Swan",
+        "year": "c. 1650"
+      },
+      {
+        "artist": "Jan Willem Pieneman",
+        "description": "This monumental painting depicts the Duke of Wellington receiving news of the Prussian arrival during the historic battle.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/7/77/The_Battle_of_Waterloo_-_Jan_Willem_Pieneman.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Neoclassicism",
+        "title": "The Battle of Waterloo",
+        "year": "1824"
+      },
+      {
+        "artist": "Frans Hals",
+        "description": "A rare and joyful depiction of a married couple relaxing in a garden setting, unusual for the formal portraiture of the era.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/da/Frans_Hals_-_Portrait_of_a_Couple%2C_Probably_Isaac_Abrahamsz_Massa_and_Beatrix_van_der_Laen.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Dutch Golden Age",
+        "title": "Portrait of a Young Couple",
+        "year": "c. 1622"
+      },
+      {
+        "artist": "Rembrandt van Rijn",
+        "description": "This late work by Rembrandt captures a tender, intimate moment between a man and a woman through rich, textured impasto.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Rembrandt_van_Rijn_-_The_Jewish_Bride_-_WGA19114.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Dutch Golden Age",
+        "title": "The Jewish Bride",
+        "year": "c. 1665"
+      },
+      {
+        "artist": "Johannes Vermeer",
+        "description": "A woman in a blue jacket is absorbed in reading a letter, illuminated by soft light from an unseen window.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5f/Johannes_Vermeer_-_Woman_in_Blue_Reading_a_Letter_-_Google_Art_Project.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Dutch Golden Age",
+        "title": "Woman Reading a Letter",
+        "year": "c. 1663"
+      }
+    ],
+    "city": "Amsterdam"
+  },
+  "museum-masterpieces|louvre": {
+    "museum": "Musée du Louvre",
+    "masterpieces": [
+      {
+        "artist": "Leonardo da Vinci",
+        "description": "A world-famous portrait of Lisa Gherardini known for her enigmatic expression and the artist's sfumato technique.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg",
+        "medium": "Oil on poplar panel",
+        "movement": "High Renaissance",
+        "title": "Mona Lisa",
+        "year": "c. 1503–1506"
+      },
+      {
+        "artist": "Alexandros of Antioch",
+        "description": "An ancient Greek statue depicting the goddess Aphrodite, renowned for its missing arms and graceful contrapposto.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e0/V%C3%A9nus_de_Milo_-_Mus%C3%A9e_du_Louvre_-_Ma_399.jpg",
+        "medium": "Parian marble",
+        "movement": "Hellenistic Greek",
+        "title": "Venus de Milo",
+        "year": "c. 101 BC"
+      },
+      {
+        "artist": "Unknown",
+        "description": "A dynamic Hellenistic sculpture representing the Greek goddess Nike as she descends onto the prow of a ship.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/df/Nike_of_Samothrace_Louvre_Ma2369_n2.jpg",
+        "medium": "Parian marble",
+        "movement": "Hellenistic Greek",
+        "title": "Winged Victory of Samothrace",
+        "year": "c. 190 BC"
+      },
+      {
+        "artist": "Jacques-Louis David",
+        "description": "A massive painting documenting the 1804 coronation of Napoleon I and Empress Joséphine at Notre-Dame de Paris.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/08/Jacques-Louis_David_%281748-1825%29_-_Le_Sacre_de_Napol%C3%A9on_%281805-1807%29.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Neoclassicism",
+        "title": "The Coronation of Napoleon",
+        "year": "1807"
+      },
+      {
+        "artist": "Eugène Delacroix",
+        "description": "An allegorical representation of the July Revolution of 1830, featuring Liberty personified as a woman leading people over a barricade.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5d/Eug%C3%A8ne_Delacroix_-_Le_28_juillet._La_Libert%C3%A9_guidant_le_peuple.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Romanticism",
+        "title": "Liberty Leading the People",
+        "year": "1830"
+      },
+      {
+        "artist": "Théodore Géricault",
+        "description": "A haunting depiction of the survivors from a shipwreck, capturing the moment they spot a distant vessel on the horizon.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/15/JEAN_LOUIS_TH%C3%89ODORE_G%C3%89RICAULT_-_La_Balsa_de_la_Medusa_%28Museo_del_Louvre%2C_1818-19%29.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Romanticism",
+        "title": "The Raft of the Medusa",
+        "year": "1819"
+      },
+      {
+        "artist": "Antonio Canova",
+        "description": "A delicate marble sculpture capturing the mythological moment when Cupid awakens the lifeless Psyche with a kiss.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/24/Cupid_and_Psyche_Louvre_Ma2266.jpg",
+        "medium": "Marble",
+        "movement": "Neoclassicism",
+        "title": "Psyche Revived by Cupid's Kiss",
+        "year": "1793"
+      },
+      {
+        "artist": "Paolo Veronese",
+        "description": "The largest painting in the Louvre, it depicts the biblical miracle of turning water into wine amidst a crowded, festive banquet.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/bd/Paolo_Veronese_008.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Mannerism",
+        "title": "The Wedding Feast at Cana",
+        "year": "1563"
+      }
+    ],
+    "city": "Paris"
+  },
+  "museum-masterpieces|isabella stewart gardner museum": {
+    "museum": "Isabella Stewart Gardner Museum",
+    "masterpieces": [
+      {
+        "artist": "Titian",
+        "description": "A vibrant mythological scene commissioned by Philip II of Spain, showcasing Titian's mastery of color and brushwork.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4e/Tiziano_-_Ratto_di_Europa.jpg",
+        "medium": "Oil on canvas",
+        "movement": "High Renaissance",
+        "title": "The Rape of Europa",
+        "year": "1562"
+      },
+      {
+        "artist": "John Singer Sargent",
+        "description": "A large-scale painting capturing the dramatic energy and movement of a Spanish Romani dancer in a dimly lit tavern.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/23/John_Singer_Sargent_-_El_Jaleo_-_Isabella_Stewart_Gardner_Museum.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Realism",
+        "title": "El Jaleo",
+        "year": "1882"
+      },
+      {
+        "artist": "Rembrandt",
+        "description": "An early, finely detailed self-portrait where the young artist experiments with light and shadow to convey character.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/07/Rembrandt_-_Self-Portrait_-_Isabella_Stewart_Gardner_Museum.jpg",
+        "medium": "Oil on wood",
+        "movement": "Dutch Golden Age",
+        "title": "Self-Portrait, Age 23",
+        "year": "1629"
+      },
+      {
+        "artist": "Sandro Botticelli",
+        "description": "A narrative panel depicting the historical and legendary events surrounding the death of Lucretia and the founding of the Roman Republic.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/44/Sandro_Botticelli_-_The_Tragedy_of_Lucretia_-_Isabella_Stewart_Gardner_Museum.jpg",
+        "medium": "Tempera on panel",
+        "movement": "Early Renaissance",
+        "title": "The Tragedy of Lucretia",
+        "year": "c. 1496-1504"
+      },
+      {
+        "artist": "Anders Zorn",
+        "description": "A spirited depiction of the museum's founder stepping from a balcony into the Venetian night.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b5/Anders_Zorn_-_Isabella_Stewart_Gardner_in_Venice_-_Isabella_Stewart_Gardner_Museum.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Impressionism",
+        "title": "Isabella Stewart Gardner in Venice",
+        "year": "1894"
+      },
+      {
+        "artist": "John Singer Sargent",
+        "description": "A formal yet intimate portrait of Isabella Stewart Gardner, emphasizing her elegant posture and social standing.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/36/John_Singer_Sargent_-_Isabella_Stewart_Gardner_-_Isabella_Stewart_Gardner_Museum.jpg",
+        "medium": "Oil on canvas",
+        "movement": "Impressionism",
+        "title": "Isabella Stewart Gardner",
+        "year": "1888"
+      },
+      {
+        "artist": "Fra Angelico",
+        "description": "A delicate reliquary panel illustrating sacred scenes with the artist's characteristic piety and clarity.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/37/Fra_Angelico_-_Death_and_Assumption_of_the_Virgin_-_Isabella_Stewart_Gardner_Museum.jpg",
+        "medium": "Tempera and gold on panel",
+        "movement": "Early Renaissance",
+        "title": "Death and the Assumption of the Virgin",
+        "year": "c. 1424-1434"
+      },
+      {
+        "artist": "Piero della Francesca",
+        "description": "A rare surviving fresco by the Renaissance master, depicting the mythological hero with calm, monumental dignity.",
+        "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/aa/Piero_della_Francesca_-_Hercules_-_Isabella_Stewart_Gardner_Museum.jpg",
+        "medium": "Fresco",
+        "movement": "Renaissance",
+        "title": "Hercules",
+        "year": "c. 1470"
+      }
+    ],
+    "city": "Boston"
+  },
+  "little girl in a blue armchair by unknown": {
+    "title": "Little Girl in a Blue Armchair",
+    "artist": "Mary Cassatt",
+    "year": "1878",
+    "movement": "Impressionism",
+    "medium": "Oil on canvas",
+    "type": "Painting",
+    "description": "The painting depicts a young girl sprawled in a large, overstuffed blue armchair, looking bored or restless, accompanied by a small sleeping Brussels Griffon dog in an adjacent chair. The composition uses radical cropping and a high viewpoint, reflecting the influence of Japanese woodblock prints and a focus on the candid moments of childhood.",
+    "historicalContext": "Painted in 1878, this work is one of Cassatt's most famous contributions to Impressionism. Edgar Degas, her close friend and mentor, advised her on the composition and even painted parts of the background. The painting was rejected from the American section of the 1878 Exposition Universelle in Paris, which Cassatt found deeply insulting, but it later became a defining example of her ability to capture the psychological state of children.",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e0/Mary_Cassatt_-_Little_Girl_in_a_Blue_Armchair_-_Google_Art_Project.jpg",
+    "location": "Washington, D.C., USA",
+    "museum": "National Gallery of Art"
+  },
+  "paul revere by unknown": {
+    "title": "Paul Revere",
+    "artist": "John Singleton Copley",
+    "year": "1768",
+    "movement": "American Colonial",
+    "medium": "Oil on canvas",
+    "type": "Portrait",
+    "description": "This world-famous portrait depicts the American silversmith and patriot Paul Revere in an unusually informal manner for the 18th century. Revere is shown without a wig in his shirtsleeves, holding a silver teapot of his own craftsmanship. He rests his chin on his hand in a contemplative pose, with the highly polished surface of his worktable reflecting his figure and the teapot.",
+    "historicalContext": "Painted in Boston during a time of increasing revolutionary tension, this work is a landmark in American art for its portrayal of a craftsman with the dignity and intellectual presence typically reserved for the aristocracy. While the user suggested an unknown artist, this masterpiece by John Singleton Copley is the definitive and most iconic depiction of the historical figure, representing the rising American middle class and the democratic ideals of the era.",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4b/John_Singleton_Copley_-_Paul_Revere_-_Google_Art_Project.jpg",
+    "location": "Boston, Massachusetts",
+    "museum": "Museum of Fine Arts, Boston"
+  },
+  "under the wave off kanagawa (great wave) by unknown": {
+    "title": "The Great Wave off Kanagawa",
+    "artist": "Katsushika Hokusai",
+    "year": "c. 1831",
+    "movement": "Ukiyo-e",
+    "medium": "Woodblock print; ink and color on paper",
+    "type": "Landscape",
+    "description": "The woodblock print depicts an enormous wave threatening three fishing boats in the Sagami Bay, while Mount Fuji remains visible and calm in the distant background. The dynamic composition emphasizes the power of nature through the frothing claws of the wave and the use of the deep Prussian Blue pigment.",
+    "historicalContext": "This work is the first and most recognizable print in Hokusai's series 'Thirty-six Views of Mount Fuji'. Created during the Edo period, it represents a pivotal moment where traditional Japanese art integrated Western-style linear perspective and imported pigments, eventually becoming a global icon that influenced Impressionist painters in Europe.",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0d/Great_Wave_off_Kanagawa2.jpg",
+    "location": "New York City, USA",
+    "museum": "Metropolitan Museum of Art"
+  },
+  "woman with binoculars by edgar degas": {
+    "title": "Woman with Binoculars (Femme à la lorgnette)",
+    "artist": "Edgar Degas",
+    "year": "1865-1866",
+    "movement": "Impressionism",
+    "medium": "Oil on cardboard",
+    "type": "Painting",
+    "description": "The painting features a woman in a dark dress and a bonnet, peering through binoculars. Her figure is set against a sparsely detailed background, emphasizing her focused expression and the industrial design of the field glasses. The work is famous for its reversal of the traditional artist-subject relationship, as the subject appears to be studying the viewer or the environment with the same intensity usually reserved for the artist's gaze.",
+    "historicalContext": "Degas was a key figure in the Impressionist movement, though he often preferred the term 'Realist.' This piece, likely set at the Longchamp Racecourse, showcases his fascination with modern leisure activities and the technology of vision. It was executed at a time when Degas was transitioning from historical painting toward scenes of everyday Parisian life, capturing the 'snapshot' quality and psychological depth that would define his mature style.",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e0/Edgar_Degas_-_Woman_with_Binoculars_-_Google_Art_Project.jpg",
+    "location": "Vienna, Austria",
+    "museum": "Galerie Belvedere"
+  },
+  "woman with binoculars (femme à la lorgnette) by edgar degas": {
+    "title": "Woman with Binoculars (Femme à la lorgnette)",
+    "artist": "Edgar Degas",
+    "year": "c. 1865-1866",
+    "movement": "Impressionism",
+    "medium": "Oil on cardboard, transferred to canvas",
+    "type": "Painting",
+    "description": "The painting features a woman dressed in dark, elegant attire, holding a pair of field glasses to her eyes. She is depicted in profile, focused intently on an event outside the frame, likely at a racetrack or theater. Degas captures the physical posture of observation and the psychological detachment of the modern spectator.",
+    "historicalContext": "This work was created during a period when Degas was shifting his focus from historical subjects to scenes of contemporary Parisian life. It reflects his lifelong fascination with the act of seeing and being seen, exploring themes of voyeurism and the anonymity of the urban crowd that would define the Impressionist era.",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Edgar_Degas_-_Femme_à_la_lorgnette_-_Google_Art_Project.jpg",
+    "location": "Basel, Switzerland",
+    "museum": "Galerie Beyeler"
+  },
+  "the rape of europa by unknown": {
+    "title": "The Rape of Europa",
+    "artist": "Unknown",
+    "year": "c. 50-79 AD",
+    "movement": "Roman Art",
+    "medium": "Fresco",
+    "type": "Wall Painting",
+    "description": "This ancient Roman fresco depicts the Greek myth of the Phoenician princess Europa being abducted by Zeus, who has disguised himself as a white bull. Europa is shown draped in elegant clothing, clinging to the bull as it strides through the sea, with the composition highlighting the fluid motion of the water and the divine nature of the encounter.",
+    "historicalContext": "Originally decorating the walls of the House of Jason in Pompeii, this artwork provides significant insight into the Roman fascination with Hellenistic mythology and the sophisticated techniques of the Third Pompeian Style. It survived the eruption of Mount Vesuvius in 79 AD and was later excavated, becoming one of the most recognized ancient depictions of this specific myth.",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e0/Rape_of_Europa_Pompeii_House_of_Jason.jpg",
+    "location": "Naples, Italy",
+    "museum": "National Archaeological Museum of Naples"
+  },
+  "isabella stewart museum": {
+    "title": "The Rape of Europa",
+    "artist": "Titian",
+    "year": "1560-1562",
+    "movement": "Renaissance",
+    "medium": "Oil on canvas",
+    "type": "Painting",
+    "description": "The painting illustrates the Greek myth of the Phoenician princess Europa being abducted by Zeus, who has transformed into a white bull. Titian depicts Europa sprawled precariously on the bull's back as it plunges through the waves, with her garments fluttering and cupids following in the air, while her companions wave frantically from the distant shore.",
+    "historicalContext": "Commissioned by King Philip II of Spain, this work is the final piece in a series of six mythological paintings known as 'poesie' (painted poems). It was acquired by Isabella Stewart Gardner in 1896 through the expertise of Bernard Berenson, marking the first time a major Titian painting was brought to the United States. The work is celebrated for its revolutionary brushwork and influence on later masters like Rubens and Velázquez.",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/be/Tizian_085.jpg",
+    "location": "Boston, Massachusetts, USA",
+    "museum": "Isabella Stewart Gardner Museum"
+  }
+}

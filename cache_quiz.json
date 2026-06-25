@@ -1,0 +1,1050 @@
+{
+  "2026-06-22": [
+    {
+      "artworkTitle": "Mona Lisa",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg",
+      "type": "artist",
+      "correctAnswer": "Leonardo da Vinci",
+      "options": [
+        "Michelangelo",
+        "Leonardo da Vinci",
+        "Raphael",
+        "Donatello"
+      ],
+      "hint": "He was a quintessential Renaissance Polymath and painted the Vitruvian Man."
+    },
+    {
+      "artworkTitle": "The Starry Night",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
+      "type": "artist",
+      "correctAnswer": "Vincent van Gogh",
+      "options": [
+        "Claude Monet",
+        "Vincent van Gogh",
+        "Paul Gauguin",
+        "Edvard Munch"
+      ],
+      "hint": "This Dutch artist painted this while in an asylum in Saint-Rémy-de-Provence."
+    },
+    {
+      "artworkTitle": "The Scream",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Edvard_Munch%2C_1893%2C_The_Scream%2C_oil%2C_tempera_and_pastel_on_cardboard%2C_91_x_73_cm%2C_National_Gallery_of_Norway.jpg",
+      "type": "artist",
+      "correctAnswer": "Edvard Munch",
+      "options": [
+        "Edvard Munch",
+        "Gustav Klimt",
+        "Egon Schiele",
+        "Wassily Kandinsky"
+      ],
+      "hint": "This Norwegian artist is a key figure in the Expressionist movement."
+    },
+    {
+      "artworkTitle": "Girl with a Pearl Earring",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0f/1665_Girl_with_a_Pearl_Earring.jpg",
+      "type": "artist",
+      "correctAnswer": "Johannes Vermeer",
+      "options": [
+        "Rembrandt",
+        "Johannes Vermeer",
+        "Frans Hals",
+        "Jan Steen"
+      ],
+      "hint": "This Dutch Golden Age painter is known for his masterly use of light in domestic interiors."
+    },
+    {
+      "artworkTitle": "The Birth of Venus",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0b/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project.jpg",
+      "type": "period",
+      "correctAnswer": "Renaissance",
+      "options": [
+        "Baroque",
+        "Renaissance",
+        "Neoclassicism",
+        "Rococo"
+      ],
+      "hint": "This period saw a massive revival of interest in Classical antiquity and humanism."
+    },
+    {
+      "artworkTitle": "The Night Watch",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5a/The_Night_Watch_-_HD.jpg",
+      "type": "artist",
+      "correctAnswer": "Rembrandt",
+      "options": [
+        "Peter Paul Rubens",
+        "Rembrandt",
+        "Anthony van Dyck",
+        "Jan van Eyck"
+      ],
+      "hint": "This artist is famous for his mastery of chiaroscuro and many self-portraits."
+    },
+    {
+      "artworkTitle": "The Great Wave off Kanagawa",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a5/Tsunami_by_hokusai_19th_century.jpg",
+      "type": "artist",
+      "correctAnswer": "Katsushika Hokusai",
+      "options": [
+        "Utamaro",
+        "Hiroshige",
+        "Katsushika Hokusai",
+        "Kuniyoshi"
+      ],
+      "hint": "This Japanese artist was a master of the ukiyo-e woodblock print style."
+    },
+    {
+      "artworkTitle": "American Gothic",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Grant_Wood_-_American_Gothic_-_Google_Art_Project.jpg",
+      "type": "movement",
+      "correctAnswer": "Regionalism",
+      "options": [
+        "Surrealism",
+        "Regionalism",
+        "Pop Art",
+        "Abstract Expressionism"
+      ],
+      "hint": "This 1930s movement focused on realistic scenes of rural and small-town America."
+    },
+    {
+      "artworkTitle": "The Kiss",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/40/The_Kiss_-_Gustav_Klimt_-_Google_Art_Project.jpg",
+      "type": "movement",
+      "correctAnswer": "movement",
+      "options": [
+        "Impressionism",
+        "Art Nouveau",
+        "Cubism",
+        "Minimalism"
+      ],
+      "hint": "This movement is known for its intricate linear designs and flowing curves."
+    },
+    {
+      "artworkTitle": "Las Meninas",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/31/Las_Meninas%2C_by_Diego_Vel%C3%A1zquez%2C_from_Prado_in_Google_Earth.jpg",
+      "type": "artist",
+      "correctAnswer": "Diego Velázquez",
+      "options": [
+        "Francisco Goya",
+        "Diego Velázquez",
+        "El Greco",
+        "Murillo"
+      ],
+      "hint": "He was the leading artist in the court of King Philip IV of Spain."
+    },
+    {
+      "artworkTitle": "Impression, Sunrise",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/59/Claude_Monet%2C_Impression%2C_soleil_levant.jpg",
+      "type": "movement",
+      "correctAnswer": "Impressionism",
+      "options": [
+        "Realism",
+        "Impressionism",
+        "Romanticism",
+        "Fauvism"
+      ],
+      "hint": "The name of this movement was derived from the title of this specific painting."
+    },
+    {
+      "artworkTitle": "The Garden of Earthly Delights",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/6/62/The_Garden_of_Earthly_Delights_by_Bosch_High_Res.jpg",
+      "type": "artist",
+      "correctAnswer": "Hieronymus Bosch",
+      "options": [
+        "Pieter Bruegel",
+        "Hieronymus Bosch",
+        "Jan van Eyck",
+        "Albrecht Dürer"
+      ],
+      "hint": "This Early Netherlandish painter is known for his fantastic imagery and complex symbolism."
+    },
+    {
+      "artworkTitle": "School of Athens",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/49/%22The_School_of_Athens%22_by_Raffaello_Sanzio_da_Urbino.jpg",
+      "type": "artist",
+      "correctAnswer": "Raphael",
+      "options": [
+        "Leonardo da Vinci",
+        "Michelangelo",
+        "Raphael",
+        "Bramante"
+      ],
+      "hint": "This artist was commissioned to decorate the Stanza della Segnatura in the Vatican."
+    },
+    {
+      "artworkTitle": "Wanderer above the Sea of Fog",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg",
+      "type": "movement",
+      "correctAnswer": "Romanticism",
+      "options": [
+        "Romanticism",
+        "Enlightenment",
+        "Neoclassicism",
+        "Realism"
+      ],
+      "hint": "This movement emphasized emotion, individualism, and the sublime power of nature."
+    },
+    {
+      "artworkTitle": "Liberty Leading the People",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5d/Eug%C3%A8ne_Delacroix_-_Le_28_juillet._La_Libert%C3%A9_guidant_le_peuple.jpg",
+      "type": "artist",
+      "correctAnswer": "Eugène Delacroix",
+      "options": [
+        "Jacques-Louis David",
+        "Eugène Delacroix",
+        "Ingres",
+        "Géricault"
+      ],
+      "hint": "This French artist is considered the leader of the French Romantic school."
+    },
+    {
+      "artworkTitle": "A Sunday Afternoon on the Island of La Grande Jatte",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/7/7d/A_Sunday_on_La_Grande_Jatte%2C_Georges_Seurat%2C_1884.jpg",
+      "type": "movement",
+      "correctAnswer": "movement",
+      "options": [
+        "Impressionism",
+        "Post-Impressionism",
+        "Cubism",
+        "Fauvism"
+      ],
+      "hint": "This painting is the most famous example of the pointillist technique."
+    },
+    {
+      "artworkTitle": "Nighthawks",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a8/Nighthawks_by_Edward_Hopper_1942.jpg",
+      "type": "artist",
+      "correctAnswer": "Edward Hopper",
+      "options": [
+        "Grant Wood",
+        "Edward Hopper",
+        "Andrew Wyeth",
+        "Norman Rockwell"
+      ],
+      "hint": "This American realist painter is famous for capturing the loneliness of modern life."
+    },
+    {
+      "artworkTitle": "The Swing",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/eb/Les_Hasards_heureux_de_l%27escarpolette.jpg",
+      "type": "movement",
+      "correctAnswer": "movement",
+      "options": [
+        "Baroque",
+        "Rococo",
+        "Neoclassicism",
+        "Renaissance"
+      ],
+      "hint": "This 18th-century movement is known for its playfulness, pastel colors, and ornate decoration."
+    },
+    {
+      "artworkTitle": "Whistler's Mother",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Whistlers_Mother_high_res.jpg",
+      "type": "artist",
+      "correctAnswer": "James Abbott McNeill Whistler",
+      "options": [
+        "John Singer Sargent",
+        "Mary Cassatt",
+        "James Abbott McNeill Whistler",
+        "Winslow Homer"
+      ],
+      "hint": "The actual title of this 1871 painting is Arrangement in Grey and Black No. 1."
+    },
+    {
+      "artworkTitle": "The Creation of Adam",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Michelangelo_-_Creation_of_Adam_%28cropped%29.jpg",
+      "type": "artist",
+      "correctAnswer": "Michelangelo",
+      "options": [
+        "Donatello",
+        "Botticelli",
+        "Michelangelo",
+        "Titian"
+      ],
+      "hint": "This artist spent four years painting the ceiling of the Sistine Chapel."
+    }
+  ],
+  "2026-06-23": [
+    {
+      "artworkTitle": "Mona Lisa",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg",
+      "type": "artist",
+      "correctAnswer": "Leonardo da Vinci",
+      "options": [
+        "Michelangelo",
+        "Leonardo da Vinci",
+        "Raphael",
+        "Sandro Botticelli"
+      ],
+      "hint": "This polymath is also known for his notebooks and the Vitruvian Man."
+    },
+    {
+      "artworkTitle": "The Starry Night",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
+      "type": "artist",
+      "correctAnswer": "Vincent van Gogh",
+      "options": [
+        "Claude Monet",
+        "Vincent van Gogh",
+        "Edvard Munch",
+        "Paul Cézanne"
+      ],
+      "hint": "This Dutch Post-Impressionist painted this while in an asylum in Saint-Rémy-de-Provence."
+    },
+    {
+      "artworkTitle": "Girl with a Pearl Earring",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0b/Johannes_Vermeer_%281632-1675%29_-_The_Girl_With_The_Pearl_Earring_%281665%29.jpg",
+      "type": "artist",
+      "correctAnswer": "Johannes Vermeer",
+      "options": [
+        "Rembrandt",
+        "Johannes Vermeer",
+        "Jan van Eyck",
+        "Frans Hals"
+      ],
+      "hint": "Often called the 'Mona Lisa of the North,' this artist was a master of domestic interior scenes."
+    },
+    {
+      "artworkTitle": "The Birth of Venus",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0b/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project.jpg",
+      "type": "period",
+      "correctAnswer": "Renaissance",
+      "options": [
+        "Baroque",
+        "Renaissance",
+        "Neoclassicism",
+        "Medieval"
+      ],
+      "hint": "This era was a fervent period of European cultural, artistic, political and economic 'rebirth'."
+    },
+    {
+      "artworkTitle": "The Scream",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f4/The_Scream.jpg",
+      "type": "movement",
+      "correctAnswer": "Expressionism",
+      "options": [
+        "Impressionism",
+        "Expressionism",
+        "Surrealism",
+        "Realism"
+      ],
+      "hint": "This movement sought to present the world solely from a subjective perspective, distorting it radically for emotional effect."
+    },
+    {
+      "artworkTitle": "Las Meninas",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/31/La_familia_de_Felipe_IV%2C_o_Las_Meninas%2C_por_Diego_Vel%C3%A1zquez.jpg",
+      "type": "artist",
+      "correctAnswer": "Diego Velázquez",
+      "options": [
+        "Francisco Goya",
+        "Diego Velázquez",
+        "El Greco",
+        "Pablo Picasso"
+      ],
+      "hint": "He was the leading artist in the court of King Philip IV and one of the most important painters of the Spanish Golden Age."
+    },
+    {
+      "artworkTitle": "The School of Athens",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/49/%22The_School_of_Athens%22_by_Raffaello_Sanzio_da_Urbino.jpg",
+      "type": "artist",
+      "correctAnswer": "Raphael",
+      "options": [
+        "Michelangelo",
+        "Donatello",
+        "Raphael",
+        "Leonardo da Vinci"
+      ],
+      "hint": "This artist was commissioned to decorate the rooms now known as the Stanze di Raffaello in the Apostolic Palace in the Vatican."
+    },
+    {
+      "artworkTitle": "The Great Wave off Kanagawa",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0a/The_Great_Wave_off_Kanagawa.jpg",
+      "type": "artist",
+      "correctAnswer": "Katsushika Hokusai",
+      "options": [
+        "Utamaro",
+        "Hiroshige",
+        "Katsushika Hokusai",
+        "Kuniyoshi"
+      ],
+      "hint": "This artist is the most famous practitioner of the ukiyo-e woodblock print style."
+    },
+    {
+      "artworkTitle": "Impression, Sunrise",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/59/Claude_Monet%2C_Impression%2C_soleil_levant.jpg",
+      "type": "movement",
+      "correctAnswer": "Impressionism",
+      "options": [
+        "Impressionism",
+        "Post-Impressionism",
+        "Romanticism",
+        "Fauvism"
+      ],
+      "hint": "The name of this entire art movement was derived from the title of this specific painting."
+    },
+    {
+      "artworkTitle": "American Gothic",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Grant_Wood_-_American_Gothic_-_Google_Art_Project.jpg",
+      "type": "artist",
+      "correctAnswer": "Grant Wood",
+      "options": [
+        "Edward Hopper",
+        "Grant Wood",
+        "Andrew Wyeth",
+        "Norman Rockwell"
+      ],
+      "hint": "This artist is best known for his paintings depicting the rural American Midwest."
+    },
+    {
+      "artworkTitle": "The Night Watch",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5a/The_Night_Watch_-_HD.jpg",
+      "type": "period",
+      "correctAnswer": "Dutch Golden Age",
+      "options": [
+        "Renaissance",
+        "Baroque",
+        "Dutch Golden Age",
+        "Rococo"
+      ],
+      "hint": "This period in the 17th century saw Dutch trade, science, and art become among the most acclaimed in the world."
+    },
+    {
+      "artworkTitle": "The Garden of Earthly Delights",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/8/8d/The_Garden_of_Earthly_Delights_by_Bosch_High_Res.jpg",
+      "type": "artist",
+      "correctAnswer": "Hieronymus Bosch",
+      "options": [
+        "Pieter Bruegel",
+        "Hieronymus Bosch",
+        "Jan van Eyck",
+        "Albrecht Dürer"
+      ],
+      "hint": "This Early Netherlandish painter is known for his fantastic imagery and detailed landscapes."
+    },
+    {
+      "artworkTitle": "Liberty Leading the People",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a7/Eug%C3%A8ne_Delacroix_-_Le_28_juillet._La_Libert%C3%A9_guidant_le_peuple.jpg",
+      "type": "movement",
+      "correctAnswer": "Romanticism",
+      "options": [
+        "Neoclassicism",
+        "Romanticism",
+        "Realism",
+        "Impressionism"
+      ],
+      "hint": "This movement emphasized inspiration, subjectivity, and the primacy of the individual."
+    },
+    {
+      "artworkTitle": "The Arnolfini Portrait",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/33/Van_Eyck_-_Arnolfini_Portrait.jpg",
+      "type": "artist",
+      "correctAnswer": "Jan van Eyck",
+      "options": [
+        "Rogier van der Weyden",
+        "Jan van Eyck",
+        "Hans Holbein",
+        "Hieronymus Bosch"
+      ],
+      "hint": "This 15th-century painter was a pioneer of oil painting and included a convex mirror in this work."
+    },
+    {
+      "artworkTitle": "A Sunday Afternoon on the Island of La Grande Jatte",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/7/7d/A_Sunday_on_La_Grande_Jatte%2C_Georges_Seurat%2C_1884.jpg",
+      "type": "movement",
+      "correctAnswer": "Pointillism",
+      "options": [
+        "Pointillism",
+        "Cubism",
+        "Futurism",
+        "Symbolism"
+      ],
+      "hint": "This technique involves using small, distinct dots of color applied in patterns to form an image."
+    },
+    {
+      "artworkTitle": "Wanderer above the Sea of Fog",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg",
+      "type": "movement",
+      "correctAnswer": "Romanticism",
+      "options": [
+        "Romanticism",
+        "Realism",
+        "Baroque",
+        "Renaissance"
+      ],
+      "hint": "This movement often featured landscape as a medium for psychological and spiritual expression."
+    },
+    {
+      "artworkTitle": "The Last Supper",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4b/%C3%9Altima_Cena_-__da_Vinci_5.jpg",
+      "type": "period",
+      "correctAnswer": "Renaissance",
+      "options": [
+        "Gothic",
+        "Renaissance",
+        "Baroque",
+        "Mannerism"
+      ],
+      "hint": "This painting represents the scene of the Last Supper of Jesus with the Twelve Apostles."
+    },
+    {
+      "artworkTitle": "Whistler's Mother",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1b/James_Abbott_McNeill_Whistler_-_Arrangement_in_Grey_and_Black_No._1_-_Google_Art_Project.jpg",
+      "type": "artist",
+      "correctAnswer": "James Abbott McNeill Whistler",
+      "options": [
+        "John Singer Sargent",
+        "James Abbott McNeill Whistler",
+        "Mary Cassatt",
+        "Winslow Homer"
+      ],
+      "hint": "The formal title of this painting is 'Arrangement in Grey and Black No. 1'."
+    },
+    {
+      "artworkTitle": "The Third of May 1808",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/fd/El_tres_de_mayo_de_1808_en_Madrid_%28Francisco_de_Goya%29.jpg",
+      "type": "artist",
+      "correctAnswer": "Francisco Goya",
+      "options": [
+        "Francisco Goya",
+        "Diego Velázquez",
+        "Salvador Dalí",
+        "Joan Miró"
+      ],
+      "hint": "This Spanish painter is often referred to as both the last of the Old Masters and the first of the moderns."
+    },
+    {
+      "artworkTitle": "The Swing",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d4/Fragonard%2C_The_Swing.jpg",
+      "type": "movement",
+      "correctAnswer": "Rococo",
+      "options": [
+        "Rococo",
+        "Baroque",
+        "Neoclassicism",
+        "Romanticism"
+      ],
+      "hint": "This 18th-century movement is characterized by lightness, elegance, and an exuberant use of curving natural forms in ornamentation."
+    }
+  ],
+  "2026-06-24": [
+    {
+      "artworkTitle": "Mona Lisa",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg",
+      "type": "artist",
+      "correctAnswer": "Leonardo da Vinci",
+      "options": [
+        "Michelangelo",
+        "Raphael",
+        "Leonardo da Vinci",
+        "Caravaggio"
+      ],
+      "hint": "He was the quintessential 'Renaissance Man' known for his notebooks and the Vitruvian Man."
+    },
+    {
+      "artworkTitle": "The Starry Night",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
+      "type": "artist",
+      "correctAnswer": "Vincent van Gogh",
+      "options": [
+        "Paul Gauguin",
+        "Vincent van Gogh",
+        "Edvard Munch",
+        "Claude Monet"
+      ],
+      "hint": "This Post-Impressionist painter created this work while staying at an asylum in Saint-Rémy-de-Provence."
+    },
+    {
+      "artworkTitle": "Girl with a Pearl Earring",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0f/1665_Girl_with_a_Pearl_Earring.jpg",
+      "type": "artist",
+      "correctAnswer": "Johannes Vermeer",
+      "options": [
+        "Rembrandt",
+        "Johannes Vermeer",
+        "Frans Hals",
+        "Jan Steen"
+      ],
+      "hint": "Known for his mastery of light, this Dutch Golden Age painter spent his entire life in Delft."
+    },
+    {
+      "artworkTitle": "The Birth of Venus",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0b/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project.jpg",
+      "type": "artist",
+      "correctAnswer": "Sandro Botticelli",
+      "options": [
+        "Sandro Botticelli",
+        "Donatello",
+        "Fra Angelico",
+        "Titian"
+      ],
+      "hint": "An Early Renaissance master who enjoyed the patronage of the Medici family in Florence."
+    },
+    {
+      "artworkTitle": "The Night Watch",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5a/The_Night_Watch_-_HD.jpg",
+      "type": "artist",
+      "correctAnswer": "Rembrandt",
+      "options": [
+        "Peter Paul Rubens",
+        "Johannes Vermeer",
+        "Rembrandt",
+        "Anthony van Dyck"
+      ],
+      "hint": "This artist is famous for his use of tenebrism and his numerous self-portraits."
+    },
+    {
+      "artworkTitle": "The Scream",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f4/The_Scream.jpg",
+      "type": "movement",
+      "correctAnswer": "Expressionism",
+      "options": [
+        "Impressionism",
+        "Surrealism",
+        "Expressionism",
+        "Cubism"
+      ],
+      "hint": "This movement sought to present the world solely from a subjective perspective, distorting it radically for emotional effect."
+    },
+    {
+      "artworkTitle": "Impression, Sunrise",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/59/Monet_-_Impression%2C_Sunrise.jpg",
+      "type": "movement",
+      "correctAnswer": "Impressionism",
+      "options": [
+        "Realism",
+        "Romanticism",
+        "Impressionism",
+        "Fauvism"
+      ],
+      "hint": "The name of this 19th-century art movement was actually derived from the title of this specific painting."
+    },
+    {
+      "artworkTitle": "Liberty Leading the People",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5d/Eug%C3%A8ne_Delacroix_-_Le_28_juillet._La_Libert%C3%A9_guidant_le_peuple.jpg",
+      "type": "movement",
+      "correctAnswer": "Romanticism",
+      "options": [
+        "Neoclassicism",
+        "Romanticism",
+        "Baroque",
+        "Rococo"
+      ],
+      "hint": "This movement emphasized intense emotion as an authentic source of aesthetic experience."
+    },
+    {
+      "artworkTitle": "The Garden of Earthly Delights",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/ae/El_jard%C3%ADn_de_las_delicias%2C_de_El_Bosco.jpg",
+      "type": "period",
+      "correctAnswer": "Northern Renaissance",
+      "options": [
+        "Italian Renaissance",
+        "Northern Renaissance",
+        "Gothic",
+        "Baroque"
+      ],
+      "hint": "This period occurred in Europe north of the Alps and is known for its incredible detail and oil painting techniques."
+    },
+    {
+      "artworkTitle": "A Sunday Afternoon on the Island of La Grande Jatte",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/7/7d/A_Sunday_on_La_Grande_Jatte%2C_Georges_Seurat%2C_1884.jpg",
+      "type": "movement",
+      "correctAnswer": "Pointillism",
+      "options": [
+        "Pointillism",
+        "Expressionism",
+        "Futurism",
+        "Dada"
+      ],
+      "hint": "This technique involves using small, distinct dots of color applied in patterns to form an image."
+    },
+    {
+      "artworkTitle": "The Great Wave off Kanagawa",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0d/Tsunami_by_hokusai_19th_century.jpg",
+      "type": "artist",
+      "correctAnswer": "Hokusai",
+      "options": [
+        "Hiroshige",
+        "Hokusai",
+        "Utamaro",
+        "Kuniyoshi"
+      ],
+      "hint": "He was a Japanese ukiyo-e artist of the Edo period, best known for the series Thirty-six Views of Mount Fuji."
+    },
+    {
+      "artworkTitle": "American Gothic",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Grant_Wood_-_American_Gothic_-_Google_Art_Project.jpg",
+      "type": "artist",
+      "correctAnswer": "Grant Wood",
+      "options": [
+        "Edward Hopper",
+        "Grant Wood",
+        "Andrew Wyeth",
+        "Norman Rockwell"
+      ],
+      "hint": "An American painter best known for his depictions of the rural American Midwest."
+    },
+    {
+      "artworkTitle": "The School of Athens",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/49/%22The_School_of_Athens%22_by_Raffaello_Sanzio_da_Urbino.jpg",
+      "type": "artist",
+      "correctAnswer": "Raphael",
+      "options": [
+        "Michelangelo",
+        "Raphael",
+        "Bramante",
+        "Perugino"
+      ],
+      "hint": "This artist's work is admired for its clarity of form and ease of composition in the Vatican's Apostolic Palace."
+    },
+    {
+      "artworkTitle": "Oath of the Horatii",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/bb/David-Oath_of_the_Horatii-1784.jpg",
+      "type": "movement",
+      "correctAnswer": "Neoclassicism",
+      "options": [
+        "Romanticism",
+        "Neoclassicism",
+        "Mannerism",
+        "Rococo"
+      ],
+      "hint": "This movement drew inspiration from the classical art and culture of Ancient Greece and Rome."
+    },
+    {
+      "artworkTitle": "The Third of May 1808",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/fd/El_tres_de_mayo_de_1808_en_Madrid.jpg",
+      "type": "artist",
+      "correctAnswer": "Francisco Goya",
+      "options": [
+        "Diego Velázquez",
+        "Francisco Goya",
+        "El Greco",
+        "Bartolomé Esteban Murillo"
+      ],
+      "hint": "He was a Spanish Romantic painter and printmaker regarded as the last of the Old Masters and first of the moderns."
+    },
+    {
+      "artworkTitle": "Las Meninas",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/31/Las_Meninas%2C_by_Diego_Vel%C3%A1zquez%2C_from_Prado_in_Google_Earth.jpg",
+      "type": "artist",
+      "correctAnswer": "Diego Velázquez",
+      "options": [
+        "Francisco Goya",
+        "Diego Velázquez",
+        "El Greco",
+        "Zurbarán"
+      ],
+      "hint": "The leading artist in the court of King Philip IV and one of the most important painters of the Spanish Golden Age."
+    },
+    {
+      "artworkTitle": "The Kiss",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/40/The_Kiss_-_Gustav_Klimt_-_Google_Art_Project.jpg",
+      "type": "movement",
+      "correctAnswer": "Art Nouveau",
+      "options": [
+        "Art Deco",
+        "Art Nouveau",
+        "Minimalism",
+        "Pop Art"
+      ],
+      "hint": "A style of decorative art, architecture, and design characterized by intricate linear designs and flowing curves based on natural forms."
+    },
+    {
+      "artworkTitle": "The Last Supper",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Ultima_Cena_-_Leonardo_Da_Vinci_-_High_Resolution_Scale_x2_Leone_jump_0.jpg",
+      "type": "artist",
+      "correctAnswer": "Leonardo da Vinci",
+      "options": [
+        "Tintoretto",
+        "Paolo Veronese",
+        "Leonardo da Vinci",
+        "Andrea del Sarto"
+      ],
+      "hint": "This mural is located in the Convent of Santa Maria delle Grazie in Milan."
+    },
+    {
+      "artworkTitle": "Composition VIII",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b3/Vassily_Kandinsky%2C_1923_-_Composition_8.jpg",
+      "type": "movement",
+      "correctAnswer": "Abstract Art",
+      "options": [
+        "Impressionism",
+        "Abstract Art",
+        "Realism",
+        "Renaissance"
+      ],
+      "hint": "This movement uses visual language of shape, form, color and line to create a composition which may exist with a degree of independence from visual references."
+    },
+    {
+      "artworkTitle": "Whistler's Mother",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1b/James_Abbott_McNeill_Whistler_-_Arrangement_in_Grey_and_Black_No._1_-_Google_Art_Project.jpg",
+      "type": "artist",
+      "correctAnswer": "James Abbott McNeill Whistler",
+      "options": [
+        "John Singer Sargent",
+        "James Abbott McNeill Whistler",
+        "Thomas Eakins",
+        "Mary Cassatt"
+      ],
+      "hint": "This American artist was active during the Gilded Age and famously titled this work 'Arrangement in Grey and Black No. 1'."
+    }
+  ],
+  "2026-06-25": [
+    {
+      "artworkTitle": "Mona Lisa",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg",
+      "type": "artist",
+      "correctAnswer": "Leonardo da Vinci",
+      "options": [
+        "Leonardo da Vinci",
+        "Michelangelo",
+        "Raphael",
+        "Sandro Botticelli"
+      ],
+      "hint": "This Renaissance polymath was also an inventor and scientist who painted the Last Supper."
+    },
+    {
+      "artworkTitle": "The Starry Night",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
+      "type": "artist",
+      "correctAnswer": "Vincent van Gogh",
+      "options": [
+        "Paul Gauguin",
+        "Vincent van Gogh",
+        "Claude Monet",
+        "Edvard Munch"
+      ],
+      "hint": "This Dutch Post-Impressionist painter is famous for his expressive use of color and swirly brushstrokes."
+    },
+    {
+      "artworkTitle": "The Scream",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f4/The_Scream.jpg",
+      "type": "movement",
+      "correctAnswer": "Expressionism",
+      "options": [
+        "Impressionism",
+        "Expressionism",
+        "Surrealism",
+        "Cubism"
+      ],
+      "hint": "This movement sought to present the world solely from a subjective perspective, distorting it radically for emotional effect."
+    },
+    {
+      "artworkTitle": "The Night Watch",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5a/The_Night_Watch_-_HD.jpg",
+      "type": "period",
+      "correctAnswer": "Baroque",
+      "options": [
+        "Renaissance",
+        "Baroque",
+        "Rococo",
+        "Neoclassicism"
+      ],
+      "hint": "This period is characterized by exaggerated motion and clear detail used to produce drama, exuberance, and grandeur."
+    },
+    {
+      "artworkTitle": "The Birth of Venus",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0b/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project.jpg",
+      "type": "artist",
+      "correctAnswer": "Sandro Botticelli",
+      "options": [
+        "Sandro Botticelli",
+        "Filippo Lippi",
+        "Donatello",
+        "Titian"
+      ],
+      "hint": "This Early Renaissance painter belonged to the Florentine School under the patronage of Lorenzo de' Medici."
+    },
+    {
+      "artworkTitle": "Las Meninas",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/31/Las_Meninas%2C_by_Diego_Vel%C3%A1zquez%2C_from_Prado_in_Google_Earth.jpg",
+      "type": "artist",
+      "correctAnswer": "Diego Velázquez",
+      "options": [
+        "Francisco Goya",
+        "Diego Velázquez",
+        "El Greco",
+        "Bartolomé Esteban Murillo"
+      ],
+      "hint": "He was the leading artist in the court of King Philip IV and one of the most important painters of the Spanish Golden Age."
+    },
+    {
+      "artworkTitle": "Impression, Sunrise",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/59/Claude_Monet%2C_Impression%2C_soleil_levant.jpg",
+      "type": "movement",
+      "correctAnswer": "Impressionism",
+      "options": [
+        "Realism",
+        "Impressionism",
+        "Post-Impressionism",
+        "Fauvism"
+      ],
+      "hint": "The name of this movement was actually derived from the title of this specific painting."
+    },
+    {
+      "artworkTitle": "The School of Athens",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/49/%22The_School_of_Athens%22_by_Raffaello_Sanzio_da_Urbino.jpg",
+      "type": "artist",
+      "correctAnswer": "Raphael",
+      "options": [
+        "Raphael",
+        "Michelangelo",
+        "Leonardo da Vinci",
+        "Bramante"
+      ],
+      "hint": "This Italian painter and architect of the High Renaissance is known for his series of Madonnas and large figure compositions in the Vatican."
+    },
+    {
+      "artworkTitle": "Girl with a Pearl Earring",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0b/Johannes_Vermeer_%281632-1675%29_-_The_Girl_With_The_Pearl_Earring_%281665%29.jpg",
+      "type": "artist",
+      "correctAnswer": "Johannes Vermeer",
+      "options": [
+        "Rembrandt",
+        "Johannes Vermeer",
+        "Frans Hals",
+        "Pieter de Hooch"
+      ],
+      "hint": "A Dutch Golden Age painter who specialized in domestic interior scenes of middle-class life."
+    },
+    {
+      "artworkTitle": "American Gothic",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Grant_Wood_-_American_Gothic_-_Google_Art_Project.jpg",
+      "type": "artist",
+      "correctAnswer": "Grant Wood",
+      "options": [
+        "Edward Hopper",
+        "Grant Wood",
+        "Andrew Wyeth",
+        "Thomas Hart Benton"
+      ],
+      "hint": "This American painter is best known for his depictions of the rural American Midwest."
+    },
+    {
+      "artworkTitle": "A Sunday Afternoon on the Island of La Grande Jatte",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/7/7d/A_Sunday_on_La_Grande_Jatte%2C_Georges_Seurat%2C_1884.jpg",
+      "type": "movement",
+      "correctAnswer": "Pointillism",
+      "options": [
+        "Pointillism",
+        "Cubism",
+        "Futurism",
+        "Abstract Expressionism"
+      ],
+      "hint": "This technique involves using small, distinct dots of color applied in patterns to form an image."
+    },
+    {
+      "artworkTitle": "The Great Wave off Kanagawa",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0d/Great_Wave_off_Kanagawa2.jpg",
+      "type": "period",
+      "correctAnswer": "Edo Period",
+      "options": [
+        "Meiji Period",
+        "Edo Period",
+        "Muromachi Period",
+        "Nara Period"
+      ],
+      "hint": "This era in Japanese history is characterized by economic growth, strict social order, and isolationist foreign policies."
+    },
+    {
+      "artworkTitle": "Liberty Leading the People",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5d/Eug%C3%A8ne_Delacroix_-_Le_28_juillet._La_Libert%C3%A9_guidant_le_peuple.jpg",
+      "type": "movement",
+      "correctAnswer": "Romanticism",
+      "options": [
+        "Neoclassicism",
+        "Romanticism",
+        "Realism",
+        "Impressionism"
+      ],
+      "hint": "This movement emphasized inspiration, subjectivity, and the primacy of the individual."
+    },
+    {
+      "artworkTitle": "The Arnolfini Portrait",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/33/Van_Eyck_-_Arnolfini_Portrait.jpg",
+      "type": "artist",
+      "correctAnswer": "Jan van Eyck",
+      "options": [
+        "Jan van Eyck",
+        "Albrecht Dürer",
+        "Hans Holbein",
+        "Hieronymus Bosch"
+      ],
+      "hint": "An Early Netherlandish painter who is often considered one of the founders of the school and a master of oil painting."
+    },
+    {
+      "artworkTitle": "The Garden of Earthly Delights",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/6/6d/The_Garden_of_Earthly_Delights_by_Bosch_High_Resolution.jpg",
+      "type": "period",
+      "correctAnswer": "Northern Renaissance",
+      "options": [
+        "High Renaissance",
+        "Northern Renaissance",
+        "Middle Ages",
+        "Mannerism"
+      ],
+      "hint": "This period refers to the Renaissance as it occurred in Europe north of the Alps."
+    },
+    {
+      "artworkTitle": "The Oath of the Horatii",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/bb/David-Oath_of_the_Horatii-1784.jpg",
+      "type": "movement",
+      "correctAnswer": "Neoclassicism",
+      "options": [
+        "Baroque",
+        "Rococo",
+        "Neoclassicism",
+        "Romanticism"
+      ],
+      "hint": "This movement drew inspiration from the 'classical' art and culture of classical antiquity."
+    },
+    {
+      "artworkTitle": "The Swing",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/de/Jean-Honor%C3%A9_Fragonard_-_The_Swing_-_WGA8181.jpg",
+      "type": "period",
+      "correctAnswer": "Rococo",
+      "options": [
+        "Baroque",
+        "Rococo",
+        "Neoclassicism",
+        "Realism"
+      ],
+      "hint": "This 18th-century artistic movement is characterized by lightheartedness, pastel colors, and ornate decoration."
+    },
+    {
+      "artworkTitle": "The Burial of the Count of Orgaz",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ec/El_Greco_-_The_Burial_of_the_Count_of_Orgaz.jpg",
+      "type": "artist",
+      "correctAnswer": "El Greco",
+      "options": [
+        "Diego Velázquez",
+        "El Greco",
+        "Francisco Goya",
+        "Murillo"
+      ],
+      "hint": "This Greek painter, sculptor, and architect of the Spanish Renaissance had a dramatic and expressionistic style."
+    },
+    {
+      "artworkTitle": "Lamentation (The Mourning of Christ)",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/af/Giotto_-_Scrovegni_-_-36-_Lamentation_%28The_Mourning_of_Christ%29.jpg",
+      "type": "artist",
+      "correctAnswer": "Giotto",
+      "options": [
+        "Giotto",
+        "Cimabue",
+        "Duccio",
+        "Fra Angelico"
+      ],
+      "hint": "An Italian painter and architect from Florence during the Late Middle Ages, often called the father of European painting."
+    },
+    {
+      "artworkTitle": "Wanderer above the Sea of Fog",
+      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg",
+      "type": "artist",
+      "correctAnswer": "Caspar David Friedrich",
+      "options": [
+        "Caspar David Friedrich",
+        "J.M.W. Turner",
+        "John Constable",
+        "William Blake"
+      ],
+      "hint": "A 19th-century German Romantic landscape painter, generally considered the most important German artist of his generation."
+    }
+  ]
+}

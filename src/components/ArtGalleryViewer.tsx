@@ -128,10 +128,10 @@ export const ArtGalleryViewer: React.FC<ArtGalleryViewerProps> = ({
           <div className="absolute top-0 inset-x-0 h-20 px-8 flex items-center justify-between z-50 bg-gradient-to-b from-black/60 to-transparent">
             <div>
               <h2 className="text-white font-serif text-xl italic">{title}</h2>
-              <p className="text-white/60 text-[10px] uppercase tracking-widest font-bold">{artist}</p>
+              <p className="text-white/60 text-xs uppercase tracking-widest font-bold">{artist}</p>
             </div>
             <div className="flex items-center gap-6">
-              <div className="text-white/40 text-[10px] font-mono tracking-widest uppercase">
+              <div className="text-white/40 text-xs font-mono tracking-widest uppercase">
                 {currentIndex + 1} / {allImages.length}
               </div>
               <button 
@@ -187,7 +187,7 @@ export const ArtGalleryViewer: React.FC<ArtGalleryViewerProps> = ({
                     >
                       <ZoomOut className="w-4 h-4" />
                     </button>
-                    <span className="text-[10px] font-mono text-white/80 w-12 text-center uppercase tracking-widest">
+                    <span className="text-xs font-mono text-white/80 w-12 text-center uppercase tracking-widest">
                       {Math.round(zoomLevel * 100)}%
                     </span>
                     <button 
@@ -264,7 +264,7 @@ export const ArtGalleryViewer: React.FC<ArtGalleryViewerProps> = ({
                 {!isViewOnly && (
                   <label className="w-20 h-20 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-artistic-accent/40 transition-all hover:bg-white/5 shrink-0">
                     <Plus className="w-5 h-5 text-white/40" />
-                    <span className="text-[8px] uppercase tracking-widest text-white/40 font-bold">Add</span>
+                    <span className="text-[11px] uppercase tracking-widest text-white/40 font-bold">Add</span>
                     <input type="file" className="hidden" accept="image/*" onChange={handleFileAdd} />
                   </label>
                 )}
@@ -273,7 +273,7 @@ export const ArtGalleryViewer: React.FC<ArtGalleryViewerProps> = ({
 
           {/* Tips Overlay */}
           <div className="absolute bottom-36 inset-x-0 text-center pointer-events-none">
-            <p className="text-white/20 text-[8px] uppercase tracking-[0.3em] font-bold">
+            <p className="text-white/20 text-[11px] uppercase tracking-[0.3em] font-bold">
               Drag to pan • Scroll to Zoom • Arrows to Navigate
             </p>
           </div>

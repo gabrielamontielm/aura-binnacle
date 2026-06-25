@@ -25,11 +25,11 @@ export const AchievementSystem: React.FC<AchievementSystemProps> = ({ profile })
     <div className="space-y-8 p-6 bg-artistic-shadow/20 rounded-3xl border border-artistic-ink/5">
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-artistic-accent block mb-1">Rank</span>
+          <span className="text-xs uppercase tracking-[0.4em] font-bold text-artistic-accent block mb-1">Rank</span>
           <h3 className="text-2xl font-serif italic">Level {profile.level || 1} Connoisseur</h3>
         </div>
         <div className="text-right">
-          <span className="text-[10px] uppercase tracking-widest font-bold opacity-40 block mb-1">{profile.totalXP || 0} Total XP</span>
+          <span className="text-xs uppercase tracking-widest font-bold opacity-40 block mb-1">{profile.totalXP || 0} Total XP</span>
           <div className="w-32 h-2 bg-artistic-ink/10 rounded-full overflow-hidden">
             <motion.div 
               initial={{ width: 0 }}
@@ -41,7 +41,7 @@ export const AchievementSystem: React.FC<AchievementSystemProps> = ({ profile })
       </div>
 
       <div>
-        <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-artistic-ink/40 block mb-6">Badges & Achievements</span>
+        <span className="text-xs uppercase tracking-[0.4em] font-bold text-artistic-ink/40 block mb-6">Badges & Achievements</span>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {BADGES.map((badge) => {
             const isEarned = profile.badges?.includes(badge.id);
@@ -56,9 +56,9 @@ export const AchievementSystem: React.FC<AchievementSystemProps> = ({ profile })
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${isEarned ? 'bg-artistic-shadow' : 'bg-transparent'}`}>
                   <BadgeIcon className={`w-6 h-6 ${isEarned ? badge.color : 'text-artistic-ink'}`} />
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-tight leading-tight">{badge.name}</span>
+                <span className="text-xs font-bold uppercase tracking-tight leading-tight">{badge.name}</span>
                 {badge.movement && (
-                  <span className="text-[8px] opacity-40 mt-1">{badge.movement}</span>
+                  <span className="text-[11px] opacity-40 mt-1">{badge.movement}</span>
                 )}
               </motion.div>
             );

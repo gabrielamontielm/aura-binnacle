@@ -124,7 +124,7 @@ export const MuseumPassport: React.FC<MuseumPassportProps> = ({ stamps, history,
     <div className="space-y-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-artistic-accent block mb-2">Heritage Proof</span>
+          <span className="text-xs uppercase tracking-[0.4em] font-bold text-artistic-accent block mb-2">Heritage Proof</span>
           <h2 className="text-3xl md:text-5xl font-serif tracking-tighter italic">Museum Passport</h2>
           <p className="text-xs text-artistic-ink/40 mt-4 max-w-md italic">
             Check into physical museum locations to unlock exclusive digital stamps, or claim them by identifying artworks from their prestigious collections in your gallery.
@@ -171,12 +171,12 @@ export const MuseumPassport: React.FC<MuseumPassportProps> = ({ stamps, history,
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isStamped ? 'bg-white shadow-sm' : 'bg-artistic-shadow'}`}>
                   {isStamped ? <CheckCircle className={`w-6 h-6 ${stamp.location.lat === 0 ? 'text-artistic-accent' : 'text-green-500'}`} /> : <Navigation className="w-6 h-6" />}
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest leading-tight mb-1">{museum.name}</span>
-                <span className="text-[8px] opacity-40 uppercase tracking-widest mb-2">{museum.city}</span>
+                <span className="text-xs font-black uppercase tracking-widest leading-tight mb-1">{museum.name}</span>
+                <span className="text-[11px] opacity-40 uppercase tracking-widest mb-2">{museum.city}</span>
                 
                 {artworkCount > 0 && (
                   <div className="flex items-center gap-1.5 px-2 py-0.5 bg-artistic-ink/5 rounded-full mb-2">
-                    <span className="text-[7px] font-black uppercase tracking-widest opacity-60">{artworkCount} {artworkCount === 1 ? 'Piece' : 'Pieces'}</span>
+                    <span className="text-[11px] font-black uppercase tracking-widest opacity-60">{artworkCount} {artworkCount === 1 ? 'Piece' : 'Pieces'}</span>
                   </div>
                 )}
 
@@ -187,7 +187,7 @@ export const MuseumPassport: React.FC<MuseumPassportProps> = ({ stamps, history,
                 )}
                 
                 {isStamped && (
-                    <span className="absolute bottom-4 text-[7px] font-mono opacity-20">
+                    <span className="absolute bottom-4 text-[11px] font-mono opacity-20">
                         {stamp.location.lat === 0 ? 'DIGITAL SCAN' : new Date(stamp.timestamp).toLocaleDateString()}
                     </span>
                 )}
@@ -197,7 +197,7 @@ export const MuseumPassport: React.FC<MuseumPassportProps> = ({ stamps, history,
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     onClick={() => handleDigitalClaim(museum.id)}
-                    className="absolute -bottom-2 px-3 py-1 bg-artistic-accent text-white text-[7px] font-bold uppercase tracking-widest rounded-full shadow-lg"
+                    className="absolute -bottom-2 px-3 py-1 bg-artistic-accent text-white text-[11px] font-bold uppercase tracking-widest rounded-full shadow-lg"
                   >
                     Claim via Scan
                   </motion.button>
@@ -219,7 +219,7 @@ export const MuseumPassport: React.FC<MuseumPassportProps> = ({ stamps, history,
                     ))}
                 </div>
                 <div>
-                    <span className="text-[9px] uppercase tracking-widest font-black opacity-40 block mb-1">Passport Status</span>
+                    <span className="text-[11px] uppercase tracking-widest font-black opacity-40 block mb-1">Passport Status</span>
                     <p className="text-xl font-serif italic text-artistic-ink">
                         {stamps.length} of {MUSEUMS.length} Major Galleries Visited
                     </p>
@@ -228,13 +228,13 @@ export const MuseumPassport: React.FC<MuseumPassportProps> = ({ stamps, history,
 
             {getOtherMuseums().length > 0 && (
               <div className="flex-1 max-w-xl">
-                 <span className="text-[9px] uppercase tracking-widest font-black opacity-40 block mb-4">Field Discoveries — Local & Independent Records</span>
+                 <span className="text-[11px] uppercase tracking-widest font-black opacity-40 block mb-4">Field Discoveries — Local & Independent Records</span>
                  <div className="flex flex-wrap gap-2">
                     {getOtherMuseums().map((m, i) => (
                       <div key={i} className="px-3 py-2 bg-artistic-shadow/30 rounded-xl border border-artistic-ink/5 flex items-center gap-3">
                         <Globe className="w-3 h-3 opacity-30" />
-                        <span className="text-[9px] font-bold uppercase tracking-widest">{m.name}</span>
-                        <span className="text-[9px] font-mono opacity-40">[{m.count}]</span>
+                        <span className="text-[11px] font-bold uppercase tracking-widest">{m.name}</span>
+                        <span className="text-[11px] font-mono opacity-40">[{m.count}]</span>
                       </div>
                     ))}
                  </div>

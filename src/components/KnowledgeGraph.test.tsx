@@ -38,9 +38,9 @@ describe('KnowledgeGraph Component', () => {
 
   it('displays the legend showing graph node types', () => {
     render(<KnowledgeGraph items={mockItems} onArtworkClick={vi.fn()} />);
-    expect(screen.getByText(/Styles \/ Movements/i)).toBeInTheDocument();
+    expect(screen.getByText(/Styles/i)).toBeInTheDocument();
     expect(screen.getByText(/Artists/i)).toBeInTheDocument();
     expect(screen.getByText(/Museums/i)).toBeInTheDocument();
-    expect(screen.getByText(/Paintings/i)).toBeInTheDocument();
+    expect(screen.getByText(/Types/i)).toBeInTheDocument();
   });
 });

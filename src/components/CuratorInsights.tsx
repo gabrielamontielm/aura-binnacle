@@ -52,8 +52,9 @@ export const CuratorInsights: React.FC<CuratorInsightsProps> = ({ history }) => 
 
       // Parse Year for Timeline
       // Handle BCE/BC by making them negative
-      const isBCE = /BCE|BC/i.test(details.year);
-      const yearMatch = details.year.match(/(\d+)/); 
+      const yearStr = details.year ?? '';
+      const isBCE = /BCE|BC/i.test(yearStr);
+      const yearMatch = yearStr.match(/(\d+)/);
       
       if (yearMatch) {
         let year = parseInt(yearMatch[1]);
@@ -115,44 +116,81 @@ export const CuratorInsights: React.FC<CuratorInsightsProps> = ({ history }) => 
           </div>
         </div>
 
-        <div className="relative overflow-x-auto pb-8 mask-fade-right">
+        {stats.timelineData.length > 1 ? (() => {
+          const minYear = stats.timelineData[0].year;
+          const maxYear = stats.timelineData[stats.timelineData.length - 1].year;
+          const span = maxYear - minYear || 1;
+          const CARD_W = 160;
+          const MIN_GAP = 80;
+          const TRACK_W = Math.max(span * 0.5, stats.timelineData.length * (CARD_W + MIN_GAP));
+          const toX = (year: number) => ((year - minYear) / span) * (TRACK_W - CARD_W);
+
+          return (
+            <div className="relative overflow-x-auto pb-8">
+              <div className="relative" style={{ width: TRACK_W + CARD_W, height: 260 }}>
+                {/* Baseline */}
+                <div className="absolute left-0 right-0 border-t border-dashed border-artistic-accent/20" style={{ top: 180 }} />
+
+                {/* Era labels */}
+                {[
+                  { label: 'Ancient', year: -3000 }, { label: 'Medieval', year: 500 },
+                  { label: 'Renaissance', year: 1400 }, { label: 'Baroque', year: 1600 },
+                  { label: 'Modern', year: 1850 }, { label: 'Contemporary', year: 1970 },
+                ].filter(e => e.year >= minYear - 200 && e.year <= maxYear + 200).map(e => (
+                  <div
+                    key={e.label}
+                    className="absolute text-[10px] uppercase tracking-widest font-bold text-artistic-ink/15 pointer-events-none"
+                    style={{ left: Math.max(0, toX(e.year)), top: 188 }}
+                  >
+                    {e.label}
+                  </div>
+                ))}
+
+                {stats.timelineData.map((item, index) => {
+                  const x = toX(item.year);
+                  return (
+                    <motion.div
+                      key={`${item.title}-${index}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(index * 0.08, 0.6) }}
+                      className="absolute group"
+                      style={{ left: x, top: 0, width: CARD_W }}
+                    >
+                      {/* Year label */}
+                      <div className="text-center mb-1">
+                        <span className="text-[11px] font-serif italic text-artistic-accent whitespace-nowrap">{item.displayYear}</span>
+                      </div>
+                      {/* Stem */}
+                      <div className="w-px h-6 bg-artistic-accent/30 mx-auto mb-1" />
+                      {/* Card */}
+                      <div className="w-full aspect-[3/4] bg-artistic-shadow rounded-sm overflow-hidden shadow-sm border border-artistic-ink/5 group-hover:scale-105 group-hover:-rotate-1 transition-all duration-500 relative">
+                        <img src={item.image} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-artistic-ink/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
+                          <p className="text-[11px] text-white font-bold truncate">{item.title}</p>
+                          <p className="text-[10px] text-white/70 truncate">{item.artist}</p>
+                        </div>
+                      </div>
+                      {/* Dot on baseline */}
+                      <div className="w-2 h-2 rounded-full bg-artistic-accent/60 mx-auto mt-1" />
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })() : (
           <div className="flex gap-12 min-w-max px-4 pt-10">
             {stats.timelineData.map((item, index) => (
-              <motion.div 
-                key={`${item.title}-${index}`}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="relative flex flex-col items-center w-48 group"
-              >
-                {/* Year Marker */}
-                <div className="absolute -top-10 flex flex-col items-center">
-                  <span className="text-sm font-serif italic text-artistic-accent whitespace-nowrap">{item.displayYear}</span>
-                  <div className="w-px h-6 bg-artistic-accent/30 mt-1" />
+              <motion.div key={`${item.title}-${index}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative flex flex-col items-center w-40 group">
+                <span className="text-sm font-serif italic text-artistic-accent mb-2">{item.displayYear}</span>
+                <div className="w-full aspect-[3/4] bg-artistic-shadow rounded-sm overflow-hidden shadow-sm border border-artistic-ink/5">
+                  <img src={item.image} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 </div>
-
-                {/* Artwork Card */}
-                <div className="w-40 aspect-[3/4] bg-artistic-shadow rounded-sm overflow-hidden shadow-sm border border-artistic-ink/5 group-hover:scale-105 group-hover:-rotate-1 transition-all duration-500">
-                  <img 
-                    src={item.image} 
-                    alt={item.title} 
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-artistic-ink/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
-                    <p className="text-[10px] text-white font-bold truncate">{item.title}</p>
-                    <p className="text-[8px] text-white/70 uppercase tracking-wider truncate">{item.artist}</p>
-                  </div>
-                </div>
-
-                {/* Connecting Line */}
-                {index < stats.timelineData.length - 1 && (
-                  <div className="absolute top-1/2 -right-12 w-12 h-px bg-artistic-accent/20" />
-                )}
               </motion.div>
             ))}
           </div>
-        </div>
+        )}
       </section>
 
       {/* 2. Curator Analytics Charts */}
@@ -237,7 +275,7 @@ export const CuratorInsights: React.FC<CuratorInsightsProps> = ({ history }) => 
               {stats.mediumChartData.map((item, index) => (
                 <div key={item.name} className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-artistic-ink/60">{item.name}</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-artistic-ink/60">{item.name}</span>
                 </div>
               ))}
             </div>
@@ -288,8 +326,8 @@ export const CuratorInsights: React.FC<CuratorInsightsProps> = ({ history }) => 
                             referrerPolicy="no-referrer"
                           />
                           <div className="absolute inset-0 bg-artistic-ink/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
-                            <p className="text-[9px] text-white font-bold truncate">{item.details.title}</p>
-                            <p className="text-[7px] text-white/70 uppercase tracking-widest truncate">{item.details.artist}</p>
+                            <p className="text-[11px] text-white font-bold truncate">{item.details.title}</p>
+                            <p className="text-[11px] text-white/70 uppercase tracking-widest truncate">{item.details.artist}</p>
                           </div>
                         </div>
                       </motion.div>
@@ -344,7 +382,7 @@ export const CuratorInsights: React.FC<CuratorInsightsProps> = ({ history }) => 
                             referrerPolicy="no-referrer"
                           />
                           <div className="absolute inset-0 bg-artistic-ink/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4 text-center">
-                            <p className="text-[8px] text-white font-bold uppercase tracking-widest leading-tight">{item.details.title}</p>
+                            <p className="text-[11px] text-white font-bold uppercase tracking-widest leading-tight">{item.details.title}</p>
                           </div>
                         </div>
                       </motion.div>
@@ -383,7 +421,7 @@ export const CuratorInsights: React.FC<CuratorInsightsProps> = ({ history }) => 
                   className={`text-left rounded-2xl p-4 border transition-all ${selectedType === type.name ? 'bg-artistic-accent border-artistic-accent text-artistic-ink' : 'bg-white/10 border-white/5 hover:border-white/20'}`}
                 >
                   <p className={`text-3xl font-serif mb-1 ${selectedType === type.name ? 'text-artistic-ink' : 'text-artistic-accent'}`}>{type.count}</p>
-                  <p className={`text-[10px] font-bold uppercase tracking-[0.2em] line-clamp-1 ${selectedType === type.name ? 'text-artistic-ink' : 'opacity-60'}`}>{type.name}</p>
+                  <p className={`text-xs font-bold uppercase tracking-[0.2em] line-clamp-1 ${selectedType === type.name ? 'text-artistic-ink' : 'opacity-60'}`}>{type.name}</p>
                 </motion.button>
               ))}
             </div>

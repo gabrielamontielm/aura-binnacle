@@ -113,7 +113,7 @@ export const GooglePhotosPicker: React.FC<GooglePhotosPickerProps> = ({ isOpen, 
           <div>
             <div className="flex items-center gap-3 mb-2">
               <Globe className="w-4 h-4 text-artistic-accent" />
-              <span className="uppercase text-[10px] tracking-[0.4em] font-bold text-artistic-accent">Neural Bridge</span>
+              <span className="uppercase text-xs tracking-[0.4em] font-bold text-artistic-accent">Neural Bridge</span>
             </div>
             <h2 className="text-3xl font-serif italic tracking-tighter">Google Photos</h2>
           </div>
@@ -139,7 +139,7 @@ export const GooglePhotosPicker: React.FC<GooglePhotosPickerProps> = ({ isOpen, 
               </div>
               <button 
                 onClick={handleConnect}
-                className="px-10 py-5 bg-artistic-ink text-artistic-bg rounded-full text-[10px] uppercase font-bold tracking-[0.3em] hover:bg-artistic-accent transition-all shadow-xl"
+                className="px-10 py-5 bg-artistic-ink text-artistic-bg rounded-full text-xs uppercase font-bold tracking-[0.3em] hover:bg-artistic-accent transition-all shadow-xl"
               >
                 Connect Google Account
               </button>
@@ -148,7 +148,7 @@ export const GooglePhotosPicker: React.FC<GooglePhotosPickerProps> = ({ isOpen, 
             <div className="h-full flex items-center justify-center">
               <div className="flex flex-col items-center gap-6">
                 <Loader2 className="w-10 h-10 animate-spin text-artistic-accent" />
-                <span className="text-[10px] uppercase tracking-widest font-bold opacity-40">Scanning Cloud Database...</span>
+                <span className="text-xs uppercase tracking-widest font-bold opacity-40">Scanning Cloud Database...</span>
               </div>
             </div>
           ) : error ? (
@@ -157,7 +157,7 @@ export const GooglePhotosPicker: React.FC<GooglePhotosPickerProps> = ({ isOpen, 
               <p className="text-artistic-ink/60 italic text-sm">{error}</p>
               <button 
                 onClick={() => fetchPhotos()}
-                className="mt-8 text-[10px] uppercase font-bold tracking-widest border-b border-artistic-ink"
+                className="mt-8 text-xs uppercase font-bold tracking-widest border-b border-artistic-ink"
               >
                 Try Again
               </button>
@@ -182,7 +182,7 @@ export const GooglePhotosPicker: React.FC<GooglePhotosPickerProps> = ({ isOpen, 
                     referrerPolicy="no-referrer"
                   />
                   <div className="absolute inset-0 bg-artistic-accent/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="bg-white text-artistic-ink text-[8px] uppercase font-bold px-3 py-1.5 rounded-full shadow-lg">Select</span>
+                    <span className="bg-white text-artistic-ink text-[11px] uppercase font-bold px-3 py-1.5 rounded-full shadow-lg">Select</span>
                   </div>
                 </motion.div>
               ))}
@@ -194,7 +194,7 @@ export const GooglePhotosPicker: React.FC<GooglePhotosPickerProps> = ({ isOpen, 
           <div className="p-8 border-t border-artistic-ink/5 flex justify-center bg-white/50 backdrop-blur-sm">
             <button 
               onClick={() => fetchPhotos(nextPageToken)}
-              className="flex items-center gap-3 text-[10px] uppercase font-bold tracking-widest opacity-60 hover:opacity-100 transition-opacity"
+              className="flex items-center gap-3 text-xs uppercase font-bold tracking-widest opacity-60 hover:opacity-100 transition-opacity"
             >
               Load More <ChevronRight className="w-4 h-4" />
             </button>

@@ -160,12 +160,12 @@ export const ArtQuiz: React.FC<ArtQuizProps> = ({ history, bucketList, onCorrect
         <p className="opacity-60 text-sm mb-8 italic">You mastered {score} of {session.length} curations for today.</p>
         <div className="flex flex-col gap-3">
           <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-             <span className="text-[10px] uppercase tracking-widest block opacity-40 mb-1">Total Rewards</span>
+             <span className="text-xs uppercase tracking-widest block opacity-40 mb-1">Total Rewards</span>
              <span className="text-2xl font-black text-artistic-accent">+{score * 60} XP</span>
           </div>
           <button 
             onClick={initQuiz}
-            className="w-full py-4 bg-white text-artistic-ink rounded-full text-[10px] uppercase font-bold tracking-[0.2em]"
+            className="w-full py-4 bg-white text-artistic-ink rounded-full text-xs uppercase font-bold tracking-[0.2em]"
           >
             Review Session
           </button>
@@ -181,19 +181,19 @@ export const ArtQuiz: React.FC<ArtQuizProps> = ({ history, bucketList, onCorrect
     <div className="p-8 bg-white rounded-3xl border border-artistic-ink/5 shadow-sm relative overflow-hidden">
       <div className="absolute top-0 right-0 p-4 flex items-center gap-4">
         <div className="flex items-center gap-1 px-2 py-1 bg-artistic-shadow/30 rounded-full">
-            <span className="text-[8px] font-black uppercase tracking-widest">{currentIndex + 1} / {session.length}</span>
+            <span className="text-[11px] font-black uppercase tracking-widest">{currentIndex + 1} / {session.length}</span>
         </div>
         {current.isAiGenerated && (
           <div className="flex items-center gap-1 px-2 py-1 bg-artistic-accent/10 text-artistic-accent rounded-full">
             <Sparkles className="w-3 h-3" />
-            <span className="text-[8px] font-black uppercase tracking-widest">Masterpiece</span>
+            <span className="text-[11px] font-black uppercase tracking-widest">Masterpiece</span>
           </div>
         )}
       </div>
 
       <div className="flex items-center justify-between mb-8">
         <div>
-          <span className="text-[10px] uppercase tracking-[0.4em] font-bold text-artistic-accent block mb-1">
+          <span className="text-xs uppercase tracking-[0.4em] font-bold text-artistic-accent block mb-1">
             {current.isAiGenerated ? 'Daily Challenge' : 'Collection Recall'}
           </span>
           <h4 className="font-serif italic text-xl">Art Intelligence</h4>
@@ -208,12 +208,12 @@ export const ArtQuiz: React.FC<ArtQuizProps> = ({ history, bucketList, onCorrect
           fallback={
             <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-artistic-shadow/20 text-center">
               <ImageOff className="w-10 h-10 opacity-20 mb-4" />
-              <p className="text-[10px] font-serif italic text-artistic-ink/40">Visual record unavailable. Identifying by metadata...</p>
+              <p className="text-xs font-serif italic text-artistic-ink/40">Visual record unavailable. Identifying by metadata...</p>
             </div>
           }
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-          <p className="text-[10px] text-white/80 font-medium">
+          <p className="text-xs text-white/80 font-medium">
             {current.isAiGenerated ? `Question ${currentIndex + 1} of today's Masterpiece collection.` : "A work you have encountered recently."}
           </p>
         </div>
@@ -221,7 +221,7 @@ export const ArtQuiz: React.FC<ArtQuizProps> = ({ history, bucketList, onCorrect
 
       <div className="mb-6 text-center">
         <h5 className="font-serif italic text-lg text-artistic-ink mb-1">"{current.artworkTitle}"</h5>
-        <p className="text-[9px] uppercase tracking-[0.2em] font-bold text-artistic-ink/40">
+        <p className="text-[11px] uppercase tracking-[0.2em] font-bold text-artistic-ink/40">
             Current Subject
         </p>
       </div>
@@ -259,7 +259,7 @@ export const ArtQuiz: React.FC<ArtQuizProps> = ({ history, bucketList, onCorrect
               onClick={() => handleOptionClick(option)}
               className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center justify-between group ${bgColor} ${borderColor} ${selectedOption === null ? 'hover:border-artistic-accent hover:bg-white shadow-sm' : ''}`}
             >
-              <span className={`text-[10px] font-black uppercase tracking-tight ${selectedOption ? (isTheCorrect ? 'text-green-700' : isSelected ? 'text-red-700' : 'opacity-40') : 'opacity-70'}`}>
+              <span className={`text-xs font-black uppercase tracking-tight ${selectedOption ? (isTheCorrect ? 'text-green-700' : isSelected ? 'text-red-700' : 'opacity-40') : 'opacity-70'}`}>
                 {option}
               </span>
               {Icon && <Icon className={`w-4 h-4 ${isTheCorrect ? 'text-green-500' : 'text-red-500'}`} />}
@@ -278,25 +278,25 @@ export const ArtQuiz: React.FC<ArtQuizProps> = ({ history, bucketList, onCorrect
           >
             <div className={`inline-flex items-center gap-2 mb-2 px-4 py-1 rounded-full ${isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                 {isCorrect ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                <span className="text-[10px] font-black uppercase tracking-widest">
+                <span className="text-xs font-black uppercase tracking-widest">
                     {isCorrect ? `Correct! +${current.isAiGenerated ? 75 : 50} XP` : "Incorrect"}
                 </span>
             </div>
             
             {isCorrect && current.artworkTitle && (
-              <p className="text-[10px] text-artistic-ink/60 mb-6 italic">
+              <p className="text-xs text-artistic-ink/60 mb-6 italic">
                 "{current.artworkTitle}" by {current.correctAnswer}.
               </p>
             )}
             {!isCorrect && (
-              <p className="text-[10px] text-artistic-ink/60 mb-6 italic">
+              <p className="text-xs text-artistic-ink/60 mb-6 italic">
                 The correct answer was {current.correctAnswer}.
               </p>
             )}
 
             <button 
               onClick={nextQuestion}
-              className="w-full py-4 bg-artistic-ink text-artistic-bg rounded-xl flex items-center justify-center gap-3 text-[10px] uppercase font-bold tracking-[0.2em] hover:bg-artistic-accent transition-all group"
+              className="w-full py-4 bg-artistic-ink text-artistic-bg rounded-xl flex items-center justify-center gap-3 text-xs uppercase font-bold tracking-[0.2em] hover:bg-artistic-accent transition-all group"
             >
               {currentIndex < session.length - 1 ? 'Next Question' : 'Complete Session'}
               <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
@@ -309,7 +309,7 @@ export const ArtQuiz: React.FC<ArtQuizProps> = ({ history, bucketList, onCorrect
         <div className="mt-8 flex flex-col items-center gap-4 border-t border-artistic-ink/5 pt-6">
             <button 
               onClick={() => setShowHint(!showHint)}
-              className="flex items-center gap-2 text-[9px] uppercase tracking-widest font-bold opacity-30 hover:opacity-100 transition-opacity"
+              className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-bold opacity-30 hover:opacity-100 transition-opacity"
             >
               <Lightbulb className="w-3 h-3" />
               {showHint ? "The Curator says..." : "Need a hint?"}
@@ -319,7 +319,7 @@ export const ArtQuiz: React.FC<ArtQuizProps> = ({ history, bucketList, onCorrect
                 <motion.p 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
-                  className="text-[10px] text-center text-artistic-ink/60 bg-artistic-shadow/20 p-4 rounded-2xl italic leading-relaxed"
+                  className="text-xs text-center text-artistic-ink/60 bg-artistic-shadow/20 p-4 rounded-2xl italic leading-relaxed"
                 >
                   {current.hint || "Look closely at the texture and palette."}
                 </motion.p>

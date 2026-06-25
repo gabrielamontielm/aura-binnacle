@@ -70,7 +70,7 @@ const ArtworkMarker: React.FC<ArtworkMarkerProps> = ({
             )}
           </div>
           {artworks.length > 1 && (
-            <div className="absolute -top-1 -right-1 w-5 h-5 bg-artistic-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-artistic-accent text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">
               {artworks.length}
             </div>
           )}
@@ -95,8 +95,8 @@ const ArtworkMarker: React.FC<ArtworkMarkerProps> = ({
                     <img src={art.image} className="w-full h-full object-contain" alt={art.details.title} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold truncate group-hover:text-artistic-accent">{art.details.title}</p>
-                    <p className="text-[9px] opacity-60 italic">{art.details.year}</p>
+                    <p className="text-xs font-bold truncate group-hover:text-artistic-accent">{art.details.title}</p>
+                    <p className="text-[11px] opacity-60 italic">{art.details.year}</p>
                   </div>
                 </div>
               ))}
@@ -108,7 +108,51 @@ const ArtworkMarker: React.FC<ArtworkMarkerProps> = ({
   );
 };
 
+// Curated discovery pins — major museums the user hasn't scanned yet
+const DISCOVERY_MUSEUMS: { name: string; city: string; position: google.maps.LatLngLiteral }[] = [
+  { name: 'The Louvre', city: 'Paris', position: { lat: 48.8606, lng: 2.3376 } },
+  { name: 'The Metropolitan Museum of Art', city: 'New York', position: { lat: 40.7794, lng: -73.9632 } },
+  { name: 'Uffizi Gallery', city: 'Florence', position: { lat: 43.7678, lng: 11.2553 } },
+  { name: 'Prado Museum', city: 'Madrid', position: { lat: 40.4138, lng: -3.6922 } },
+  { name: 'Rijksmuseum', city: 'Amsterdam', position: { lat: 52.3600, lng: 4.8852 } },
+  { name: 'British Museum', city: 'London', position: { lat: 51.5194, lng: -0.1270 } },
+  { name: 'Vatican Museums', city: 'Vatican City', position: { lat: 41.9065, lng: 12.4536 } },
+  { name: 'Hermitage Museum', city: 'St. Petersburg', position: { lat: 59.9398, lng: 30.3146 } },
+  { name: 'National Gallery', city: 'London', position: { lat: 51.5089, lng: -0.1283 } },
+  { name: 'Musée d\'Orsay', city: 'Paris', position: { lat: 48.8600, lng: 2.3266 } },
+  { name: 'Guggenheim Museum', city: 'New York', position: { lat: 40.7830, lng: -73.9590 } },
+  { name: 'Tate Modern', city: 'London', position: { lat: 51.5076, lng: -0.0994 } },
+  { name: 'Museum of Modern Art', city: 'New York', position: { lat: 40.7614, lng: -73.9776 } },
+  { name: 'Städel Museum', city: 'Frankfurt', position: { lat: 50.1038, lng: 8.6826 } },
+  { name: 'Gemäldegalerie', city: 'Berlin', position: { lat: 52.5083, lng: 13.3664 } },
+];
+
+const DiscoveryPin: React.FC<{ name: string; city: string; position: google.maps.LatLngLiteral }> = ({ name, city, position }) => {
+  const [infoShown, setInfoShown] = useState(false);
+  const [markerRef, marker] = useAdvancedMarkerRef();
+  return (
+    <>
+      <AdvancedMarker ref={markerRef} position={position} onClick={() => setInfoShown(v => !v)} zIndex={0}>
+        <div className="w-7 h-7 rounded-full bg-white/80 border-2 border-dashed border-artistic-ink/30 flex items-center justify-center hover:scale-110 transition-transform" title={name}>
+          <MapPin className="w-3.5 h-3.5 text-artistic-ink/40" />
+        </div>
+      </AdvancedMarker>
+      {infoShown && (
+        <InfoWindow anchor={marker} onCloseClick={() => setInfoShown(false)}>
+          <div className="p-2 min-w-[160px]">
+            <p className="text-xs font-bold text-artistic-ink">{name}</p>
+            <p className="text-[11px] text-artistic-ink/50">{city}</p>
+            <p className="text-[10px] text-artistic-accent/80 mt-1 uppercase tracking-wider font-bold">Not yet visited</p>
+          </div>
+        </InfoWindow>
+      )}
+    </>
+  );
+};
+
 export const MuseumMap: React.FC<MuseumMapProps> = ({ items, onArtworkClick, className = "h-full w-full" }) => {
+  const [showDiscovery, setShowDiscovery] = useState(true);
+
   const groupedArtworks = useMemo(() => {
     const groups: Record<string, HistoryItem[]> = {};
     items.forEach(item => {
@@ -118,6 +162,12 @@ export const MuseumMap: React.FC<MuseumMapProps> = ({ items, onArtworkClick, cla
       groups[loc].push(item);
     });
     return groups;
+  }, [items]);
+
+  const visitedMuseums = useMemo(() => {
+    const names = new Set<string>();
+    items.forEach(i => { if (i.details.museum) names.add(i.details.museum.toLowerCase()); });
+    return names;
   }, [items]);
 
   if (!hasValidKey) {
@@ -130,8 +180,8 @@ export const MuseumMap: React.FC<MuseumMapProps> = ({ items, onArtworkClick, cla
             To visualize the geographical footprint of your collection, please provide a Google Maps Platform API Key in your project secrets.
           </p>
           <div className="bg-white/50 backdrop-blur p-6 rounded-2xl text-left border border-artistic-ink/5 space-y-4">
-            <p className="text-[10px] uppercase font-bold tracking-widest opacity-40 italic">Configuration Steps:</p>
-            <ul className="text-[10px] font-bold space-y-2">
+            <p className="text-xs uppercase font-bold tracking-widest opacity-40 italic">Configuration Steps:</p>
+            <ul className="text-xs font-bold space-y-2">
               <li className="flex gap-2">
                 <span className="text-artistic-accent">1.</span>
                 <span>Open <span className="p-1 bg-gray-100 rounded">Settings</span> (Gear icon, top-right)</span>
@@ -150,7 +200,7 @@ export const MuseumMap: React.FC<MuseumMapProps> = ({ items, onArtworkClick, cla
             href="https://console.cloud.google.com/google/maps-apis/start?utm_campaign=gmp-code-assist-ais" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="inline-block px-8 py-3 bg-artistic-ink text-artistic-bg rounded-full text-[10px] uppercase font-bold tracking-widest hover:bg-artistic-accent transition-all"
+            className="inline-block px-8 py-3 bg-artistic-ink text-artistic-bg rounded-full text-xs uppercase font-bold tracking-widest hover:bg-artistic-accent transition-all"
           >
             Create API Key
           </a>
@@ -172,27 +222,40 @@ export const MuseumMap: React.FC<MuseumMapProps> = ({ items, onArtworkClick, cla
           style={{ width: '100%', height: '100%' }}
         >
           {(Object.entries(groupedArtworks) as [string, HistoryItem[]][]).map(([location, arts]) => (
-            <ArtworkMarker 
-              key={location} 
-              locationName={location} 
-              artworks={arts} 
-              onArtworkClick={onArtworkClick} 
+            <ArtworkMarker
+              key={location}
+              locationName={location}
+              artworks={arts}
+              onArtworkClick={onArtworkClick}
             />
           ))}
+          {showDiscovery && DISCOVERY_MUSEUMS
+            .filter(m => !visitedMuseums.has(m.name.toLowerCase()))
+            .map(m => (
+              <DiscoveryPin key={m.name} name={m.name} city={m.city} position={m.position} />
+            ))
+          }
         </Map>
       </APIProvider>
-      
+
       {/* Decorative Overlay */}
-      <div className="absolute top-6 left-6 p-4 bg-white/90 backdrop-blur rounded-2xl shadow-xl border border-artistic-ink/5 pointer-events-none z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-artistic-accent flex items-center justify-center">
+      <div className="absolute top-6 left-6 p-4 bg-white/90 backdrop-blur rounded-2xl shadow-xl border border-artistic-ink/5 z-10">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 rounded-full bg-artistic-accent flex items-center justify-center flex-shrink-0">
             <Navigation className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h3 className="text-[10px] uppercase tracking-[0.2em] font-black">Heritage Navigator</h3>
-            <p className="text-[9px] opacity-40 font-bold">Spatial Distribution of Masterpieces</p>
+            <h3 className="text-xs uppercase tracking-[0.2em] font-black">Heritage Navigator</h3>
+            <p className="text-[11px] opacity-40 font-bold">Spatial Distribution of Masterpieces</p>
           </div>
         </div>
+        <button
+          onClick={() => setShowDiscovery(v => !v)}
+          className={`flex items-center gap-2 text-[11px] uppercase font-bold tracking-wider transition-colors ${showDiscovery ? 'text-artistic-accent' : 'text-artistic-ink/30'}`}
+        >
+          <span className={`w-3 h-3 rounded-full border-2 border-dashed flex-shrink-0 ${showDiscovery ? 'border-artistic-accent' : 'border-artistic-ink/30'}`} />
+          {showDiscovery ? 'Hide discovery pins' : 'Show discovery pins'}
+        </button>
       </div>
     </div>
   );

@@ -10,9 +10,11 @@ import fs from "fs";
 import crypto from "crypto";
 import { GoogleGenAI, Type } from "@google/genai";
 
+dotenv.config({ path: '.env.local', override: false });
 dotenv.config();
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+console.log(process.env.GEMINI_API_KEY);
 
 // Simple persistent cache
 class AICache {
@@ -93,7 +95,7 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_PHOTOS_CLIENT_SECRET;
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = 5000;
 
   app.set('trust proxy', 1);
 
@@ -568,6 +570,68 @@ async function startServer() {
     } catch (error) {
       console.error("Itinerary API Error:", error);
       res.status(500).json({ error: "Failed to generate itinerary" });
+    }
+  });
+
+  // Museum Masterpieces Endpoint
+  app.post("/api/museum/masterpieces", async (req, res) => {
+    try {
+      const { museum, force } = req.body;
+      if (!museum) return res.status(400).json({ error: "museum required" });
+
+      const cacheKey = searchCache.generateKey('museum-masterpieces', museum);
+      if (!force) {
+        const cached = searchCache.get(cacheKey);
+        if (cached) return res.json(cached);
+      }
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{
+          role: 'user',
+          parts: [{
+            text: `List exactly 8 of the most iconic masterpieces permanently housed in "${museum}".
+For each work provide: title, artist, year (string), movement, medium, a 1-sentence description, and optionally a public-domain imageUrl from Wikimedia Commons (https://upload.wikimedia.org/...).
+Return ONLY a JSON object with keys "museum" (string), "city" (string), and "masterpieces" (array of 8 objects).`,
+          }]
+        }],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              museum: { type: Type.STRING },
+              city: { type: Type.STRING },
+              masterpieces: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING },
+                    artist: { type: Type.STRING },
+                    year: { type: Type.STRING },
+                    movement: { type: Type.STRING },
+                    medium: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    imageUrl: { type: Type.STRING },
+                  },
+                }
+              }
+            },
+            required: ["museum", "masterpieces"]
+          }
+        }
+      });
+
+      const text = response.text;
+      if (!text) throw new Error("Empty response from model");
+      const result = JSON.parse(text);
+      if (!result.masterpieces?.length) throw new Error("No masterpieces in response");
+      searchCache.set(cacheKey, result);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Museum Masterpieces API Error:", error?.message || error);
+      res.status(500).json({ error: "Failed to fetch museum masterpieces", detail: error?.message });
     }
   });
 
